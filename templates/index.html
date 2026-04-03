@@ -1,0 +1,2426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banner Schema Search</title>
+    <style>
+        :root {
+            --navy: #003366;
+            --navy-light: #004a99;
+            --navy-dark: #002244;
+            --gold: #FFB81C;
+            --gold-light: #FFD06B;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --highlight: #fff3cd;
+            --success: #10b981;
+            --radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a; --card-bg: #1e293b; --text: #e2e8f0;
+                --text-muted: #94a3b8; --border: #334155; --highlight: #854d0e33;
+                --navy: #1e3a5f; --navy-light: #2563eb; --navy-dark: #0f172a;
+                --shadow: 0 1px 3px rgba(0,0,0,0.3); --shadow-lg: 0 4px 12px rgba(0,0,0,0.3);
+            }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.6;
+        }
+        .header {
+            background: var(--navy); color: white; position: sticky; top: 0; z-index: 100;
+            box-shadow: var(--shadow-lg);
+        }
+        .header-top {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 24px; gap: 16px;
+        }
+        .logo { font-size: 20px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+        .logo span { color: var(--gold); }
+        .search-container { flex: 1; max-width: 600px; position: relative; }
+        .search-input {
+            width: 100%; padding: 10px 36px 10px 40px; border: 2px solid transparent;
+            border-radius: var(--radius); font-size: 15px;
+            background: rgba(255,255,255,0.15); color: white; outline: none; transition: all 0.2s;
+        }
+        .search-input::placeholder { color: rgba(255,255,255,0.6); }
+        .search-input:focus { background: rgba(255,255,255,0.25); border-color: var(--gold); }
+        .search-icon {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.6;
+        }
+        .search-clear {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            background: rgba(255,255,255,0.2); border: none; color: rgba(255,255,255,0.8);
+            width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+            font-size: 14px; line-height: 1; display: none; align-items: center;
+            justify-content: center; transition: background 0.15s;
+        }
+        .search-clear:hover { background: rgba(255,255,255,0.4); }
+        .search-clear.visible { display: flex; }
+        .header-stats { font-size: 12px; color: rgba(255,255,255,0.7); white-space: nowrap; }
+        .filters-bar {
+            display: flex; align-items: center; gap: 12px; padding: 8px 24px;
+            background: var(--navy-dark); font-size: 13px; flex-wrap: wrap;
+        }
+        .filter-group { display: flex; align-items: center; gap: 6px; }
+        .filter-group label { color: rgba(255,255,255,0.7); font-size: 12px; }
+        .filter-btn {
+            padding: 3px 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
+            background: transparent; color: rgba(255,255,255,0.8); cursor: pointer;
+            font-size: 12px; transition: all 0.15s;
+        }
+        .filter-btn:hover { border-color: var(--gold); color: var(--gold); }
+        .filter-btn.active { background: var(--gold); color: var(--navy-dark); border-color: var(--gold); font-weight: 600; }
+        .module-select {
+            padding: 3px 8px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
+            background: transparent; color: white; font-size: 12px; cursor: pointer;
+        }
+        .module-select option { background: var(--navy-dark); color: white; }
+        .search-hint { margin-left: auto; color: rgba(255,255,255,0.5); font-size: 11px; }
+        .main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+        /* Stats */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px; margin-bottom: 28px;
+        }
+        .stat-card {
+            background: var(--card-bg); border-radius: var(--radius); padding: 16px;
+            text-align: center; box-shadow: var(--shadow); border-top: 3px solid var(--gold);
+        }
+        .stat-number { font-size: 28px; font-weight: 700; color: var(--navy-light); }
+        .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        @media (prefers-color-scheme: dark) { .stat-number { color: var(--gold); } }
+
+        /* Modules */
+        .section-title {
+            font-size: 18px; font-weight: 700; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 2px solid var(--gold); color: var(--navy-light);
+        }
+        @media (prefers-color-scheme: dark) { .section-title { color: var(--gold); } }
+        .modules-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px; margin-bottom: 32px;
+        }
+        .module-card {
+            background: var(--card-bg); border-radius: var(--radius); padding: 16px;
+            box-shadow: var(--shadow); cursor: pointer; transition: all 0.2s;
+            border-left: 4px solid var(--navy-light);
+        }
+        .module-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); border-left-color: var(--gold); }
+        .module-name { font-weight: 700; font-size: 15px; }
+        .module-desc { font-size: 12px; color: var(--text-muted); margin: 4px 0; }
+        .module-count { font-size: 13px; color: var(--navy-light); font-weight: 600; }
+        @media (prefers-color-scheme: dark) { .module-count { color: var(--gold); } }
+
+        /* Tables */
+        .table-list {
+            width: 100%; border-collapse: collapse; background: var(--card-bg);
+            border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+        }
+        .table-list th {
+            background: var(--navy); color: white; padding: 10px 14px; text-align: left;
+            font-size: 13px; font-weight: 600; position: sticky; top: 0;
+        }
+        .table-list td { padding: 8px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
+        .table-list tr:hover td { background: var(--highlight); }
+        .table-list tr:nth-child(even) td { background: rgba(0,0,0,0.02); }
+        @media (prefers-color-scheme: dark) { .table-list tr:nth-child(even) td { background: rgba(255,255,255,0.02); } }
+        .table-link {
+            color: var(--navy-light); text-decoration: none; font-weight: 600;
+            font-family: 'Consolas','Monaco',monospace; cursor: pointer;
+        }
+        .table-link:hover { color: var(--gold); text-decoration: underline; }
+        @media (prefers-color-scheme: dark) { .table-link { color: #60a5fa; } .table-link:hover { color: var(--gold); } }
+        .type-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+        .type-table { background: #dbeafe; color: #1e40af; }
+        .type-view { background: #dcfce7; color: #166534; }
+        @media (prefers-color-scheme: dark) { .type-table { background: #1e3a5f; color: #93c5fd; } .type-view { background: #14532d; color: #86efac; } }
+        .module-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; background: #f3f4f6; color: var(--text-muted); }
+        @media (prefers-color-scheme: dark) { .module-badge { background: #374151; color: #d1d5db; } }
+        .score-bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--gold); min-width: 4px; }
+        .desc-text { max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Detail */
+        .detail-header {
+            background: var(--card-bg); border-radius: var(--radius); padding: 24px;
+            margin-bottom: 20px; box-shadow: var(--shadow); border-top: 4px solid var(--gold);
+        }
+        .detail-title { font-size: 24px; font-weight: 700; font-family: 'Consolas','Monaco',monospace; color: var(--navy-light); }
+        @media (prefers-color-scheme: dark) { .detail-title { color: var(--gold); } }
+        .detail-meta { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+        .detail-desc { margin-top: 12px; color: var(--text-muted); }
+        .col-filter {
+            width: 100%; max-width: 400px; padding: 8px 12px; border: 1px solid var(--border);
+            border-radius: var(--radius); font-size: 14px; margin-bottom: 16px;
+            background: var(--card-bg); color: var(--text);
+        }
+        .col-filter:focus { outline: none; border-color: var(--gold); }
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+            border: 1px solid var(--border); border-radius: var(--radius);
+            background: var(--card-bg); color: var(--text); cursor: pointer;
+            font-size: 13px; margin-bottom: 16px; text-decoration: none; transition: all 0.15s;
+        }
+        .back-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+        /* Pagination */
+        .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 20px; }
+        .page-btn {
+            padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px;
+            background: var(--card-bg); color: var(--text); cursor: pointer; font-size: 13px;
+        }
+        .page-btn:hover { border-color: var(--gold); }
+        .page-btn.active { background: var(--navy); color: white; border-color: var(--navy); }
+        .page-btn:disabled { opacity: 0.5; cursor: default; }
+        .page-info { font-size: 13px; color: var(--text-muted); }
+
+        /* Cross-reference / Related */
+        .info-section {
+            background: var(--card-bg); border-radius: var(--radius); padding: 16px 20px;
+            margin-bottom: 16px; box-shadow: var(--shadow);
+        }
+        .info-section.xref { border-left: 4px solid var(--success); }
+        .info-section.related { border-left: 4px solid #8b5cf6; }
+        .info-section.synonyms { border-left: 4px solid #f59e0b; }
+        .info-section.fuzzy { border-left: 4px solid #ef4444; }
+        .info-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+        .info-subtitle { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+        .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag {
+            padding: 3px 10px; border-radius: 4px; font-size: 12px;
+            font-family: 'Consolas','Monaco',monospace; cursor: pointer; transition: all 0.15s;
+        }
+        .tag-blue { background: #dbeafe; color: #1e40af; }
+        .tag-purple { background: #ede9fe; color: #6d28d9; }
+        .tag-gold { background: #fef3c7; color: #92400e; }
+        .tag-red { background: #fee2e2; color: #991b1b; }
+        .tag:hover { background: var(--gold); color: var(--navy-dark); }
+        @media (prefers-color-scheme: dark) {
+            .tag-blue { background: #1e3a5f; color: #93c5fd; }
+            .tag-purple { background: #2e1065; color: #c4b5fd; }
+            .tag-gold { background: #78350f; color: #fde68a; }
+            .tag-red { background: #450a0a; color: #fca5a5; }
+            .tag:hover { background: var(--gold); color: var(--navy-dark); }
+        }
+
+        /* Column pattern badges */
+        .col-badge {
+            display: inline-block; padding: 1px 6px; border-radius: 3px;
+            font-size: 10px; font-weight: 600; margin-left: 6px; vertical-align: middle;
+        }
+
+        /* Grouped results */
+        .group-header {
+            background: var(--card-bg); border-radius: var(--radius); padding: 14px 18px;
+            margin-bottom: 4px; box-shadow: var(--shadow); cursor: pointer;
+            display: flex; align-items: center; gap: 12px; transition: all 0.15s;
+            border-left: 4px solid transparent;
+        }
+        .group-header:hover { border-left-color: var(--gold); }
+        .group-header.expanded { border-left-color: var(--navy-light); margin-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+        .group-name { font-weight: 700; font-family: 'Consolas','Monaco',monospace; font-size: 14px; color: var(--navy-light); }
+        @media (prefers-color-scheme: dark) { .group-name { color: #60a5fa; } }
+        .group-meta { font-size: 12px; color: var(--text-muted); }
+        .group-score-bar { height: 4px; border-radius: 2px; background: var(--gold); }
+        .group-toggle { margin-left: auto; color: var(--text-muted); font-size: 18px; transition: transform 0.2s; }
+        .group-toggle.open { transform: rotate(90deg); }
+        .group-children {
+            background: var(--card-bg); border-radius: 0 0 var(--radius) var(--radius);
+            padding: 0 18px 12px 36px; margin-bottom: 8px; box-shadow: var(--shadow);
+        }
+        .group-child {
+            padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+            display: flex; gap: 10px; align-items: flex-start;
+        }
+        .group-child:last-child { border-bottom: none; }
+        .group-child-name { font-family: 'Consolas','Monaco',monospace; font-weight: 600; min-width: 200px; font-size: 12px; }
+        .group-child-desc { color: var(--text-muted); font-size: 12px; flex: 1; }
+
+        /* Did you mean */
+        .did-you-mean {
+            background: #fef3c7; border-radius: var(--radius); padding: 12px 18px;
+            margin-bottom: 16px; font-size: 13px; color: #92400e;
+        }
+        @media (prefers-color-scheme: dark) { .did-you-mean { background: #78350f; color: #fde68a; } }
+        .did-you-mean a { color: #b45309; font-weight: 600; cursor: pointer; text-decoration: underline; }
+        @media (prefers-color-scheme: dark) { .did-you-mean a { color: var(--gold); } }
+
+        /* Interactive term tags */
+        .term-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 8px; border-radius: 4px; font-size: 12px;
+            font-family: 'Consolas','Monaco',monospace; cursor: default;
+            transition: all 0.15s; border: 1px solid transparent;
+        }
+        .term-tag.original { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+        .term-tag.synonym { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+        .term-tag.custom { background: #dcfce7; color: #166534; border-color: #86efac; }
+        .term-tag.disabled { background: var(--bg); color: var(--text-muted); border-color: var(--border); opacity: 0.6; text-decoration: line-through; }
+        @media (prefers-color-scheme: dark) {
+            .term-tag.original { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
+            .term-tag.synonym { background: #78350f; color: #fde68a; border-color: #b45309; }
+            .term-tag.custom { background: #14532d; color: #86efac; border-color: #16a34a; }
+            .term-tag.disabled { background: #1e293b; color: #64748b; border-color: #334155; }
+        }
+        .term-tag-x {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 14px; height: 14px; border-radius: 50%; font-size: 10px;
+            line-height: 1; cursor: pointer; background: rgba(0,0,0,0.15); color: inherit;
+            border: none; padding: 0; font-weight: 700; transition: background 0.15s;
+        }
+        .term-tag-x:hover { background: rgba(220,38,38,0.3); }
+        .term-tag-restore {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 14px; height: 14px; border-radius: 50%; font-size: 12px;
+            line-height: 1; cursor: pointer; background: rgba(0,0,0,0.1); color: inherit;
+            border: none; padding: 0; transition: background 0.15s;
+        }
+        .term-tag-restore:hover { background: rgba(34,197,94,0.3); }
+
+        /* Term builder bar */
+        .term-builder {
+            background: var(--card-bg); border-radius: var(--radius); padding: 14px 18px;
+            margin-bottom: 16px; box-shadow: var(--shadow); border-left: 4px solid var(--navy-light);
+        }
+        .term-builder-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .term-builder-title { font-size: 13px; font-weight: 700; }
+        .term-builder-actions { display: flex; gap: 6px; }
+        .term-builder-btn {
+            padding: 3px 10px; border: 1px solid var(--border); border-radius: 4px;
+            background: var(--card-bg); color: var(--text-muted); cursor: pointer;
+            font-size: 11px; transition: all 0.15s;
+        }
+        .term-builder-btn:hover { border-color: var(--gold); color: var(--gold); }
+        .term-tags-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .term-add-input {
+            padding: 3px 8px; border: 1px dashed var(--border); border-radius: 4px;
+            background: transparent; color: var(--text); font-size: 12px;
+            font-family: 'Consolas','Monaco',monospace; width: 120px; outline: none;
+        }
+        .term-add-input:focus { border-color: var(--gold); border-style: solid; }
+        .term-add-input::placeholder { color: var(--text-muted); font-family: inherit; }
+
+        /* Refine bar */
+        .refine-bar {
+            background: var(--card-bg); border-radius: var(--radius); padding: 10px 18px;
+            margin-bottom: 16px; box-shadow: var(--shadow); display: flex;
+            align-items: center; gap: 12px; border-left: 4px solid #8b5cf6;
+        }
+        .refine-label { font-size: 12px; font-weight: 700; color: #8b5cf6; white-space: nowrap; }
+        .refine-input {
+            flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px;
+            background: transparent; color: var(--text); font-size: 13px; outline: none;
+        }
+        .refine-input:focus { border-color: #8b5cf6; }
+        .refine-input::placeholder { color: var(--text-muted); }
+        .refine-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+        mark { background: var(--gold); color: var(--navy-dark); padding: 0 2px; border-radius: 2px; }
+        .loading { text-align: center; padding: 60px; color: var(--text-muted); }
+        .no-results { text-align: center; padding: 40px; color: var(--text-muted); }
+        .no-results-icon { font-size: 48px; margin-bottom: 12px; }
+        .result-count { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+        .footer {
+            text-align: center; padding: 20px; font-size: 12px; color: var(--text-muted);
+            border-top: 1px solid var(--border); margin-top: 40px;
+        }
+
+        /* ==================== HELP PANEL ==================== */
+        .sql-toggle {
+            position: fixed; right: 0; top: calc(50% - 80px);
+            background: var(--gold); color: var(--navy-dark); border: none; padding: 12px 6px;
+            border-radius: var(--radius) 0 0 var(--radius); cursor: pointer; z-index: 200;
+            font-size: 14px; writing-mode: vertical-rl; text-orientation: mixed;
+            letter-spacing: 1px; font-weight: 700; box-shadow: var(--shadow-lg);
+            transition: all 0.2s;
+        }
+        .sql-toggle:hover { background: var(--gold-light); padding-right: 10px; }
+        .sql-textarea {
+            width: 100%; min-height: 200px; padding: 16px; font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px; border: 2px solid var(--border); border-radius: var(--radius);
+            background: var(--card-bg); color: var(--text); resize: vertical; line-height: 1.5;
+        }
+        .sql-textarea:focus { border-color: var(--gold); outline: none; }
+        .sql-explain-btn {
+            background: var(--gold); color: var(--navy-dark); border: none; padding: 10px 24px;
+            border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .sql-explain-btn:hover { background: var(--gold-light); }
+        .sql-section { margin: 20px 0; }
+        .sql-section-title {
+            font-size: 14px; font-weight: 700; color: var(--navy-light); margin-bottom: 10px;
+            padding-bottom: 6px; border-bottom: 2px solid var(--gold);
+        }
+        .sql-item { margin: 8px 0; padding: 10px 14px; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); }
+        .sql-item-name { font-weight: 700; color: var(--navy-light); cursor: pointer; }
+        .sql-item-name:hover { text-decoration: underline; }
+        .sql-item-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+        .sql-item-detail { font-size: 12px; color: var(--text-muted); font-style: italic; margin-top: 2px; }
+        .sql-join-arrow { color: var(--gold); font-weight: 700; margin: 0 4px; }
+        .sql-filter-tag {
+            display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px;
+            background: var(--highlight); color: var(--text); margin: 2px;
+        }
+        .sql-case-card {
+            margin: 8px 0; padding: 12px 14px; background: var(--highlight); border-radius: var(--radius);
+            border-left: 3px solid var(--gold);
+        }
+        .sql-case-title { font-weight: 600; font-size: 13px; }
+        .sql-case-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .sql-summary {
+            padding: 16px; background: var(--navy); color: white; border-radius: var(--radius);
+            margin-top: 20px; font-size: 14px; line-height: 1.8;
+        }
+        .sql-summary strong { color: var(--gold); }
+        .help-toggle {
+            position: fixed; right: 0; top: calc(50% + 30px);
+            background: var(--navy); color: var(--gold); border: none; padding: 12px 6px;
+            border-radius: var(--radius) 0 0 var(--radius); cursor: pointer; z-index: 200;
+            font-size: 14px; writing-mode: vertical-rl; text-orientation: mixed;
+            letter-spacing: 1px; font-weight: 700; box-shadow: var(--shadow-lg);
+            transition: all 0.2s;
+        }
+        .help-toggle:hover { background: var(--navy-light); padding-right: 10px; }
+        .help-toggle.panel-open { right: 380px; }
+
+        .help-panel {
+            position: fixed; top: 0; right: -380px; width: 380px; height: 100vh;
+            background: var(--card-bg); box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+            z-index: 190; overflow-y: auto; transition: right 0.3s ease;
+            border-left: 3px solid var(--gold);
+        }
+        .help-panel.open { right: 0; }
+
+        .help-panel-header {
+            position: sticky; top: 0; background: var(--navy); color: white;
+            padding: 14px 20px; z-index: 1;
+        }
+        .help-panel-top {
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+        }
+        .help-panel-title { font-size: 16px; font-weight: 700; }
+        .help-panel-title span { color: var(--gold); }
+        .help-panel-close {
+            background: none; border: none; color: rgba(255,255,255,0.7); font-size: 22px;
+            cursor: pointer; padding: 0 4px; line-height: 1;
+        }
+        .help-panel-close:hover { color: var(--gold); }
+        .help-search-wrap { position: relative; }
+        .help-search {
+            width: 100%; padding: 7px 30px 7px 32px; border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 6px; background: rgba(255,255,255,0.1); color: white;
+            font-size: 13px; outline: none; transition: all 0.2s;
+        }
+        .help-search::placeholder { color: rgba(255,255,255,0.5); }
+        .help-search:focus { border-color: var(--gold); background: rgba(255,255,255,0.18); }
+        .help-search-icon {
+            position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+            opacity: 0.5; pointer-events: none;
+        }
+        .help-search-clear {
+            position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+            background: rgba(255,255,255,0.15); border: none; color: rgba(255,255,255,0.7);
+            width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
+            font-size: 12px; display: none; align-items: center; justify-content: center;
+        }
+        .help-search-clear.visible { display: flex; }
+        .help-search-clear:hover { background: rgba(255,255,255,0.3); }
+        .help-search-count {
+            font-size: 11px; color: var(--gold); margin-top: 6px; display: none;
+        }
+        .help-search-count.visible { display: block; }
+
+        /* Relationship sections */
+        .rels-section {
+            background: var(--card-bg); border-radius: var(--radius); padding: 16px 20px;
+            margin-bottom: 16px; box-shadow: var(--shadow);
+        }
+        .rels-section.outgoing { border-left: 4px solid #3b82f6; }
+        .rels-section.incoming { border-left: 4px solid #f97316; }
+        .rels-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .rels-subtitle { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+        .rels-icon { font-size: 16px; }
+        .rels-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .rels-table th {
+            text-align: left; padding: 5px 10px; font-weight: 600;
+            border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 11px;
+        }
+        .rels-table td { padding: 5px 10px; border-bottom: 1px solid var(--border); }
+        .rels-table tr:hover td { background: var(--highlight); }
+        .rels-label {
+            display: inline-block; padding: 1px 7px; border-radius: 3px;
+            font-size: 10px; font-weight: 600; background: #dbeafe; color: #1e40af;
+        }
+        .rels-label.fk { background: #fef3c7; color: #92400e; }
+        @media (prefers-color-scheme: dark) {
+            .rels-label { background: #1e3a5f; color: #93c5fd; }
+            .rels-label.fk { background: #78350f; color: #fde68a; }
+        }
+        .rels-arrow { color: var(--text-muted); font-size: 14px; }
+
+        .help-panel-body { padding: 16px 20px; }
+
+        .help-category.hidden { display: none; }
+        .help-query.hidden { display: none; }
+        .help-query.match code { background: rgba(255,181,28,0.25); }
+        .help-cat-match-count {
+            font-size: 11px; font-weight: 400; color: var(--gold); margin-left: 6px;
+        }
+
+        .help-category {
+            margin-bottom: 20px;
+        }
+        .help-cat-title {
+            font-size: 13px; font-weight: 700; color: var(--navy-light);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            margin-bottom: 8px; padding-bottom: 4px;
+            border-bottom: 2px solid var(--gold);
+            display: flex; align-items: center; gap: 8px;
+        }
+        @media (prefers-color-scheme: dark) { .help-cat-title { color: var(--gold); } }
+        .help-cat-icon { font-size: 15px; }
+
+        .help-query {
+            display: block; padding: 6px 10px; margin: 3px 0; border-radius: 4px;
+            font-size: 13px; cursor: pointer; transition: all 0.15s;
+            color: var(--text); text-decoration: none; border: 1px solid transparent;
+        }
+        .help-query:hover {
+            background: var(--highlight); border-color: var(--gold); color: var(--navy-light);
+        }
+        @media (prefers-color-scheme: dark) { .help-query:hover { color: var(--gold); } }
+        .help-query code {
+            font-family: 'Consolas','Monaco',monospace; background: rgba(0,0,0,0.06);
+            padding: 1px 5px; border-radius: 3px; font-size: 12px;
+        }
+        @media (prefers-color-scheme: dark) { .help-query code { background: rgba(255,255,255,0.08); } }
+        .help-query .help-hint {
+            display: block; font-size: 11px; color: var(--text-muted); margin-top: 1px;
+        }
+
+        .help-tip {
+            background: #eff6ff; border-radius: var(--radius); padding: 12px 14px;
+            margin: 12px 0; font-size: 12px; line-height: 1.5;
+            border-left: 3px solid var(--navy-light); color: var(--text);
+        }
+        @media (prefers-color-scheme: dark) { .help-tip { background: #1e293b; } }
+        .help-tip strong { color: var(--navy-light); }
+        @media (prefers-color-scheme: dark) { .help-tip strong { color: var(--gold); } }
+
+        .help-kbd {
+            display: inline-block; padding: 2px 6px; border: 1px solid var(--border);
+            border-radius: 3px; font-family: 'Consolas','Monaco',monospace; font-size: 11px;
+            background: var(--bg); box-shadow: 0 1px 0 var(--border);
+        }
+
+        /* Push main content when panel is open (optional, smooth) */
+        body.panel-open .main { margin-right: 380px; transition: margin-right 0.3s ease; }
+        body.panel-open .footer { margin-right: 380px; transition: margin-right 0.3s ease; }
+
+        @media (max-width: 768px) {
+            .header-top { padding: 10px 16px; }
+            .main { padding: 16px; }
+            .search-container { max-width: none; }
+            .header-stats { display: none; }
+            .filters-bar { padding: 8px 16px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .detail-meta { flex-direction: column; gap: 8px; }
+            .group-child-name { min-width: 120px; }
+            .help-panel { width: 100%; right: -100%; }
+            .help-toggle.panel-open { right: calc(100% - 32px); }
+            body.panel-open .main { margin-right: 0; }
+            body.panel-open .footer { margin-right: 0; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-top">
+            <div class="logo" onclick="navigate('')">Banner <span>Schema Search</span></div>
+            <div class="search-container">
+                <svg class="search-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="text" class="search-input" id="searchInput"
+                    placeholder="Search tables, columns, descriptions... (e.g. employee hire date)"
+                    autocomplete="off" spellcheck="false">
+                <button class="search-clear" id="searchClear" title="Clear search">&times;</button>
+            </div>
+            <div class="header-stats">
+                {{ stats.totalTables + stats.totalViews }} tables &middot;
+                {{ stats.totalColumns }} columns &middot;
+                {{ stats.totalRelationships }} relationships
+            </div>
+        </div>
+        <div class="filters-bar">
+            <div class="filter-group">
+                <label>Type:</label>
+                <button class="filter-btn active" data-type="ALL">All</button>
+                <button class="filter-btn" data-type="TABLE">Tables</button>
+                <button class="filter-btn" data-type="VIEW">Views</button>
+            </div>
+            <div class="filter-group">
+                <label>Module:</label>
+                <select class="module-select" id="moduleFilter">
+                    <option value="">All Modules</option>
+                </select>
+            </div>
+            <div class="search-hint" id="searchHint">Press / to search &middot; Understands Banner abbreviations</div>
+        </div>
+    </header>
+
+    <main class="main" id="app">
+        <div class="loading">Loading Banner schema data...</div>
+    </main>
+
+    <!-- SQL Explainer Button -->
+    <button class="sql-toggle" id="sqlToggle" title="SQL Explainer - Paste SQL to understand it">&lt;/&gt; SQL</button>
+
+    <!-- Help/Examples Side Panel -->
+    <button class="help-toggle" id="helpToggle" title="Search Examples &amp; Help">? HELP</button>
+
+    <aside class="help-panel" id="helpPanel">
+        <div class="help-panel-header">
+            <div class="help-panel-top">
+                <div class="help-panel-title">Search <span>Examples</span> &amp; Help</div>
+                <button class="help-panel-close" id="helpClose">&times;</button>
+            </div>
+            <div class="help-search-wrap">
+                <svg class="help-search-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="text" class="help-search" id="helpSearch"
+                    placeholder="Filter examples... (e.g. tax, address, W2)"
+                    autocomplete="off" spellcheck="false">
+                <button class="help-search-clear" id="helpSearchClear">&times;</button>
+            </div>
+            <div class="help-search-count" id="helpSearchCount"></div>
+        </div>
+        <div class="help-panel-body">
+
+            <div class="help-tip">
+                <strong>Smart Search:</strong> This tool understands Banner abbreviations.
+                Type natural English like <code>employee hire date</code> and it automatically
+                expands to search EMPL, EMP, PEBEMPL and related terms. Click any example below to try it.
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128100;</span> Person / Identity</div>
+                <a class="help-query" data-q="employee hire date"><code>employee hire date</code><span class="help-hint">Finds PEBEMPL hire date columns</span></a>
+                <a class="help-query" data-q="person name"><code>person name</code><span class="help-hint">Expands to PERS, PIDM, SPRIDEN</span></a>
+                <a class="help-query" data-q="student identification"><code>student identification</code><span class="help-hint">Student ID related tables</span></a>
+                <a class="help-query" data-q="PIDM"><code>PIDM</code><span class="help-hint">Cross-references all tables with PIDM</span></a>
+                <a class="help-query" data-q="date of birth"><code>date of birth</code><span class="help-hint">Birth date fields across modules</span></a>
+                <a class="help-query" data-q="gender ethnicity"><code>gender ethnicity</code><span class="help-hint">Demographic data fields</span></a>
+                <a class="help-query" data-q="citizenship immigration"><code>citizenship immigration</code><span class="help-hint">I-9, visa, citizenship data</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128176;</span> HR / Payroll</div>
+                <a class="help-query" data-q="salary compensation"><code>salary compensation</code><span class="help-hint">Expands to WAGE, PAY, EARNINGS</span></a>
+                <a class="help-query" data-q="payroll deductions"><code>payroll deductions</code><span class="help-hint">Expands to PAY, PHR, DEDN, BDCA</span></a>
+                <a class="help-query" data-q="benefit enrollment"><code>benefit enrollment</code><span class="help-hint">Benefits and deduction rules</span></a>
+                <a class="help-query" data-q="tax withholding"><code>tax withholding</code><span class="help-hint">W2, 1042, 1099, 1095 related</span></a>
+                <a class="help-query" data-q="W2 tax information"><code>W2 tax information</code><span class="help-hint">W-2 state/federal tax data</span></a>
+                <a class="help-query" data-q="direct deposit bank"><code>direct deposit bank</code><span class="help-hint">Bank routing, deposit info</span></a>
+                <a class="help-query" data-q="earnings history"><code>earnings history</code><span class="help-hint">Pay history tables</span></a>
+                <a class="help-query" data-q="gross net pay"><code>gross net pay</code><span class="help-hint">Gross/net amount fields</span></a>
+                <a class="help-query" data-q="leave accrual"><code>leave accrual</code><span class="help-hint">Leave balance and accrual</span></a>
+                <a class="help-query" data-q="employee status terminated"><code>employee status terminated</code><span class="help-hint">Employment status fields</span></a>
+                <a class="help-query" data-q="position budget"><code>position budget</code><span class="help-hint">Expands to POSN, NBBPOSN</span></a>
+                <a class="help-query" data-q="job classification"><code>job classification</code><span class="help-hint">Position class/employee class</span></a>
+                <a class="help-query" data-q="FLSA overtime"><code>FLSA overtime</code><span class="help-hint">Fair Labor Standards data</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#127891;</span> Student / Academic</div>
+                <a class="help-query" data-q="course registration"><code>course registration</code><span class="help-hint">Expands to CRSE, CLASS, SECTION</span></a>
+                <a class="help-query" data-q="student enrollment"><code>student enrollment</code><span class="help-hint">Registration/enrollment tables</span></a>
+                <a class="help-query" data-q="grade point average"><code>grade point average</code><span class="help-hint">GPA, GRDE related fields</span></a>
+                <a class="help-query" data-q="degree major"><code>degree major</code><span class="help-hint">Expands to DGRE, MAJR, PROGRAM</span></a>
+                <a class="help-query" data-q="transcript academic"><code>transcript academic</code><span class="help-hint">Academic record/history</span></a>
+                <a class="help-query" data-q="admission applicant"><code>admission applicant</code><span class="help-hint">Admissions and recruit data</span></a>
+                <a class="help-query" data-q="class schedule"><code>class schedule</code><span class="help-hint">Schedule/section information</span></a>
+                <a class="help-query" data-q="transfer credits"><code>transfer credits</code><span class="help-hint">Transfer credit evaluation</span></a>
+                <a class="help-query" data-q="academic standing"><code>academic standing</code><span class="help-hint">Standing, probation, dean's list</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128181;</span> Financial Aid</div>
+                <a class="help-query" data-q="financial aid award"><code>financial aid award</code><span class="help-hint">Aid packages and awards</span></a>
+                <a class="help-query" data-q="scholarship"><code>scholarship</code><span class="help-hint">Scholarship/award data</span></a>
+                <a class="help-query" data-q="loan disbursement"><code>loan disbursement</code><span class="help-hint">Loan tracking and disbursement</span></a>
+                <a class="help-query" data-q="Pell grant"><code>Pell grant</code><span class="help-hint">Federal Pell grant data</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128200;</span> Finance</div>
+                <a class="help-query" data-q="purchase order"><code>purchase order</code><span class="help-hint">PO/procurement tables</span></a>
+                <a class="help-query" data-q="invoice payment"><code>invoice payment</code><span class="help-hint">AP invoice and payment</span></a>
+                <a class="help-query" data-q="budget account"><code>budget account</code><span class="help-hint">Budget/account/FOAPAL</span></a>
+                <a class="help-query" data-q="grant fund"><code>grant fund</code><span class="help-hint">Research/sponsored programs</span></a>
+                <a class="help-query" data-q="FOAPAL"><code>FOAPAL</code><span class="help-hint">Fund/Org/Acct/Prog/Activity/Location</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128205;</span> Address / Contact</div>
+                <a class="help-query" data-q="address city state zip"><code>address city state zip</code><span class="help-hint">Expands to ADDR, SPRADDR</span></a>
+                <a class="help-query" data-q="telephone phone"><code>telephone phone</code><span class="help-hint">Expands to TELE, SPRTELE</span></a>
+                <a class="help-query" data-q="email contact"><code>email contact</code><span class="help-hint">Expands to MAIL, GOREMAL</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128203;</span> Real-World Integration Queries</div>
+                <div class="help-tip">
+                    These are actual data questions from <strong>production Banner integrations</strong>
+                    (ADP SmartCompliance, NSC). Proven search patterns that find the right tables.
+                </div>
+                <a class="help-query" data-q="employee hire date termination"><code>employee hire date termination</code><span class="help-hint">PEBEMPL hire/term dates for HR feeds</span></a>
+                <a class="help-query" data-q="SSN social security number"><code>SSN social security number</code><span class="help-hint">SPBPERS SSN for employee matching</span></a>
+                <a class="help-query" data-q="PHRHIST gross wages quarterly"><code>PHRHIST gross wages quarterly</code><span class="help-hint">Quarterly wage totals from pay history</span></a>
+                <a class="help-query" data-q="PHRDEDN employer deduction"><code>PHRDEDN employer deduction</code><span class="help-hint">Employer vs employee deduction amounts</span></a>
+                <a class="help-query" data-q="federal income tax FED"><code>federal income tax FED</code><span class="help-hint">Federal tax withholding code mapping</span></a>
+                <a class="help-query" data-q="medicare social security FIO FIM"><code>medicare social security FIO FIM</code><span class="help-hint">FICA codes - employee & employer portions</span></a>
+                <a class="help-query" data-q="state income tax ILL MCH NYT"><code>state income tax ILL MCH NYT</code><span class="help-hint">Multi-state tax codes (IL, MI, NY)</span></a>
+                <a class="help-query" data-q="state unemployment SUI wages"><code>state unemployment SUI wages</code><span class="help-hint">SUI taxable wages with quarterly caps</span></a>
+                <a class="help-query" data-q="W2 box 12 retirement 403b 457b"><code>W2 box 12 retirement 403b 457b</code><span class="help-hint">PXRW2CD retirement plan contributions</span></a>
+                <a class="help-query" data-q="PXRW2ST state tax W2"><code>PXRW2ST state tax W2</code><span class="help-hint">W-2 state-level tax data</span></a>
+                <a class="help-query" data-q="HSA employer health savings"><code>HSA employer health savings</code><span class="help-hint">HSA contributions (Box 12 Code W)</span></a>
+                <a class="help-query" data-q="PPO HMO health plan employer"><code>PPO HMO health plan employer</code><span class="help-hint">Medical plan costs (Box 12 Code DD)</span></a>
+                <a class="help-query" data-q="PTRBDCA benefit deduction rules"><code>PTRBDCA benefit deduction rules</code><span class="help-hint">Deduction code definitions and calc rules</span></a>
+                <a class="help-query" data-q="SURS retirement exempt"><code>SURS retirement exempt</code><span class="help-hint">IL state retirement system exemptions</span></a>
+                <a class="help-query" data-q="pay calendar check date PTRCALN"><code>pay calendar check date PTRCALN</code><span class="help-hint">Payroll calendar and check dates</span></a>
+                <a class="help-query" data-q="address HR mailing SPRADDR"><code>address HR mailing SPRADDR</code><span class="help-hint">Employee HR addresses by type code</span></a>
+                <a class="help-query" data-q="PXRTXCD tax code validation"><code>PXRTXCD tax code validation</code><span class="help-hint">Tax code validation table</span></a>
+                <a class="help-query" data-q="life insurance imputed income"><code>life insurance imputed income</code><span class="help-hint">Group term life >$50K (Box 12C)</span></a>
+                <a class="help-query" data-q="employee status active leave"><code>employee status active leave</code><span class="help-hint">PEBEMPL status codes (A/B/L/F/P/T)</span></a>
+                <a class="help-query" data-q="position class employee group"><code>position class employee group</code><span class="help-hint">ECLS/EGRP classification codes</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128279;</span> Cross-Reference Power Queries</div>
+                <div class="help-tip">
+                    Search for column suffixes to find <strong>all tables</strong> that share a key column.
+                    This reveals data relationships across the entire Banner schema.
+                </div>
+                <a class="help-query" data-q="_PIDM"><code>_PIDM</code><span class="help-hint">All tables linked by Person ID</span></a>
+                <a class="help-query" data-q="_TERM_CODE"><code>_TERM_CODE</code><span class="help-hint">All term-related tables</span></a>
+                <a class="help-query" data-q="_ACTIVITY_DATE"><code>_ACTIVITY_DATE</code><span class="help-hint">Audit trail columns</span></a>
+                <a class="help-query" data-q="_SURROGATE_ID"><code>_SURROGATE_ID</code><span class="help-hint">Surrogate primary keys</span></a>
+                <a class="help-query" data-q="_CODE"><code>_CODE</code><span class="help-hint">All validation code references</span></a>
+                <a class="help-query" data-q="_IND"><code>_IND</code><span class="help-hint">All Yes/No indicator flags</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128161;</span> Fuzzy / Typo Tolerance</div>
+                <div class="help-tip">
+                    Made a typo? The search uses <strong>trigram matching</strong> to find similar terms
+                    even when you misspell a word.
+                </div>
+                <a class="help-query" data-q="employy"><code>employy</code><span class="help-hint">Finds "employee" despite the typo</span></a>
+                <a class="help-query" data-q="addres"><code>addres</code><span class="help-hint">Finds "address" despite missing 's'</span></a>
+                <a class="help-query" data-q="payrol"><code>payrol</code><span class="help-hint">Finds "payroll" despite missing 'l'</span></a>
+                <a class="help-query" data-q="registraton"><code>registraton</code><span class="help-hint">Finds "registration" with a typo</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#9000;</span> Keyboard Shortcuts</div>
+                <div style="padding:6px 10px;font-size:13px;line-height:2">
+                    <span class="help-kbd">/</span> Focus search bar<br>
+                    <span class="help-kbd">Enter</span> Search immediately<br>
+                    <span class="help-kbd">?</span> Toggle this help panel
+                </div>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#9881;</span> How It Works</div>
+                <div class="help-tip">
+                    <strong>BM25 Ranking:</strong> The same algorithm used by Elasticsearch and
+                    Apache Lucene. Ranks results by relevance considering term frequency and
+                    document length.<br><br>
+                    <strong>Banner Synonyms:</strong> Automatically expands your query with Banner
+                    abbreviations. "employee" also searches for EMPL, EMP, PEBEMPL.<br><br>
+                    <strong>Fuzzy Matching:</strong> Uses trigram similarity to handle typos
+                    and partial matches.<br><br>
+                    <strong>Column Patterns:</strong> Recognizes common Banner column types:
+                    _PIDM (Person ID), _CODE (Validation), _IND (Flag), _DATE, _AMT (Amount),
+                    _SURROGATE_ID (Key).
+                </div>
+            </div>
+
+        </div>
+    </aside>
+
+    <footer class="footer">
+        Banner Schema Search &middot; Built {{ build_time }} &middot;
+        Powered by BM25 ranking + Banner synonym expansion &middot;
+        {{ stats.totalTables }} tables, {{ stats.totalViews }} views, {{ stats.totalColumns }} columns
+    </footer>
+
+    <!-- Embedded data -->
+    <script>var SCHEMA={{ schema_json }};var SEARCH_INDEX={{ index_json }};var RELS={{ rels_json }};</script>
+
+    <script>
+    (function() {
+        'use strict';
+
+        var RESULTS_PER_PAGE = 50;
+        var DEBOUNCE_MS = 150;
+
+        var state = {
+            view: 'dashboard', query: '', typeFilter: 'ALL', moduleFilter: '', sqlText: '', sqlResults: '',
+            tableName: '', moduleName: '', page: 1, results: null, colFilter: '',
+            expandedGroups: {},
+            // Interactive term system
+            activeTerms: [],       // [{token, type:'original'|'synonym'|'custom', enabled:bool}]
+            disabledTerms: new Set(),
+            customTerms: [],       // extra terms added by user
+            refineQuery: '',       // secondary filter within results
+            lastSearchMeta: null,
+        };
+
+        // ==================== TOKENIZER (mirrors Python) ====================
+        var STOP_WORDS = new Set([
+            'a','an','the','is','are','was','were','be','been','being',
+            'have','has','had','do','does','did','will','would','could',
+            'should','may','might','shall','can','need','must',
+            'of','to','in','for','on','with','at','by','from','as',
+            'into','through','during','before','after','above','below',
+            'between','out','off','over','under','again','further',
+            'then','once','here','there','when','where','why','how',
+            'all','each','every','both','few','more','most','other',
+            'some','such','no','nor','not','only','own','same',
+            'than','too','very','just','because','but','and','or',
+            'if','while','about','against','up','down',
+            'it','its','this','that','these','those','what','which','who',
+            'whom','he','she','they','them','we','you','me','him','her',
+            'table','view','column','field','null','value',
+            'record','associated','used','contains','provides','retrieves'
+        ]);
+
+        function simpleStem(w) {
+            if (w.length <= 3) return w;
+            if (w.endsWith('tion') && w.length > 5) return w.slice(0,-3);
+            if (w.endsWith('sion') && w.length > 5) return w.slice(0,-3);
+            if (w.endsWith('ment') && w.length > 5) return w.slice(0,-4);
+            if (w.endsWith('ness') && w.length > 5) return w.slice(0,-4);
+            if (w.endsWith('ing') && w.length > 5) return w.slice(0,-3);
+            if (w.endsWith('ed') && w.length > 4) return w.slice(0,-2);
+            if (w.endsWith('ly') && w.length > 4) return w.slice(0,-2);
+            if (w.endsWith('er') && w.length > 4) return w.slice(0,-2);
+            if (w.endsWith('es') && w.length > 4) return w.slice(0,-2);
+            if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) return w.slice(0,-1);
+            return w;
+        }
+
+        function tokenize(text) {
+            var tokens = text.toLowerCase().match(/[a-z0-9]+/g) || [];
+            var result = [];
+            for (var i = 0; i < tokens.length; i++) {
+                var t = tokens[i];
+                if (STOP_WORDS.has(t) || t.length < 2) continue;
+                var s = simpleStem(t);
+                if (s && s.length >= 2) result.push(s);
+            }
+            return result;
+        }
+
+        // ==================== SYNONYM EXPANSION ====================
+        var SYNONYMS = SEARCH_INDEX.synonyms || {};
+
+        function expandWithSynonyms(tokens) {
+            var expanded = [];
+            var original = new Set(tokens);
+            var synonymTokens = [];
+
+            // Add originals first
+            for (var i = 0; i < tokens.length; i++) expanded.push({token: tokens[i], weight: 1.0});
+
+            // Add synonyms with reduced weight
+            for (var i = 0; i < tokens.length; i++) {
+                var syns = SYNONYMS[tokens[i]] || [];
+                for (var j = 0; j < syns.length; j++) {
+                    var s = simpleStem(syns[j]);
+                    if (s && !original.has(s) && !STOP_WORDS.has(s)) {
+                        expanded.push({token: s, weight: 0.4});
+                        original.add(s);
+                        synonymTokens.push(syns[j]);
+                    }
+                }
+            }
+            return {expanded: expanded, synonymsUsed: synonymTokens};
+        }
+
+        // ==================== FUZZY MATCHING ====================
+        function buildTrigrams(word) {
+            if (word.length < 3) return [word];
+            var padded = '$$' + word + '$$';
+            var tris = [];
+            for (var i = 0; i < padded.length - 2; i++) tris.push(padded.slice(i, i+3));
+            return tris;
+        }
+
+        function fuzzyMatch(queryToken) {
+            // Find tokens in the index that are similar to queryToken using trigram overlap
+            var trigrams = SEARCH_INDEX.trigrams || {};
+            var qTris = buildTrigrams(queryToken);
+            var candidates = {};
+
+            for (var i = 0; i < qTris.length; i++) {
+                var matches = trigrams[qTris[i]] || [];
+                for (var j = 0; j < matches.length; j++) {
+                    var m = matches[j];
+                    candidates[m] = (candidates[m] || 0) + 1;
+                }
+            }
+
+            // Calculate Jaccard similarity
+            var results = [];
+            var qTriSet = new Set(qTris);
+            for (var token in candidates) {
+                if (token === queryToken) continue;
+                var tTris = buildTrigrams(token);
+                var intersection = candidates[token];
+                var union = qTriSet.size + tTris.length - intersection;
+                var similarity = intersection / union;
+                if (similarity > 0.25 && Math.abs(token.length - queryToken.length) <= 3) {
+                    results.push({token: token, similarity: similarity});
+                }
+            }
+
+            results.sort(function(a,b) { return b.similarity - a.similarity; });
+            return results.slice(0, 5);
+        }
+
+        // ==================== SEARCH ENGINE (BM25) ====================
+        function search(query, useActiveTerms) {
+            var queryTokens = tokenize(query);
+            var rawQuery = query.trim().toUpperCase();
+
+            if (queryTokens.length === 0 && !rawQuery) return {results: [], meta: {}};
+
+            // Synonym expansion
+            var expansion = expandWithSynonyms(queryTokens);
+            var allSynonymsUsed = expansion.synonymsUsed;
+
+            // Build the active terms list for the UI
+            var activeTerms = [];
+            var seen = new Set();
+            // Original query tokens
+            for (var i = 0; i < queryTokens.length; i++) {
+                if (!seen.has(queryTokens[i])) {
+                    seen.add(queryTokens[i]);
+                    activeTerms.push({token: queryTokens[i], type: 'original', enabled: true});
+                }
+            }
+            // Synonym tokens
+            var uniqueSyns = [];
+            allSynonymsUsed.forEach(function(s) {
+                var stemmed = simpleStem(s.toLowerCase());
+                if (!seen.has(stemmed)) {
+                    seen.add(stemmed);
+                    uniqueSyns.push(s);
+                    var isDisabled = state.disabledTerms.has(stemmed);
+                    activeTerms.push({token: stemmed, display: s, type: 'synonym', enabled: !isDisabled});
+                }
+            });
+            // Custom terms added by user
+            state.customTerms.forEach(function(ct) {
+                var stemmed = simpleStem(ct.toLowerCase());
+                if (!seen.has(stemmed)) {
+                    seen.add(stemmed);
+                    activeTerms.push({token: stemmed, display: ct, type: 'custom', enabled: true});
+                }
+            });
+
+            // If using active terms mode (re-search with toggled terms), filter expanded tokens
+            var expandedTokens = [];
+            if (useActiveTerms && state.activeTerms.length > 0) {
+                // Use the current activeTerms state
+                state.activeTerms.forEach(function(at) {
+                    if (at.enabled) {
+                        var weight = at.type === 'original' ? 1.0 : (at.type === 'custom' ? 0.8 : 0.4);
+                        expandedTokens.push({token: at.token, weight: weight});
+                    }
+                });
+            } else {
+                // First search: use all expanded tokens except disabled ones
+                expansion.expanded.forEach(function(et) {
+                    if (!state.disabledTerms.has(et.token)) {
+                        expandedTokens.push(et);
+                    }
+                });
+                // Add custom terms
+                state.customTerms.forEach(function(ct) {
+                    var stemmed = simpleStem(ct.toLowerCase());
+                    if (!state.disabledTerms.has(stemmed)) {
+                        expandedTokens.push({token: stemmed, weight: 0.8});
+                    }
+                });
+            }
+
+            var scores = {};
+            var idx = SEARCH_INDEX.idx;
+            var tablesList = SEARCH_INDEX.tables;
+
+            // BM25 search with active tokens
+            for (var qi = 0; qi < expandedTokens.length; qi++) {
+                var tokenInfo = expandedTokens[qi];
+                var postings = idx[tokenInfo.token];
+                if (!postings) continue;
+
+                for (var pi = 0; pi < postings.length; pi++) {
+                    var posting = postings[pi];
+                    var tid = posting[0];
+                    var colIdx = posting[1];
+                    var bm25Score = posting[2] * tokenInfo.weight;
+                    var tableName = tablesList[tid];
+                    var key;
+
+                    if (colIdx === -1) {
+                        key = 'T:' + tableName;
+                    } else {
+                        var tableData = SCHEMA.tables[tableName];
+                        if (!tableData || !tableData.c[colIdx]) continue;
+                        key = 'C:' + tableName + '.' + tableData.c[colIdx][0];
+                    }
+                    scores[key] = (scores[key] || 0) + bm25Score;
+                }
+            }
+
+            // Exact/substring name match boost
+            if (rawQuery) {
+                for (var tname in SCHEMA.tables) {
+                    if (tname === rawQuery || tname.indexOf(rawQuery) !== -1) {
+                        var k = 'T:' + tname;
+                        scores[k] = (scores[k] || 0) + (tname === rawQuery ? 15 : 4);
+                    }
+                    var td = SCHEMA.tables[tname];
+                    for (var ci = 0; ci < td.c.length; ci++) {
+                        var colName = td.c[ci][0];
+                        if (colName === rawQuery || colName.indexOf(rawQuery) !== -1) {
+                            var ck = 'C:' + tname + '.' + colName;
+                            scores[ck] = (scores[ck] || 0) + (colName === rawQuery ? 15 : 3);
+                        }
+                    }
+                }
+            }
+
+            // Fuzzy matching for tokens not found in index
+            var fuzzyUsed = [];
+            for (var qi = 0; qi < queryTokens.length; qi++) {
+                if (!idx[queryTokens[qi]]) {
+                    var fuzzyMatches = fuzzyMatch(queryTokens[qi]);
+                    for (var fi = 0; fi < fuzzyMatches.length; fi++) {
+                        var fm = fuzzyMatches[fi];
+                        fuzzyUsed.push({original: queryTokens[qi], suggestion: fm.token, sim: fm.similarity});
+                        var postings = idx[fm.token];
+                        if (!postings) continue;
+                        for (var pi = 0; pi < postings.length; pi++) {
+                            var posting = postings[pi];
+                            var tid = posting[0];
+                            var colIdx = posting[1];
+                            var fScore = posting[2] * fm.similarity * 0.5;
+                            var tableName = tablesList[tid];
+                            var key = colIdx === -1
+                                ? 'T:' + tableName
+                                : 'C:' + tableName + '.' + (SCHEMA.tables[tableName] && SCHEMA.tables[tableName].c[colIdx] ? SCHEMA.tables[tableName].c[colIdx][0] : '');
+                            if (key.endsWith('.')) continue;
+                            scores[key] = (scores[key] || 0) + fScore;
+                        }
+                    }
+                }
+            }
+
+            // Convert to results array
+            var results = [];
+            for (var key in scores) {
+                var parts = key.split(':');
+                var type = parts[0];
+                var name = parts[1];
+
+                if (type === 'T') {
+                    var tinfo = SCHEMA.tables[name];
+                    if (!tinfo) continue;
+                    results.push({
+                        type: 'TABLE', name: name, tableType: tinfo.t,
+                        module: tinfo.m, description: tinfo.d,
+                        score: scores[key], colCount: tinfo.c.length,
+                    });
+                } else {
+                    var dotIdx = name.indexOf('.');
+                    var tbl = name.substring(0, dotIdx);
+                    var col = name.substring(dotIdx + 1);
+                    var tinfo = SCHEMA.tables[tbl];
+                    if (!tinfo) continue;
+                    var colDesc = '';
+                    for (var j = 0; j < tinfo.c.length; j++) {
+                        if (tinfo.c[j][0] === col) { colDesc = tinfo.c[j][1]; break; }
+                    }
+                    results.push({
+                        type: 'COLUMN', name: col, tableName: tbl,
+                        tableType: tinfo.t, module: tinfo.m,
+                        description: colDesc, score: scores[key],
+                    });
+                }
+            }
+
+            results.sort(function(a, b) { return b.score - a.score; });
+
+            return {
+                results: results,
+                meta: {
+                    synonymsUsed: allSynonymsUsed,
+                    fuzzyUsed: fuzzyUsed,
+                    queryTokens: queryTokens,
+                    activeTerms: activeTerms,
+                }
+            };
+        }
+
+        function reSearchWithTerms() {
+            // Re-run search using current activeTerms state
+            var searchResult = search(state.query, true);
+            state.results = searchResult.results;
+            state.lastSearchMeta = searchResult.meta;
+            state.page = 1;
+            render();
+        }
+
+        // ==================== GROUP RESULTS BY TABLE ====================
+        function groupResults(results) {
+            var groups = {};
+            var tableOnlyResults = [];
+
+            for (var i = 0; i < results.length; i++) {
+                var r = results[i];
+                if (r.type === 'TABLE') {
+                    if (!groups[r.name]) {
+                        groups[r.name] = {
+                            table: r, columns: [], maxScore: r.score, totalScore: r.score
+                        };
+                    } else {
+                        groups[r.name].table = r;
+                        groups[r.name].maxScore = Math.max(groups[r.name].maxScore, r.score);
+                        groups[r.name].totalScore += r.score;
+                    }
+                } else {
+                    var tbl = r.tableName;
+                    if (!groups[tbl]) {
+                        var tinfo = SCHEMA.tables[tbl];
+                        groups[tbl] = {
+                            table: {
+                                type: 'TABLE', name: tbl, tableType: tinfo ? tinfo.t : '?',
+                                module: tinfo ? tinfo.m : '?', description: tinfo ? tinfo.d : '',
+                                score: 0, colCount: tinfo ? tinfo.c.length : 0,
+                            },
+                            columns: [], maxScore: r.score, totalScore: 0,
+                        };
+                    }
+                    groups[tbl].columns.push(r);
+                    groups[tbl].maxScore = Math.max(groups[tbl].maxScore, r.score);
+                    groups[tbl].totalScore += r.score;
+                }
+            }
+
+            // Convert to sorted array
+            var arr = [];
+            for (var name in groups) arr.push(groups[name]);
+            arr.sort(function(a, b) { return b.maxScore - a.maxScore || b.totalScore - a.totalScore; });
+            return arr;
+        }
+
+        // ==================== COLUMN PATTERN DETECTION ====================
+        var COL_PATTERNS = SEARCH_INDEX.colPatterns || {};
+
+        function getColumnBadge(colName, tableName) {
+            var badge = null;
+            for (var suffix in COL_PATTERNS) {
+                if (colName.endsWith(suffix)) {
+                    var p = COL_PATTERNS[suffix];
+                    badge = {label: p.label, color: p.color, desc: p.desc, target: null};
+                    break;
+                }
+            }
+            // Look up actual relationship target from RELS data
+            if (tableName && RELS[tableName] && RELS[tableName].refs) {
+                var refs = RELS[tableName].refs;
+                for (var i = 0; i < refs.length; i++) {
+                    if (refs[i][0] === colName) {
+                        var target = refs[i][1];
+                        var label = refs[i][2];
+                        var isFk = refs[i][4];
+                        if (!badge) {
+                            badge = {label: label, color: '#3b82f6', desc: '', target: target};
+                        } else {
+                            badge.target = target;
+                        }
+                        badge.desc = (isFk ? 'FK' : 'Links') + ' \u2192 ' + target;
+                        break;
+                    }
+                }
+            }
+            return badge;
+        }
+
+        function renderBadge(badge) {
+            if (!badge) return null;
+            var span = document.createElement('span');
+            span.className = 'col-badge';
+            span.style.cssText = 'background:' + badge.color + '22;color:' + badge.color;
+            span.title = badge.desc + (badge.target ? ' (click to navigate)' : '');
+            span.textContent = badge.label + (badge.target ? ' \u2192' : '');
+            if (badge.target) {
+                span.style.cursor = 'pointer';
+                span.style.textDecoration = 'underline';
+                span.style.textDecorationStyle = 'dotted';
+                var tgt = badge.target;
+                span.onclick = function(e) { e.stopPropagation(); navigate('table/' + tgt); };
+            }
+            return span;
+        }
+
+        // ==================== RELATED TABLES ====================
+        var RELATED_INDEX = SEARCH_INDEX.related || {};
+
+        function getRelatedTables(tableName) {
+            var related = {};
+            var table = SCHEMA.tables[tableName];
+            if (!table) return [];
+
+            for (var i = 0; i < table.c.length; i++) {
+                var colName = table.c[i][0];
+                var parts = colName.split('_');
+                if (parts.length > 1) {
+                    var suffix = '_' + parts.slice(1).join('_');
+                    var relatedList = RELATED_INDEX[suffix];
+                    if (relatedList) {
+                        for (var j = 0; j < relatedList.length; j++) {
+                            if (relatedList[j] !== tableName) {
+                                related[relatedList[j]] = (related[relatedList[j]] || 0) + 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            var arr = [];
+            for (var name in related) arr.push({name: name, shared: related[name]});
+            arr.sort(function(a, b) { return b.shared - a.shared; });
+            return arr.slice(0, 30);
+        }
+
+        // ==================== FILTERING ====================
+        function applyFilters(results) {
+            return results.filter(function(r) {
+                if (state.typeFilter !== 'ALL' && r.tableType !== state.typeFilter) return false;
+                if (state.moduleFilter && r.module !== state.moduleFilter) return false;
+                return true;
+            });
+        }
+
+        // ==================== RENDERING ====================
+        var app = document.getElementById('app');
+
+        function h(tag, attrs, children) {
+            var el = document.createElement(tag);
+            if (attrs) for (var k in attrs) {
+                if (k === 'onclick' || k === 'oninput' || k === 'onchange') el[k] = attrs[k];
+                else if (k === 'className') el.className = attrs[k];
+                else if (k === 'innerHTML') el.innerHTML = attrs[k];
+                else el.setAttribute(k, attrs[k]);
+            }
+            if (children) {
+                if (typeof children === 'string') el.textContent = children;
+                else if (Array.isArray(children)) children.forEach(function(c) { if (c) el.appendChild(c); });
+                else el.appendChild(children);
+            }
+            return el;
+        }
+
+        function highlightText(text, query) {
+            if (!query || !text) return text || '';
+            var words = query.trim().split(/\s+/);
+            var escaped = words.map(function(w) { return w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+            var re = new RegExp('(' + escaped.join('|') + ')', 'gi');
+            return text.replace(re, '<mark>$1</mark>');
+        }
+
+        function renderDashboard() {
+            var s = SCHEMA.stats;
+            var frag = document.createDocumentFragment();
+
+            var grid = h('div', {className: 'stats-grid'});
+            [[s.totalTables + s.totalViews, 'Total Objects'], [s.totalTables, 'Tables'],
+             [s.totalViews, 'Views'], [s.totalColumns.toLocaleString(), 'Columns'],
+             [s.totalModules, 'Modules'],
+             [(s.totalRelationships || 0).toLocaleString(), 'Relationships']].forEach(function(d) {
+                grid.appendChild(h('div', {className: 'stat-card'}, [
+                    h('div', {className: 'stat-number'}, String(d[0])),
+                    h('div', {className: 'stat-label'}, d[1]),
+                ]));
+            });
+            frag.appendChild(grid);
+
+            frag.appendChild(h('div', {className: 'section-title'}, 'Banner Modules'));
+            var mgrid = h('div', {className: 'modules-grid'});
+            for (var mod in SCHEMA.modules) {
+                (function(modName, modInfo) {
+                    mgrid.appendChild(h('div', {className: 'module-card', onclick: function() { navigate('module/' + modName); }}, [
+                        h('div', {className: 'module-name'}, modName),
+                        h('div', {className: 'module-desc'}, modInfo.description),
+                        h('div', {className: 'module-count'}, modInfo.count + ' objects (' + modInfo.tables + 'T / ' + modInfo.views + 'V)'),
+                    ]));
+                })(mod, SCHEMA.modules[mod]);
+            }
+            frag.appendChild(mgrid);
+
+            frag.appendChild(h('div', {className: 'section-title'}, 'All Tables'));
+            frag.appendChild(renderFlatTableList(getAllTables(), true));
+            return frag;
+        }
+
+        function getAllTables() {
+            var list = [];
+            for (var name in SCHEMA.tables) {
+                var t = SCHEMA.tables[name];
+                list.push({type:'TABLE', name:name, tableType:t.t, module:t.m, description:t.d, colCount:t.c.length, score:0});
+            }
+            list.sort(function(a,b) { return a.name.localeCompare(b.name); });
+            return list;
+        }
+
+        function renderFlatTableList(items, showPagination) {
+            var filtered = applyFilters(items);
+            var total = filtered.length;
+            var totalPages = Math.ceil(total / RESULTS_PER_PAGE);
+            if (state.page > totalPages) state.page = 1;
+            var start = (state.page - 1) * RESULTS_PER_PAGE;
+            var pageItems = filtered.slice(start, start + RESULTS_PER_PAGE);
+
+            var frag = document.createDocumentFragment();
+            frag.appendChild(h('div', {className: 'result-count'}, total + ' results'));
+
+            var table = h('table', {className: 'table-list'});
+            var thead = h('thead');
+            var hrow = h('tr');
+            ['Name','Type','Module','Columns','Description'].forEach(function(hdr) { hrow.appendChild(h('th', null, hdr)); });
+            thead.appendChild(hrow);
+            table.appendChild(thead);
+
+            var tbody = h('tbody');
+            pageItems.forEach(function(item) {
+                var row = h('tr');
+                var nameCell = h('td');
+                nameCell.appendChild(h('a', {className:'table-link', onclick:function(){navigate('table/'+item.name);}}, item.name));
+                row.appendChild(nameCell);
+                row.appendChild(h('td', null, [h('span', {className:'type-badge type-'+item.tableType.toLowerCase()}, item.tableType)]));
+                row.appendChild(h('td', null, [h('span', {className:'module-badge'}, item.module)]));
+                row.appendChild(h('td', null, String(item.colCount || 0)));
+                var dc = h('td', {className:'desc-text'}); dc.textContent = item.description || ''; row.appendChild(dc);
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            frag.appendChild(table);
+
+            if (showPagination && totalPages > 1) frag.appendChild(renderPagination(totalPages));
+            return frag;
+        }
+
+        function renderPagination(totalPages) {
+            var pag = h('div', {className: 'pagination'});
+            pag.appendChild(h('button', {className:'page-btn', disabled:state.page<=1, onclick:function(){state.page--;render();}}, 'Prev'));
+            var startP = Math.max(1, state.page - 3);
+            var endP = Math.min(totalPages, startP + 6);
+            if (endP - startP < 6) startP = Math.max(1, endP - 6);
+            for (var p = startP; p <= endP; p++) {
+                (function(pg) {
+                    pag.appendChild(h('button', {className:'page-btn'+(pg===state.page?' active':''), onclick:function(){state.page=pg;render();}}, String(pg)));
+                })(p);
+            }
+            pag.appendChild(h('button', {className:'page-btn', disabled:state.page>=totalPages, onclick:function(){state.page++;render();}}, 'Next'));
+            pag.appendChild(h('span', {className:'page-info'}, 'Page ' + state.page + ' of ' + totalPages));
+            return pag;
+        }
+
+        // ==================== GROUPED SEARCH RESULTS ====================
+        function renderSearchResults() {
+            var searchResult;
+            if (state.activeTerms.length > 0 && state.results) {
+                // Re-search with current active terms
+                searchResult = search(state.query, true);
+                state.results = searchResult.results;
+            } else {
+                searchResult = search(state.query, false);
+                state.results = searchResult.results;
+            }
+            var meta = searchResult.meta;
+            state.lastSearchMeta = meta;
+
+            // Update activeTerms from meta
+            if (meta.activeTerms) {
+                // Preserve user's enabled/disabled choices
+                var newTerms = meta.activeTerms.map(function(at) {
+                    var isDisabled = state.disabledTerms.has(at.token);
+                    return {token: at.token, display: at.display || at.token, type: at.type, enabled: !isDisabled};
+                });
+                // Add custom terms
+                state.customTerms.forEach(function(ct) {
+                    var stemmed = simpleStem(ct.toLowerCase());
+                    var exists = newTerms.some(function(t) { return t.token === stemmed; });
+                    if (!exists) {
+                        newTerms.push({token: stemmed, display: ct, type: 'custom', enabled: !state.disabledTerms.has(stemmed)});
+                    }
+                });
+                state.activeTerms = newTerms;
+            }
+
+            var filtered = applyFilters(state.results);
+
+            // Apply refine filter (secondary search within results)
+            var refineQ = state.refineQuery.trim().toUpperCase();
+            if (refineQ) {
+                filtered = filtered.filter(function(r) {
+                    var searchable = (r.name + ' ' + (r.tableName || '') + ' ' + r.description + ' ' + r.module).toUpperCase();
+                    return searchable.indexOf(refineQ) !== -1;
+                });
+            }
+
+            var frag = document.createDocumentFragment();
+
+            // ---- INTERACTIVE TERM BUILDER ----
+            if (state.activeTerms.length > 0) {
+                var builder = h('div', {className: 'term-builder'});
+                var bHeader = h('div', {className: 'term-builder-header'});
+                bHeader.appendChild(h('div', {className: 'term-builder-title'}, 'Active Search Terms (click to toggle, add your own)'));
+                var actions = h('div', {className: 'term-builder-actions'});
+                actions.appendChild(h('button', {className: 'term-builder-btn', onclick: function() {
+                    state.disabledTerms.clear(); state.activeTerms.forEach(function(t){t.enabled=true;}); reSearchWithTerms();
+                }}, 'Enable All'));
+                actions.appendChild(h('button', {className: 'term-builder-btn', onclick: function() {
+                    // Disable all synonyms, keep originals
+                    state.activeTerms.forEach(function(t) {
+                        if (t.type !== 'original') { t.enabled = false; state.disabledTerms.add(t.token); }
+                    });
+                    reSearchWithTerms();
+                }}, 'Only Originals'));
+                actions.appendChild(h('button', {className: 'term-builder-btn', onclick: function() {
+                    state.customTerms = []; state.disabledTerms.clear(); state.activeTerms = []; reSearchWithTerms();
+                }}, 'Reset'));
+                bHeader.appendChild(actions);
+                builder.appendChild(bHeader);
+
+                var tagsRow = h('div', {className: 'term-tags-row'});
+                state.activeTerms.forEach(function(term, idx) {
+                    var tagClass = 'term-tag ' + term.type + (term.enabled ? '' : ' disabled');
+                    var tag = h('span', {className: tagClass});
+
+                    // Label
+                    var label = term.display || term.token;
+                    if (term.type === 'original') label = label + ' (query)';
+                    tag.appendChild(document.createTextNode(label + ' '));
+
+                    if (term.enabled) {
+                        // X button to disable
+                        var xBtn = h('button', {className: 'term-tag-x', title: 'Remove this term from search'});
+                        xBtn.textContent = '\u00d7';
+                        (function(t) {
+                            xBtn.onclick = function(e) {
+                                e.stopPropagation();
+                                t.enabled = false;
+                                state.disabledTerms.add(t.token);
+                                reSearchWithTerms();
+                            };
+                        })(term);
+                        tag.appendChild(xBtn);
+                    } else {
+                        // Restore button
+                        var restoreBtn = h('button', {className: 'term-tag-restore', title: 'Add this term back to search'});
+                        restoreBtn.textContent = '+';
+                        (function(t) {
+                            restoreBtn.onclick = function(e) {
+                                e.stopPropagation();
+                                t.enabled = true;
+                                state.disabledTerms.delete(t.token);
+                                reSearchWithTerms();
+                            };
+                        })(term);
+                        tag.appendChild(restoreBtn);
+                    }
+
+                    tagsRow.appendChild(tag);
+                });
+
+                // Add custom term input
+                var addInput = h('input', {
+                    className: 'term-add-input',
+                    type: 'text',
+                    placeholder: '+ add term...',
+                    onchange: function(e) {  // not oninput - only on Enter/blur
+                        e.stopPropagation();
+                    },
+                });
+                addInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var val = addInput.value.trim();
+                        if (val) {
+                            state.customTerms.push(val);
+                            addInput.value = '';
+                            reSearchWithTerms();
+                        }
+                    }
+                });
+                tagsRow.appendChild(addInput);
+                builder.appendChild(tagsRow);
+                frag.appendChild(builder);
+            }
+
+            // ---- FUZZY MATCH INFO ----
+            if (meta.fuzzyUsed && meta.fuzzyUsed.length > 0) {
+                var seen = new Set();
+                var unique = [];
+                meta.fuzzyUsed.forEach(function(f) {
+                    var key = f.original + '->' + f.suggestion;
+                    if (!seen.has(key)) { seen.add(key); unique.push(f); }
+                });
+                if (unique.length > 0) {
+                    var dym = h('div', {className: 'did-you-mean'});
+                    var text = 'Fuzzy match: "' + unique[0].original + '" not found in index. Also searching similar terms: ';
+                    dym.innerHTML = text;
+                    unique.slice(0, 5).forEach(function(f, i) {
+                        if (i > 0) dym.appendChild(document.createTextNode(', '));
+                        var link = h('a', {onclick: function() {
+                            document.getElementById('searchInput').value = f.suggestion;
+                            navigate('search/' + encodeURIComponent(f.suggestion));
+                        }});
+                        link.textContent = f.suggestion;
+                        dym.appendChild(link);
+                    });
+                    frag.appendChild(dym);
+                }
+            }
+
+            // ---- CROSS-REFERENCE ----
+            var rawQ = state.query.trim().toUpperCase();
+            if (rawQ.length >= 3) {
+                var xrefTables = findTablesWithColumn(rawQ);
+                if (xrefTables.length > 0 && xrefTables.length <= 200) {
+                    var xref = h('div', {className: 'info-section xref'});
+                    xref.appendChild(h('div', {className: 'info-title'},
+                        'Column cross-reference: ' + xrefTables.length + ' tables contain "' + rawQ + '"'));
+                    var tags = h('div', {className: 'tag-list'});
+                    xrefTables.slice(0, 40).forEach(function(tn) {
+                        tags.appendChild(h('span', {className:'tag tag-blue', onclick:function(){navigate('table/'+tn);}}, tn));
+                    });
+                    if (xrefTables.length > 40) {
+                        tags.appendChild(h('span', {className:'tag tag-gold'}, '+ ' + (xrefTables.length - 40) + ' more'));
+                    }
+                    xref.appendChild(tags);
+                    frag.appendChild(xref);
+                }
+            }
+
+            // ---- REFINE BAR (secondary search within results) ----
+            var refineBar = h('div', {className: 'refine-bar'});
+            refineBar.appendChild(h('span', {className: 'refine-label'}, 'Refine:'));
+            var refineInput = h('input', {
+                className: 'refine-input',
+                type: 'text',
+                placeholder: 'Filter within results... (table name, column, description)',
+                value: state.refineQuery,
+                oninput: function(e) {
+                    state.refineQuery = e.target.value;
+                    state.page = 1;
+                    render();
+                    // Re-focus the refine input after render
+                    var ri = document.querySelector('.refine-input');
+                    if (ri) { ri.focus(); ri.selectionStart = ri.selectionEnd = ri.value.length; }
+                }
+            });
+            refineBar.appendChild(refineInput);
+            if (refineQ) {
+                var totalBeforeRefine = applyFilters(state.results).length;
+                refineBar.appendChild(h('span', {className: 'refine-count'}, filtered.length + ' of ' + totalBeforeRefine));
+                var clearBtn = h('button', {
+                    className: 'term-builder-btn',
+                    onclick: function() { state.refineQuery = ''; state.page = 1; render(); }
+                }, 'Clear');
+                refineBar.appendChild(clearBtn);
+            }
+            frag.appendChild(refineBar);
+
+            // ---- RESULTS ----
+            if (filtered.length === 0) {
+                frag.appendChild(h('div', {className: 'no-results'}, [
+                    h('div', {className: 'no-results-icon', innerHTML: '&#128269;'}),
+                    h('div', null, 'No results found' + (refineQ ? ' matching "' + state.refineQuery + '"' : ' for "' + state.query + '"')),
+                    h('div', {style: 'font-size:13px;margin-top:8px'}, refineQ ? 'Try a different refine filter or clear it' : 'Try different keywords, Banner abbreviations, or check spelling'),
+                ]));
+                return frag;
+            }
+
+            // Group results by table
+            var groups = groupResults(filtered);
+            var total = groups.length;
+            var totalPages = Math.ceil(total / RESULTS_PER_PAGE);
+            if (state.page > totalPages) state.page = 1;
+            var start = (state.page - 1) * RESULTS_PER_PAGE;
+            var pageGroups = groups.slice(start, start + RESULTS_PER_PAGE);
+
+            frag.appendChild(h('div', {className: 'result-count'},
+                filtered.length + ' matches across ' + groups.length + ' tables for "' + state.query + '"'
+                + (refineQ ? ' filtered by "' + state.refineQuery + '"' : '')));
+
+            var container = h('div');
+            pageGroups.forEach(function(group) {
+                var tbl = group.table;
+                var isExpanded = state.expandedGroups[tbl.name] || false;
+                var hasColumns = group.columns.length > 0;
+
+                // Group header
+                var maxScore = groups[0].maxScore || 1;
+                var pct = Math.min(100, Math.round((group.maxScore / maxScore) * 100));
+
+                var header = h('div', {
+                    className: 'group-header' + (isExpanded ? ' expanded' : ''),
+                    onclick: function() {
+                        if (hasColumns) {
+                            state.expandedGroups[tbl.name] = !state.expandedGroups[tbl.name];
+                            render();
+                        } else {
+                            navigate('table/' + tbl.name);
+                        }
+                    }
+                });
+
+                var scoreBar = h('div', {style: 'width:60px'});
+                scoreBar.appendChild(h('div', {className: 'group-score-bar', style: 'width:' + pct + '%'}));
+                header.appendChild(scoreBar);
+
+                var nameEl = h('span', {className: 'group-name'});
+                nameEl.innerHTML = highlightText(tbl.name, state.query);
+                header.appendChild(nameEl);
+
+                header.appendChild(h('span', {className: 'type-badge type-' + tbl.tableType.toLowerCase()}, tbl.tableType));
+                header.appendChild(h('span', {className: 'module-badge'}, tbl.module));
+
+                var descEl = h('span', {className: 'group-meta', style: 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'});
+                descEl.innerHTML = highlightText(tbl.description || '', state.query);
+                header.appendChild(descEl);
+
+                if (hasColumns) {
+                    header.appendChild(h('span', {className: 'group-meta'}, group.columns.length + ' col match' + (group.columns.length > 1 ? 'es' : '')));
+                    header.appendChild(h('span', {className: 'group-toggle' + (isExpanded ? ' open' : '')}, '\u25B6'));
+                } else {
+                    header.appendChild(h('span', {className: 'group-meta'}, tbl.colCount + ' cols'));
+                }
+
+                container.appendChild(header);
+
+                // Expanded column details
+                if (isExpanded && hasColumns) {
+                    var children = h('div', {className: 'group-children'});
+                    // Link to full table
+                    var viewAll = h('div', {style: 'padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:4px'});
+                    viewAll.appendChild(h('a', {
+                        className: 'table-link',
+                        style: 'font-size:12px',
+                        onclick: function(e) { e.stopPropagation(); navigate('table/' + tbl.name); }
+                    }, 'View all ' + tbl.colCount + ' columns \u2192'));
+                    children.appendChild(viewAll);
+
+                    group.columns.sort(function(a,b) { return b.score - a.score; });
+                    group.columns.slice(0, 20).forEach(function(col) {
+                        var child = h('div', {className: 'group-child'});
+                        var nameDiv = h('div', {className: 'group-child-name'});
+                        nameDiv.innerHTML = highlightText(col.name, state.query);
+
+                        // Column pattern badge with navigation
+                        var badge = getColumnBadge(col.name, tbl.name);
+                        var badgeEl = renderBadge(badge);
+                        if (badgeEl) nameDiv.appendChild(badgeEl);
+
+                        child.appendChild(nameDiv);
+                        var descDiv = h('div', {className: 'group-child-desc'});
+                        descDiv.innerHTML = highlightText(col.description, state.query);
+                        child.appendChild(descDiv);
+                        children.appendChild(child);
+                    });
+                    if (group.columns.length > 20) {
+                        children.appendChild(h('div', {style:'padding:6px 0;font-size:12px;color:var(--text-muted)'},
+                            '+ ' + (group.columns.length - 20) + ' more matching columns'));
+                    }
+                    container.appendChild(children);
+                }
+            });
+            frag.appendChild(container);
+
+            if (totalPages > 1) frag.appendChild(renderPagination(totalPages));
+            return frag;
+        }
+
+        // ==================== TABLE DETAIL ====================
+        function renderTableDetail() {
+            var t = SCHEMA.tables[state.tableName];
+            if (!t) return h('div', {className:'no-results'}, 'Table "' + state.tableName + '" not found');
+
+            var frag = document.createDocumentFragment();
+            frag.appendChild(h('a', {className:'back-btn', onclick:function(){history.back();}}, '\u2190 Back'));
+
+            var header = h('div', {className: 'detail-header'});
+            header.appendChild(h('div', {className: 'detail-title'}, state.tableName));
+            var meta = h('div', {className: 'detail-meta'});
+            meta.appendChild(h('span', {className:'type-badge type-'+t.t.toLowerCase()}, t.t));
+            meta.appendChild(h('span', {className:'module-badge'}, t.m));
+            meta.appendChild(h('span', {style:'font-size:13px;color:var(--text-muted)'}, t.c.length + ' columns'));
+            header.appendChild(meta);
+            if (t.d) header.appendChild(h('div', {className:'detail-desc'}, t.d));
+            frag.appendChild(header);
+
+            // ---- RELATIONSHIPS (outgoing: this table references...) ----
+            var tRels = RELS[state.tableName];
+            if (tRels && tRels.refs && tRels.refs.length > 0) {
+                var outSection = h('div', {className: 'rels-section outgoing'});
+                outSection.appendChild(h('div', {className: 'rels-title'}, [
+                    h('span', {className: 'rels-icon', innerHTML: '&#8594;'}),
+                    document.createTextNode('This Table References (' + tRels.refs.length + ' relationships)')
+                ]));
+                outSection.appendChild(h('div', {className: 'rels-subtitle'},
+                    'Columns in ' + state.tableName + ' that link to other tables'));
+                var outTable = h('table', {className: 'rels-table'});
+                var oHead = h('tr');
+                ['Column', '', 'Target Table', 'Type', 'Description'].forEach(function(hdr) {
+                    oHead.appendChild(h('th', null, hdr));
+                });
+                outTable.appendChild(oHead);
+                tRels.refs.forEach(function(ref) {
+                    // ref = [column, target_table, label, desc, formal]
+                    var targetName = ref[1];
+                    var row = h('tr', {style: 'cursor:pointer', onclick: function() { navigate('table/' + targetName); }});
+                    var colCell = h('td', {style: 'font-family:Consolas,Monaco,monospace;font-weight:600;font-size:12px'});
+                    colCell.textContent = ref[0];
+                    row.appendChild(colCell);
+                    row.appendChild(h('td', {className: 'rels-arrow', innerHTML: '&#8594;'}));
+                    row.appendChild(h('td', null, [
+                        h('a', {className: 'table-link', style: 'font-size:12px'}, targetName)
+                    ]));
+                    row.appendChild(h('td', null, [
+                        h('span', {className: 'rels-label' + (ref[4] ? ' fk' : '')}, ref[4] ? 'FK' : ref[2])
+                    ]));
+                    row.appendChild(h('td', {style: 'color:var(--text-muted);font-size:11px'}, ref[3]));
+                    outTable.appendChild(row);
+                });
+                outSection.appendChild(outTable);
+                frag.appendChild(outSection);
+            }
+
+            // ---- RELATIONSHIPS (incoming: referenced by...) ----
+            if (tRels && tRels.refBy && tRels.refBy.length > 0) {
+                var inSection = h('div', {className: 'rels-section incoming'});
+                inSection.appendChild(h('div', {className: 'rels-title'}, [
+                    h('span', {className: 'rels-icon', innerHTML: '&#8592;'}),
+                    document.createTextNode('Referenced By (' + tRels.refBy.length + ' tables)')
+                ]));
+                inSection.appendChild(h('div', {className: 'rels-subtitle'},
+                    'Other tables that have columns pointing to ' + state.tableName));
+                var inTags = h('div', {className: 'tag-list'});
+                tRels.refBy.forEach(function(ref) {
+                    // ref = [source_table, count, label]
+                    var srcName = ref[0];
+                    var cnt = ref[1];
+                    inTags.appendChild(h('span', {
+                        className: 'tag tag-purple',
+                        title: cnt + ' column' + (cnt > 1 ? 's' : '') + ' referencing this table',
+                        onclick: function() { navigate('table/' + srcName); }
+                    }, srcName + (cnt > 1 ? ' (' + cnt + ')' : '')));
+                });
+                inSection.appendChild(inTags);
+                frag.appendChild(inSection);
+            }
+
+            // Column pattern summary
+            var patternCounts = {};
+            for (var i = 0; i < t.c.length; i++) {
+                var badge = getColumnBadge(t.c[i][0], state.tableName);
+                if (badge) patternCounts[badge.label] = (patternCounts[badge.label] || 0) + 1;
+            }
+            if (Object.keys(patternCounts).length > 0) {
+                var patSection = h('div', {className: 'info-section', style: 'border-left:4px solid var(--gold)'});
+                patSection.appendChild(h('div', {className: 'info-title'}, 'Column Pattern Summary'));
+                var tags = h('div', {className: 'tag-list'});
+                for (var label in patternCounts) {
+                    tags.appendChild(h('span', {className: 'tag tag-gold'}, label + ': ' + patternCounts[label]));
+                }
+                patSection.appendChild(tags);
+                frag.appendChild(patSection);
+            }
+
+            // Column filter
+            frag.appendChild(h('input', {
+                className: 'col-filter', type: 'text', placeholder: 'Filter columns...',
+                value: state.colFilter,
+                oninput: function(e) { state.colFilter = e.target.value; renderColumns(colBody, t.c, state.colFilter, state.tableName); }
+            }));
+
+            // Columns table
+            var colTable = h('table', {className: 'table-list'});
+            var chead = h('thead');
+            var hrow = h('tr');
+            ['#','Column Name','','Description'].forEach(function(hdr) { hrow.appendChild(h('th', null, hdr)); });
+            chead.appendChild(hrow);
+            colTable.appendChild(chead);
+            var colBody = h('tbody');
+            renderColumns(colBody, t.c, state.colFilter, state.tableName);
+            colTable.appendChild(colBody);
+            frag.appendChild(colTable);
+
+            return frag;
+        }
+
+        function renderColumns(tbody, columns, filter, ownerTable) {
+            tbody.innerHTML = '';
+            var filterUpper = (filter || '').toUpperCase();
+            var count = 0;
+            for (var i = 0; i < columns.length; i++) {
+                var col = columns[i];
+                if (filterUpper && col[0].indexOf(filterUpper) === -1 && col[1].toUpperCase().indexOf(filterUpper) === -1) continue;
+                count++;
+                var row = h('tr');
+                row.appendChild(h('td', {style:'color:var(--text-muted);font-size:11px;width:30px'}, String(count)));
+                var nameCell = h('td', {style:'font-family:Consolas,Monaco,monospace;font-weight:600;font-size:13px'});
+                nameCell.innerHTML = filter ? highlightText(col[0], filter) : col[0];
+                row.appendChild(nameCell);
+
+                // Badge column with navigation
+                var badgeCell = h('td', {style:'width:80px'});
+                var badge = getColumnBadge(col[0], ownerTable);
+                var badgeEl = renderBadge(badge);
+                if (badgeEl) badgeCell.appendChild(badgeEl);
+                row.appendChild(badgeCell);
+
+                var descCell = h('td', {style:'font-size:13px'});
+                descCell.innerHTML = filter ? highlightText(col[1], filter) : col[1];
+                row.appendChild(descCell);
+                tbody.appendChild(row);
+            }
+            if (count === 0) {
+                var emptyRow = h('tr');
+                emptyRow.appendChild(h('td', {colspan:'4', style:'text-align:center;color:var(--text-muted);padding:20px'},
+                    'No columns match "' + filter + '"'));
+                tbody.appendChild(emptyRow);
+            }
+        }
+
+        function renderModuleView() {
+            var modInfo = SCHEMA.modules[state.moduleName];
+            if (!modInfo) return h('div', {className:'no-results'}, 'Module "' + state.moduleName + '" not found');
+
+            var frag = document.createDocumentFragment();
+            frag.appendChild(h('a', {className:'back-btn', onclick:function(){navigate('');}}, '\u2190 Back to Dashboard'));
+            var header = h('div', {className:'detail-header'});
+            header.appendChild(h('div', {className:'detail-title'}, state.moduleName));
+            header.appendChild(h('div', {className:'detail-desc'}, modInfo.description));
+            header.appendChild(h('div', {className:'detail-meta'}, [
+                h('span', {style:'font-size:14px;font-weight:600'}, modInfo.count + ' objects (' + modInfo.tables + ' tables, ' + modInfo.views + ' views)')
+            ]));
+            frag.appendChild(header);
+
+            var tables = [];
+            for (var name in SCHEMA.tables) {
+                var t = SCHEMA.tables[name];
+                if (t.m === state.moduleName)
+                    tables.push({type:'TABLE', name:name, tableType:t.t, module:t.m, description:t.d, colCount:t.c.length, score:0});
+            }
+            tables.sort(function(a,b) { return a.name.localeCompare(b.name); });
+            var saved = state.moduleFilter;
+            state.moduleFilter = '';
+            frag.appendChild(renderFlatTableList(tables, true));
+            state.moduleFilter = saved;
+            return frag;
+        }
+
+        function findTablesWithColumn(pattern) {
+            var results = [];
+            for (var name in SCHEMA.tables) {
+                var cols = SCHEMA.tables[name].c;
+                for (var i = 0; i < cols.length; i++) {
+                    if (cols[i][0].indexOf(pattern) !== -1) { results.push(name); break; }
+                }
+            }
+            return results.sort();
+        }
+
+        // ==================== ROUTER ====================
+        function navigate(path) { window.location.hash = '#/' + path; }
+
+        function parseRoute() {
+            var hash = window.location.hash.slice(2) || '';
+            var parts = hash.split('/');
+            if (parts[0] === 'table' && parts[1]) {
+                state.view = 'table'; state.tableName = decodeURIComponent(parts[1]); state.colFilter = '';
+            } else if (parts[0] === 'module' && parts[1]) {
+                state.view = 'module'; state.moduleName = decodeURIComponent(parts[1]); state.page = 1;
+            } else if (parts[0] === 'sql') {
+                state.view = 'sql';
+            } else if (parts[0] === 'search' && parts[1]) {
+                var newQuery = decodeURIComponent(parts[1]);
+                var queryChanged = newQuery !== state.query;
+                state.view = 'search'; state.query = newQuery;
+                state.results = null; state.page = 1; state.expandedGroups = {};
+                if (queryChanged) {
+                    // Reset interactive terms on new query
+                    state.activeTerms = []; state.disabledTerms = new Set();
+                    state.customTerms = []; state.refineQuery = '';
+                }
+                document.getElementById('searchInput').value = state.query;
+            } else {
+                state.view = 'dashboard'; state.page = 1;
+            }
+        }
+
+        function render() {
+            app.innerHTML = '';
+            var content;
+            switch (state.view) {
+                case 'search': content = renderSearchResults(); break;
+                case 'table': content = renderTableDetail(); break;
+                case 'module': content = renderModuleView(); break;
+                case 'sql': content = renderSqlExplainer(); break;
+                default: content = renderDashboard();
+            }
+            if (content) app.appendChild(content);
+            var hint = document.getElementById('searchHint');
+            if (state.view === 'search' && state.results) {
+                hint.textContent = state.results.length + ' matches \u00b7 BM25 ranked \u00b7 Banner-aware synonyms';
+            } else {
+                hint.textContent = 'Press / to search \u00b7 Understands Banner abbreviations';
+            }
+        }
+
+        // ==================== EVENTS ====================
+        var debounceTimer;
+        var searchInput = document.getElementById('searchInput');
+        var searchClear = document.getElementById('searchClear');
+
+        function updateClearBtn() {
+            searchClear.classList.toggle('visible', searchInput.value.length > 0);
+        }
+
+        searchInput.addEventListener('input', function(e) {
+            updateClearBtn();
+            clearTimeout(debounceTimer);
+            var val = e.target.value.trim();
+            debounceTimer = setTimeout(function() {
+                if (val.length >= 2) { state.page = 1; navigate('search/' + encodeURIComponent(val)); }
+                else if (val.length === 0) navigate('');
+            }, DEBOUNCE_MS);
+        });
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                clearTimeout(debounceTimer);
+                var val = e.target.value.trim();
+                if (val.length >= 1) { state.page = 1; navigate('search/' + encodeURIComponent(val)); }
+            }
+        });
+        searchClear.addEventListener('click', function() {
+            searchInput.value = '';
+            updateClearBtn();
+            state.query = ''; state.results = null; state.activeTerms = [];
+            state.disabledTerms = new Set(); state.customTerms = []; state.refineQuery = '';
+            navigate('');
+            searchInput.focus();
+        });
+
+        document.querySelectorAll('.filter-btn[data-type]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn[data-type]').forEach(function(b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                state.typeFilter = btn.getAttribute('data-type');
+                state.page = 1; render();
+            });
+        });
+
+        var moduleSelect = document.getElementById('moduleFilter');
+        for (var mod in SCHEMA.modules) {
+            var opt = document.createElement('option');
+            opt.value = mod; opt.textContent = mod + ' (' + SCHEMA.modules[mod].count + ')';
+            moduleSelect.appendChild(opt);
+        }
+        moduleSelect.addEventListener('change', function() {
+            state.moduleFilter = moduleSelect.value; state.page = 1; render();
+        });
+
+        // SQL Explainer toggle
+        document.getElementById('sqlToggle').addEventListener('click', function() {
+            navigate('sql');
+        });
+
+        // ==================== SQL EXPLAINER ====================
+        var BDCA_CODES = {
+            'FED': 'Federal Income Tax', 'FIM': 'FICA Medicare (Employee + Employer)',
+            'FIO': 'FICA Social Security (Employee + Employer)', 'FIA': 'Additional Medicare (>$200K wages)',
+            'ILL': 'Illinois State Income Tax', 'MCH': 'Michigan State Income Tax',
+            'NYT': 'New York State Income Tax', 'EIC': 'Earned Income Credit',
+            'S1R': 'SURS Tier 1 Retirement', 'S2G': 'SURS Tier 2 (eff 2011)', 'S2R': 'SURS Tier 2 New (eff 2014)',
+            'AC1': '403b Percent', 'AC2': '403b Flat', 'AC6': '457b Percent', 'AC7': '457b Flat',
+            'AC8': 'ROTH 457b Percent', 'AC9': 'ROTH 457b Flat', 'AR2': 'WCC ROTH 457b Flat',
+            'H01': 'HSA Single/Adult', 'H02': 'HSA Family',
+            'M01': 'PPO Single/Adult', 'M02': 'PPO Family', 'M03': 'PPO Tier 3',
+            'M04': 'HMO Single/Adult', 'M05': 'HMO Family', 'M07': 'HDHP Single/Adult', 'M08': 'HDHP Family'
+        };
+
+        var BUSINESS_CASES = {{ business_cases_json | default('[]') }};
+
+        function parseSql(sql) {
+            var clean = sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
+            var result = { tables: [], aliases: {}, columns: [], joins: [], conditions: [], aggregations: [] };
+
+            // Tables from FROM/JOIN
+            var tableRe = /(?:FROM|JOIN)\s+(\w+)\s*(\w+)?/gi;
+            var skip = ['ON','WHERE','AND','OR','LEFT','RIGHT','INNER','OUTER','CROSS','FULL','JOIN','GROUP','ORDER','HAVING','SET','AS','SELECT'];
+            var m;
+            while ((m = tableRe.exec(clean)) !== null) {
+                var tbl = m[1].toUpperCase();
+                var alias = m[2] ? m[2].toUpperCase() : null;
+                if (tbl !== 'SELECT' && tbl !== 'DUAL') {
+                    result.tables.push(tbl);
+                    if (alias && skip.indexOf(alias) === -1) result.aliases[alias] = tbl;
+                }
+            }
+
+            // SELECT columns
+            var selMatch = clean.match(/SELECT\s+([\s\S]*?)\s+FROM/i);
+            if (selMatch) {
+                selMatch[1].split(',').forEach(function(c) {
+                    var col = c.trim().replace(/\w+\./g, '').replace(/\s+AS\s+\w+/i, '').trim();
+                    if (col !== '*') result.columns.push(col.toUpperCase());
+                });
+            }
+
+            // JOIN ON conditions
+            var onRe = /ON\s+([\s\S]*?)(?=\s+(?:WHERE|JOIN|LEFT|RIGHT|INNER|GROUP|ORDER|$))/gi;
+            while ((m = onRe.exec(clean)) !== null) result.joins.push(m[1].trim());
+
+            // WHERE conditions
+            var whereMatch = clean.match(/WHERE\s+([\s\S]*?)(?=\s+(?:GROUP|ORDER|HAVING|$))/i);
+            if (whereMatch) {
+                whereMatch[1].split(/\s+AND\s+/i).forEach(function(c) { result.conditions.push(c.trim()); });
+            }
+
+            // Aggregations
+            var aggRe = /(SUM|COUNT|AVG|MIN|MAX)\s*\([^)]+\)/gi;
+            while ((m = aggRe.exec(clean)) !== null) result.aggregations.push(m[0]);
+
+            return result;
+        }
+
+        function findMatchingCases(tables) {
+            if (!BUSINESS_CASES || !BUSINESS_CASES.length) return [];
+            var tblSet = {};
+            tables.forEach(function(t) { tblSet[t] = true; });
+            var matches = [];
+            BUSINESS_CASES.forEach(function(bc) {
+                var overlap = 0;
+                bc.tables.forEach(function(t) { if (tblSet[t]) overlap++; });
+                if (overlap >= 1) matches.push({ score: overlap / bc.tables.length, bc: bc });
+            });
+            matches.sort(function(a, b) { return b.score - a.score; });
+            return matches.slice(0, 5);
+        }
+
+        function lookupColumn(colName, tables) {
+            for (var i = 0; i < tables.length; i++) {
+                var tbl = SCHEMA.tables[tables[i]];
+                if (!tbl) continue;
+                for (var j = 0; j < tbl.c.length; j++) {
+                    if (tbl.c[j][0].toUpperCase() === colName) return { table: tables[i], desc: tbl.c[j][1] };
+                }
+            }
+            return null;
+        }
+
+        function explainCondition(cond) {
+            var hints = [];
+            var upper = cond.toUpperCase();
+            if (upper.indexOf('DISP') >= 0 && upper.indexOf('60') >= 0) hints.push('Only POSTED transactions (completed payroll runs)');
+            if (upper.indexOf('PICT_CODE') >= 0 && upper.indexOf('SP') >= 0) hints.push('Staff/Professional payroll');
+            if (upper.indexOf('PICT_CODE') >= 0 && upper.indexOf('SF') >= 0) hints.push('Faculty payroll');
+            if (upper.indexOf('CHANGE_IND') >= 0 && upper.indexOf('NULL') >= 0) hints.push('Current name record only (no name change history)');
+            if (upper.indexOf('ATYP_CODE') >= 0 && upper.indexOf('HR') >= 0) hints.push('HR address type (employee, not student)');
+            if (upper.indexOf('BDCA_CODE') >= 0) {
+                var codeMatch = cond.match(/'(\w+)'/);
+                if (codeMatch && BDCA_CODES[codeMatch[1].toUpperCase()]) {
+                    hints.push("Deduction '" + codeMatch[1] + "' = " + BDCA_CODES[codeMatch[1].toUpperCase()]);
+                }
+                // Handle IN list
+                var inMatch = cond.match(/IN\s*\(([^)]+)\)/i);
+                if (inMatch) {
+                    var codes = inMatch[1].match(/'(\w+)'/g);
+                    if (codes) codes.forEach(function(c) {
+                        var code = c.replace(/'/g, '').toUpperCase();
+                        if (BDCA_CODES[code]) hints.push("'" + code + "' = " + BDCA_CODES[code]);
+                    });
+                }
+            }
+            if (upper.indexOf('PTRCALN_END_DATE') >= 0 && upper.indexOf('BETWEEN') >= 0) {
+                var months = upper.match(/\d+/g);
+                if (months && months.length >= 2) {
+                    var qMap = {'1-3':'Q1 (Jan-Mar)','4-6':'Q2 (Apr-Jun)','7-9':'Q3 (Jul-Sep)','10-12':'Q4 (Oct-Dec)'};
+                    var key = months[months.length-2] + '-' + months[months.length-1];
+                    if (qMap[key]) hints.push('Filtering to ' + qMap[key]);
+                }
+            }
+            if (upper.indexOf('PIDM') >= 0) hints.push('Matching by Person ID');
+            if (upper.indexOf('PAYNO') >= 0) hints.push('Matching by Pay Number');
+            if (upper.indexOf('SEQ_NO') >= 0) hints.push('Matching by Sequence (original vs adjustment)');
+            if (upper.indexOf('YEAR') >= 0) {
+                var yr = cond.match(/(\d{4})/); if (yr) hints.push('Payroll year: ' + yr[1]);
+            }
+            return hints;
+        }
+
+        function renderSqlExplainer() {
+            var container = h('div', {});
+
+            // Top bar with home button and shortcuts hint
+            var topBar = h('div', { style: 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;' });
+            var homeBtn = h('button', {
+                style: 'background: var(--navy); color: var(--gold); border: none; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600;'
+            }, 'Home');
+            homeBtn.onclick = function() { navigate(''); };
+            topBar.appendChild(homeBtn);
+            topBar.appendChild(h('span', { style: 'color: var(--text-muted); font-size: 12px;' },
+                'Shortcuts: ` (backtick) = open SQL Explainer | Esc = back to home | / = search | ? = help'));
+            container.appendChild(topBar);
+
+            // Title
+            container.appendChild(h('h2', { style: 'margin-bottom: 8px;' }, 'SQL Explainer'));
+            container.appendChild(h('p', { style: 'color: var(--text-muted); margin-bottom: 16px; font-size: 14px;' },
+                'Paste any Banner SQL query below. The tool will identify the tables, columns, joins, and filters, ' +
+                'then explain what the query does using the Banner schema metadata and real business case knowledge.'));
+
+            // Textarea
+            var textarea = h('textarea', {
+                className: 'sql-textarea', id: 'sqlInput',
+                placeholder: 'Paste your SQL query here...\n\nExample:\nSELECT d.PHRDEDN_BDCA_CODE, SUM(d.PHRDEDN_APPLICABLE_GROSS)\nFROM PHRDEDN d\nJOIN PHRHIST h ON h.PHRHIST_PIDM = d.PHRDEDN_PIDM\nWHERE d.PHRDEDN_YEAR = 2025\nGROUP BY d.PHRDEDN_BDCA_CODE'
+            });
+            container.appendChild(textarea);
+
+            // Button row
+            var btnRow = h('div', { style: 'margin-top: 12px; display: flex; gap: 12px; align-items: center;' });
+            var explainBtn = h('button', { className: 'sql-explain-btn' }, 'Explain This SQL');
+            var clearBtn = h('button', {
+                style: 'background: transparent; border: 1px solid var(--border); padding: 10px 20px; border-radius: var(--radius); cursor: pointer; color: var(--text-muted);'
+            }, 'Clear');
+            btnRow.appendChild(explainBtn);
+            btnRow.appendChild(clearBtn);
+            container.appendChild(btnRow);
+
+            // Results area
+            var resultsDiv = h('div', { id: 'sqlResults' });
+            container.appendChild(resultsDiv);
+
+            // Restore previous SQL if any
+            if (state.sqlText) {
+                setTimeout(function() {
+                    document.getElementById('sqlInput').value = state.sqlText;
+                    if (state.sqlResults) document.getElementById('sqlResults').innerHTML = state.sqlResults;
+                }, 0);
+            }
+
+            explainBtn.addEventListener('click', function() {
+                var sql = document.getElementById('sqlInput').value.trim();
+                if (!sql) return;
+                state.sqlText = sql;
+                var parsed = parseSql(sql);
+                var out = document.getElementById('sqlResults');
+                out.innerHTML = '';
+                out.appendChild(buildExplanation(parsed, sql));
+                state.sqlResults = out.innerHTML;
+            });
+
+            clearBtn.addEventListener('click', function() {
+                document.getElementById('sqlInput').value = '';
+                document.getElementById('sqlResults').innerHTML = '';
+                state.sqlText = ''; state.sqlResults = '';
+            });
+
+            return container;
+        }
+
+        function buildExplanation(parsed, sql) {
+            var frag = document.createDocumentFragment();
+
+            // === TABLES ===
+            if (parsed.tables.length) {
+                var sec = h('div', { className: 'sql-section' });
+                sec.appendChild(h('div', { className: 'sql-section-title' }, 'Tables Used (' + parsed.tables.length + ')'));
+                parsed.tables.forEach(function(tbl) {
+                    var info = SCHEMA.tables[tbl];
+                    var item = h('div', { className: 'sql-item' });
+                    var nameEl = h('span', { className: 'sql-item-name' }, tbl);
+                    nameEl.onclick = function() { navigate('table/' + tbl); };
+                    item.appendChild(nameEl);
+                    // Show alias
+                    for (var a in parsed.aliases) {
+                        if (parsed.aliases[a] === tbl) {
+                            item.appendChild(h('span', { style: 'color: var(--text-muted); font-size: 12px; margin-left: 8px;' }, '(alias: ' + a + ')'));
+                        }
+                    }
+                    if (info) {
+                        item.appendChild(h('div', { className: 'sql-item-desc' }, info.d));
+                        item.appendChild(h('div', { className: 'sql-item-detail' }, info.t + ' | Module: ' + info.m + ' | ' + info.c.length + ' columns'));
+                    } else {
+                        item.appendChild(h('div', { className: 'sql-item-desc' }, 'Not found in Banner schema'));
+                    }
+                    sec.appendChild(item);
+                });
+                frag.appendChild(sec);
+            }
+
+            // === COLUMNS ===
+            var realCols = [];
+            parsed.columns.forEach(function(col) {
+                // Extract actual column names from expressions
+                var matches = col.match(/[A-Z_]{3,}/g);
+                if (matches) matches.forEach(function(m) {
+                    if (m !== 'SUM' && m !== 'COUNT' && m !== 'AVG' && m !== 'MIN' && m !== 'MAX' &&
+                        m !== 'ROUND' && m !== 'DISTINCT' && m !== 'NVL' && m !== 'EXTRACT' && m !== 'MONTH' && m !== 'FROM') {
+                        var info = lookupColumn(m, parsed.tables);
+                        if (info) realCols.push({ name: m, table: info.table, desc: info.desc });
+                    }
+                });
+            });
+            if (realCols.length) {
+                var sec = h('div', { className: 'sql-section' });
+                sec.appendChild(h('div', { className: 'sql-section-title' }, 'Columns Selected (' + realCols.length + ')'));
+                realCols.forEach(function(col) {
+                    var item = h('div', { className: 'sql-item' });
+                    var nameEl = h('span', { className: 'sql-item-name' }, col.table + '.' + col.name);
+                    nameEl.onclick = function() { navigate('table/' + col.table); };
+                    item.appendChild(nameEl);
+                    item.appendChild(h('div', { className: 'sql-item-desc' }, col.desc));
+                    sec.appendChild(item);
+                });
+                frag.appendChild(sec);
+            }
+
+            // === JOINS ===
+            if (parsed.joins.length) {
+                var sec = h('div', { className: 'sql-section' });
+                sec.appendChild(h('div', { className: 'sql-section-title' }, 'How Tables Connect'));
+                parsed.joins.forEach(function(join) {
+                    var item = h('div', { className: 'sql-item' });
+                    item.appendChild(h('code', { style: 'font-size: 12px; color: var(--text-muted);' }, join));
+                    var hints = explainCondition(join);
+                    hints.forEach(function(hint) {
+                        item.appendChild(h('div', { className: 'sql-item-detail' }, '>> ' + hint));
+                    });
+                    sec.appendChild(item);
+                });
+                frag.appendChild(sec);
+            }
+
+            // === FILTERS ===
+            if (parsed.conditions.length) {
+                var sec = h('div', { className: 'sql-section' });
+                sec.appendChild(h('div', { className: 'sql-section-title' }, 'Filters Applied (' + parsed.conditions.length + ')'));
+                parsed.conditions.forEach(function(cond) {
+                    var item = h('div', { className: 'sql-item' });
+                    item.appendChild(h('code', { style: 'font-size: 12px;' }, cond));
+                    var hints = explainCondition(cond);
+                    hints.forEach(function(hint) {
+                        var tag = h('span', { className: 'sql-filter-tag' }, hint);
+                        item.appendChild(h('div', { style: 'margin-top: 4px;' }, [tag]));
+                    });
+                    sec.appendChild(item);
+                });
+                frag.appendChild(sec);
+            }
+
+            // === AGGREGATIONS ===
+            if (parsed.aggregations.length) {
+                var sec = h('div', { className: 'sql-section' });
+                sec.appendChild(h('div', { className: 'sql-section-title' }, 'Calculations'));
+                parsed.aggregations.forEach(function(agg) {
+                    var item = h('div', { className: 'sql-item' });
+                    item.appendChild(h('code', { style: 'font-size: 13px;' }, agg));
+                    if (agg.toUpperCase().indexOf('SUM') >= 0) item.appendChild(h('div', { className: 'sql-item-detail' }, 'Totaling amounts across all matching records'));
+                    if (agg.toUpperCase().indexOf('COUNT') >= 0) item.appendChild(h('div', { className: 'sql-item-detail' }, 'Counting records or unique values'));
+                    sec.appendChild(item);
+                });
+                frag.appendChild(sec);
+            }
+
+            // === BUSINESS CASES ===
+            var cases = findMatchingCases(parsed.tables);
+            if (cases.length) {
+                var sec = h('div', { className: 'sql-section' });
+                sec.appendChild(h('div', { className: 'sql-section-title' }, 'Related Business Cases'));
+                cases.forEach(function(m) {
+                    var card = h('div', { className: 'sql-case-card' });
+                    card.appendChild(h('div', { className: 'sql-case-title' }, '[' + m.bc.id + '] ' + m.bc.title));
+                    card.appendChild(h('div', { className: 'sql-case-desc' }, m.bc.description.substring(0, 200) + '...'));
+                    sec.appendChild(card);
+                });
+                frag.appendChild(sec);
+            }
+
+            // === SUMMARY ===
+            var summaryParts = [];
+            parsed.tables.forEach(function(tbl) {
+                var info = SCHEMA.tables[tbl];
+                if (info) summaryParts.push(info.d);
+            });
+            var summary = h('div', { className: 'sql-summary' });
+            var sumHTML = '<strong>Summary:</strong> This query reads from ';
+            sumHTML += parsed.tables.map(function(t) { return '<strong>' + t + '</strong>'; }).join(', ');
+            if (summaryParts.length) sumHTML += ' (' + summaryParts.join('; ') + ')';
+            sumHTML += '. ';
+            if (parsed.aggregations.length) sumHTML += 'Results are <strong>aggregated</strong> (totals/counts). ';
+            else sumHTML += 'Results are <strong>detail-level</strong> (one row per record). ';
+
+            // Year and code context
+            parsed.conditions.forEach(function(c) {
+                var yr = c.match(/(\d{4})/);
+                if (yr && c.toUpperCase().indexOf('YEAR') >= 0) sumHTML += 'For payroll year <strong>' + yr[1] + '</strong>. ';
+            });
+
+            summary.innerHTML = sumHTML;
+            frag.appendChild(summary);
+
+            return frag;
+        }
+
+        window.addEventListener('hashchange', function() { parseRoute(); render(); });
+
+        // Init
+        parseRoute(); render();
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault(); searchInput.focus();
+            }
+            if (e.key === '?' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault(); toggleHelpPanel();
+            }
+            if (e.key === '`' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault(); navigate('sql');
+            }
+            if (e.key === 'Escape') {
+                var panel = document.getElementById('helpPanel');
+                if (panel.classList.contains('open')) toggleHelpPanel();
+                else if (state.view === 'sql') navigate('');
+            }
+        });
+
+        // ==================== HELP PANEL ====================
+        function toggleHelpPanel() {
+            var panel = document.getElementById('helpPanel');
+            var toggle = document.getElementById('helpToggle');
+            var isOpen = panel.classList.toggle('open');
+            toggle.classList.toggle('panel-open', isOpen);
+            document.body.classList.toggle('panel-open', isOpen);
+        }
+
+        document.getElementById('helpToggle').addEventListener('click', toggleHelpPanel);
+        document.getElementById('helpClose').addEventListener('click', toggleHelpPanel);
+
+        // Clickable example queries
+        document.querySelectorAll('.help-query[data-q]').forEach(function(el) {
+            el.addEventListener('click', function(e) {
+                e.preventDefault();
+                var q = el.getAttribute('data-q');
+                searchInput.value = q;
+                updateClearBtn();
+                searchInput.focus();
+                state.page = 1;
+                navigate('search/' + encodeURIComponent(q));
+                if (window.innerWidth <= 768) {
+                    var panel = document.getElementById('helpPanel');
+                    if (panel.classList.contains('open')) toggleHelpPanel();
+                }
+            });
+        });
+
+        // ==================== HELP PANEL SEARCH ====================
+        var helpSearchInput = document.getElementById('helpSearch');
+        var helpSearchClear = document.getElementById('helpSearchClear');
+        var helpSearchCount = document.getElementById('helpSearchCount');
+        var helpQueries = document.querySelectorAll('.help-query[data-q]');
+        var helpCategories = document.querySelectorAll('.help-category');
+
+        function filterHelpPanel() {
+            var q = helpSearchInput.value.trim().toLowerCase();
+            helpSearchClear.classList.toggle('visible', q.length > 0);
+
+            if (!q) {
+                // Show everything
+                helpQueries.forEach(function(el) { el.classList.remove('hidden', 'match'); });
+                helpCategories.forEach(function(cat) { cat.classList.remove('hidden'); });
+                // Remove match counts
+                document.querySelectorAll('.help-cat-match-count').forEach(function(el) { el.remove(); });
+                helpSearchCount.classList.remove('visible');
+                return;
+            }
+
+            var words = q.split(/\s+/);
+            var totalMatches = 0;
+
+            helpCategories.forEach(function(cat) {
+                var queries = cat.querySelectorAll('.help-query[data-q]');
+                var catMatches = 0;
+
+                queries.forEach(function(el) {
+                    var searchText = (el.getAttribute('data-q') + ' ' + el.textContent).toLowerCase();
+                    var matches = words.every(function(w) { return searchText.indexOf(w) !== -1; });
+                    el.classList.toggle('hidden', !matches);
+                    el.classList.toggle('match', matches);
+                    if (matches) catMatches++;
+                });
+
+                // Hide category if no matches (but keep tips/non-query items visible if category has matches)
+                cat.classList.toggle('hidden', catMatches === 0);
+                totalMatches += catMatches;
+
+                // Update or create match count badge on category title
+                var title = cat.querySelector('.help-cat-title');
+                var existing = title.querySelector('.help-cat-match-count');
+                if (existing) existing.remove();
+                if (catMatches > 0 && q) {
+                    var badge = document.createElement('span');
+                    badge.className = 'help-cat-match-count';
+                    badge.textContent = '(' + catMatches + ')';
+                    title.appendChild(badge);
+                }
+            });
+
+            helpSearchCount.textContent = totalMatches + ' example' + (totalMatches !== 1 ? 's' : '') + ' matching "' + helpSearchInput.value.trim() + '"';
+            helpSearchCount.classList.toggle('visible', q.length > 0);
+        }
+
+        helpSearchInput.addEventListener('input', filterHelpPanel);
+        helpSearchClear.addEventListener('click', function() {
+            helpSearchInput.value = '';
+            filterHelpPanel();
+            helpSearchInput.focus();
+        });
+    })();
+    </script>
+</body>
+</html>
