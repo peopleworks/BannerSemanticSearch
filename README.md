@@ -59,6 +59,24 @@ It also handles typos: `employy` still finds "employee", `addres` finds "address
 - **Column Pattern Badges** -- Automatic color-coded labels: `Person ID` for _PIDM columns, `Code` for _CODE, `Indicator` for _IND, `Date` for _DATE, `Amount` for _AMT, `Key` for _SURROGATE_ID.
 - **Related Tables** -- When viewing a table, see other tables that share the same key columns (PIDM, TERM_CODE, etc.).
 
+### SQL Explainer & Validator
+Paste any Banner SQL query and the tool inspects it against the live schema and a curated knowledge base of real Banner integration cases.
+
+- **Schema validation** -- Every table and column referenced in the query is checked against the embedded Banner schema. Unknown identifiers are flagged with "Did you mean...?" suggestions powered by Levenshtein distance.
+- **Banner pitfall detection** -- Catches the gotchas that have burned real integrations:
+  - `PHRHIST` used without `PHRHIST_DISP >= '60'` filter (in-progress vs posted)
+  - Payroll tables without a `PICT_CODE` filter
+  - `SPRIDEN` without `CHANGE_IND IS NULL` (current vs historical names)
+  - `SPRADDR` with student address types (`MA`/`RE`) instead of `HR` for employees
+  - `PEBEMPL_CURRENT_HIRE_DATE` vs `PEBEMPL_FIRST_HIRE_DATE` for tax reporting
+  - `PHRHIST_GROSS > 0` filter that excludes negative reversal records
+  - `PERETOT` for SUI/unemployment without student-employment exclusion
+  - Stale `PXRW2ST` for state assignment vs the more reliable `PWVEMPL_MAIL_STATE`
+- **Function-aware parser** -- Correctly handles SQL standard functions that use the `FROM` keyword internally: `EXTRACT(MONTH FROM col)`, `TRIM(LEADING ' ' FROM col)`, and `SUBSTRING(col FROM n FOR m)`. These won't be misread as table references.
+- **Business case matching** -- Compares your query's tables to a knowledge base (`data/business_cases.txt`) of real-world Banner integration scenarios (Federal/Medicare/SS tax, SURS exemptions, payroll adjustments, W-2 reporting, etc.) and surfaces matching cases with their lessons learned.
+- **Structural checks** -- Balanced parentheses, missing `SELECT`/`FROM`, and aggregation hints.
+- **All offline** -- The validator runs entirely in the browser using the embedded schema. Your SQL never leaves your machine.
+
 ### UI
 - **Help Panel** -- Click "? HELP" on the right edge (or press `?`) for a complete guide with 50+ clickable example queries, including real-world integration scenarios.
 - **Dark Mode** -- Automatically matches your system theme.
@@ -160,8 +178,11 @@ BannerSemanticSearch/
 │                         #   Contains: HTML structure, CSS styles, JavaScript
 │                         #   search engine, router, and all UI components
 ├── data/                 # Input data files (pipe-delimited)
-│   ├── table_info.txt    #   TABLE_NAME|TYPE|DESCRIPTION
-│   └── field_info.txt    #   TABLE_NAME|COLUMN_NAME|DESCRIPTION
+│   ├── table_info.txt        #   TABLE_NAME|TYPE|DESCRIPTION
+│   ├── field_info.txt        #   TABLE_NAME|COLUMN_NAME|DESCRIPTION
+│   ├── relationships.txt     #   Foreign key constraints (optional)
+│   └── business_cases.txt    #   Curated Banner integration knowledge
+│                             #   (used by the SQL Explainer for case matching)
 └── docs/                 # Generated output
     └── index.html        # THE OUTPUT - open this in your browser
                           #   Self-contained: ~17 MB, works offline
@@ -194,6 +215,7 @@ BannerSemanticSearch/
 - Grouped search results with expand/collapse
 - Column pattern badge detection
 - Help panel with 50+ example queries
+- SQL Explainer/Validator: parses SQL queries (EXTRACT/TRIM/SUBSTRING aware), validates tables and columns against the embedded schema, runs Banner pitfall checks, and matches against the business-case knowledge base
 
 ---
 

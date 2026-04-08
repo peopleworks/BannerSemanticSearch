@@ -385,6 +385,30 @@
             margin-top: 20px; font-size: 14px; line-height: 1.8;
         }
         .sql-summary strong { color: var(--gold); }
+        /* SQL Validator */
+        .sql-val-section { margin: 0 0 24px; padding: 16px; background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); }
+        .sql-val-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .sql-val-title { font-size: 15px; font-weight: 700; color: var(--navy-light); }
+        .sql-val-badges { display: flex; gap: 8px; }
+        .sql-val-badge { padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+        .sql-val-badge.errors { background: #fef2f2; color: #dc2626; }
+        .sql-val-badge.warnings { background: #fffbeb; color: #d97706; }
+        .sql-val-badge.passes { background: #f0fdf4; color: #059669; }
+        .sql-val-item { margin: 6px 0; padding: 8px 12px; border-radius: 6px; font-size: 13px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+        .sql-val-item.error { background: #fef2f2; border-left: 3px solid #ef4444; }
+        .sql-val-item.warning { background: #fffbeb; border-left: 3px solid #f59e0b; }
+        .sql-val-item.pass { background: #f0fdf4; border-left: 3px solid #10b981; }
+        .sql-val-icon { flex-shrink: 0; }
+        .sql-val-msg { flex: 1; }
+        .sql-val-suggestion { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; font-style: italic; }
+        @media (prefers-color-scheme: dark) {
+            .sql-val-badge.errors { background: #7f1d1d44; }
+            .sql-val-badge.warnings { background: #78350f44; }
+            .sql-val-badge.passes { background: #14532d44; }
+            .sql-val-item.error { background: #7f1d1d22; }
+            .sql-val-item.warning { background: #78350f22; }
+            .sql-val-item.pass { background: #14532d22; }
+        }
         .help-toggle {
             position: fixed; right: 0; top: calc(50% + 30px);
             background: var(--navy); color: var(--gold); border: none; padding: 12px 6px;
@@ -1990,11 +2014,20 @@
             var clean = sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
             var result = { tables: [], aliases: {}, columns: [], joins: [], conditions: [], aggregations: [] };
 
-            // Tables from FROM/JOIN
-            var tableRe = /(?:FROM|JOIN)\s+(\w+)\s*(\w+)?/gi;
+            // Strip EXTRACT(...) / TRIM(...) / SUBSTRING(...) before table extraction.
+            // These functions use the FROM keyword internally
+            // (e.g., EXTRACT(MONTH FROM c.PTRCALN_END_DATE)) which would otherwise
+            // be misread as a FROM clause and treated as a table reference.
+            var cleanForTables = clean
+                .replace(/\bEXTRACT\s*\([^()]*\)/gi, '')
+                .replace(/\bTRIM\s*\([^()]*\)/gi, '')
+                .replace(/\bSUBSTRING\s*\([^()]*\)/gi, '');
+
+            // Tables from FROM/JOIN (handles SCHEMA.TABLE syntax)
+            var tableRe = /(?:FROM|JOIN)\s+(?:\w+\.)?(\w+)(?:\s+(\w+))?/gi;
             var skip = ['ON','WHERE','AND','OR','LEFT','RIGHT','INNER','OUTER','CROSS','FULL','JOIN','GROUP','ORDER','HAVING','SET','AS','SELECT'];
             var m;
-            while ((m = tableRe.exec(clean)) !== null) {
+            while ((m = tableRe.exec(cleanForTables)) !== null) {
                 var tbl = m[1].toUpperCase();
                 var alias = m[2] ? m[2].toUpperCase() : null;
                 if (tbl !== 'SELECT' && tbl !== 'DUAL') {
@@ -2027,6 +2060,250 @@
             while ((m = aggRe.exec(clean)) !== null) result.aggregations.push(m[0]);
 
             return result;
+        }
+
+        // ==================== SQL VALIDATOR ====================
+
+        function levenshtein(a, b) {
+            if (a === b) return 0;
+            if (!a.length) return b.length;
+            if (!b.length) return a.length;
+            var prev = [], curr = [];
+            for (var j = 0; j <= a.length; j++) prev[j] = j;
+            for (var i = 1; i <= b.length; i++) {
+                curr[0] = i;
+                for (var j = 1; j <= a.length; j++) {
+                    curr[j] = a[j - 1] === b[i - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+                }
+                var tmp = prev; prev = curr; curr = tmp;
+            }
+            return prev[a.length];
+        }
+
+        function findSimilarTables(name) {
+            var results = [];
+            var keys = Object.keys(SCHEMA.tables);
+            for (var i = 0; i < keys.length; i++) {
+                var dist = levenshtein(name, keys[i]);
+                if (dist <= 3 && dist < name.length * 0.5) {
+                    results.push({ name: keys[i], dist: dist });
+                }
+            }
+            results.sort(function(a, b) { return a.dist - b.dist; });
+            return results.slice(0, 3);
+        }
+
+        function findSimilarColumns(colName, tableName) {
+            var tbl = SCHEMA.tables[tableName];
+            if (!tbl) return [];
+            var results = [];
+            for (var i = 0; i < tbl.c.length; i++) {
+                var dist = levenshtein(colName, tbl.c[i][0]);
+                if (dist <= 3 && dist < colName.length * 0.4) {
+                    results.push({ name: tbl.c[i][0], desc: tbl.c[i][1], dist: dist });
+                }
+            }
+            results.sort(function(a, b) { return a.dist - b.dist; });
+            return results.slice(0, 3);
+        }
+
+        function extractColumnRefs(sql, aliases) {
+            var refs = [], seen = {};
+            var clean = sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+            var re = /\b([A-Za-z_]\w*)\.([A-Za-z_]\w*)\b/g;
+            var m;
+            var skipPre = { SUM:1, COUNT:1, AVG:1, MIN:1, MAX:1, ROUND:1, NVL:1, NVL2:1, EXTRACT:1,
+                TO_NUMBER:1, TO_CHAR:1, TO_DATE:1, DECODE:1, TRIM:1, UPPER:1, LOWER:1, SUBSTR:1,
+                REPLACE:1, COALESCE:1, GREATEST:1, LEAST:1, ABS:1, TRUNC:1, ROWNUM:1, DUAL:1,
+                BANINST1:1, SATURN:1, PAYROLL:1, GENERAL:1, POSNCTL:1, FIMSMGR:1, TAISMGR:1, FAISMGR:1 };
+            var skipCol = { NEXTVAL:1, CURRVAL:1 };
+            while ((m = re.exec(clean)) !== null) {
+                var prefix = m[1].toUpperCase();
+                var col = m[2].toUpperCase();
+                if (skipPre[prefix] || skipCol[col]) continue;
+                var table = aliases[prefix] || prefix;
+                var key = table + '.' + col;
+                if (!seen[key]) { seen[key] = true; refs.push({ col: col, table: table }); }
+            }
+            return refs;
+        }
+
+        function validateSql(parsed, sql) {
+            var errors = [], warnings = [], passes = [];
+            var upper = sql.toUpperCase();
+
+            // 1. Table validation
+            var validTables = [];
+            parsed.tables.forEach(function(tbl) {
+                if (SCHEMA.tables[tbl]) {
+                    validTables.push(tbl);
+                } else {
+                    var similar = findSimilarTables(tbl);
+                    errors.push({
+                        msg: "Table '" + tbl + "' not found in Banner schema.",
+                        suggestion: similar.length ? "Did you mean: " + similar.map(function(s) { return s.name; }).join(', ') + "?" : null
+                    });
+                }
+            });
+            if (validTables.length === parsed.tables.length && parsed.tables.length > 0) {
+                passes.push({ msg: "All " + parsed.tables.length + " table(s) found in Banner schema." });
+            }
+
+            // 2. Column validation
+            var colRefs = extractColumnRefs(sql, parsed.aliases);
+            var badCols = 0, goodCols = 0;
+            colRefs.forEach(function(ref) {
+                var tbl = SCHEMA.tables[ref.table];
+                if (!tbl) return;
+                var found = false;
+                for (var i = 0; i < tbl.c.length; i++) {
+                    if (tbl.c[i][0] === ref.col) { found = true; break; }
+                }
+                if (found) { goodCols++; }
+                else {
+                    badCols++;
+                    var similar = findSimilarColumns(ref.col, ref.table);
+                    errors.push({
+                        msg: "Column '" + ref.col + "' not found on " + ref.table + ".",
+                        suggestion: similar.length ? "Did you mean: " + similar.map(function(s) { return s.name; }).join(', ') + "?" : null
+                    });
+                }
+            });
+            if (goodCols > 0 && badCols === 0) {
+                passes.push({ msg: goodCols + " column reference(s) validated against schema." });
+            }
+
+            // 3. Banner best-practice warnings
+            var hasPHRHIST = parsed.tables.indexOf('PHRHIST') >= 0;
+            var hasPHRDEDN = parsed.tables.indexOf('PHRDEDN') >= 0;
+            var hasSPRIDEN = parsed.tables.indexOf('SPRIDEN') >= 0;
+            var hasSPRADDR = parsed.tables.indexOf('SPRADDR') >= 0;
+            var hasPEBEMPL = parsed.tables.indexOf('PEBEMPL') >= 0;
+            var hasPXRW2ST = parsed.tables.indexOf('PXRW2ST') >= 0;
+            var hasPERETOT = parsed.tables.indexOf('PERETOT') >= 0;
+            var hasPayroll = hasPHRHIST || hasPHRDEDN;
+
+            if (hasPHRHIST) {
+                if (upper.indexOf('DISP') >= 0 && (upper.indexOf("'60'") >= 0 || upper.indexOf("'>= ''6") >= 0 || upper.indexOf('>= \'6') >= 0)) {
+                    passes.push({ msg: "PHRHIST_DISP filter present \u2014 only posted transactions." });
+                } else if (upper.indexOf('PHRHIST_DISP') < 0) {
+                    warnings.push({ msg: "PHRHIST used without PHRHIST_DISP filter.",
+                        suggestion: "Add WHERE PHRHIST_DISP >= '60' to include only posted/completed transactions. Values < '60' are in-progress or voided." });
+                }
+            }
+
+            if (hasPayroll) {
+                if (upper.indexOf('PICT_CODE') >= 0) {
+                    passes.push({ msg: "PICT_CODE payroll type filter present." });
+                } else {
+                    warnings.push({ msg: "Payroll table used without PICT_CODE filter.",
+                        suggestion: "Filter by your institution's active PICT_CODEs (e.g., 'SP','SF'). Without this, you may include test or inactive payroll types." });
+                }
+            }
+
+            if (hasSPRIDEN) {
+                if (upper.indexOf('CHANGE_IND') >= 0 && upper.indexOf('NULL') >= 0) {
+                    passes.push({ msg: "SPRIDEN_CHANGE_IND IS NULL \u2014 current name only." });
+                } else {
+                    warnings.push({ msg: "SPRIDEN used without CHANGE_IND IS NULL.",
+                        suggestion: "Without this filter, results include historical name changes. Add SPRIDEN_CHANGE_IND IS NULL for current name only." });
+                }
+            }
+
+            if (hasSPRADDR) {
+                if (upper.indexOf('ATYP_CODE') >= 0) {
+                    if (upper.indexOf("'MA'") >= 0 || upper.indexOf("'RE'") >= 0) {
+                        warnings.push({ msg: "SPRADDR using MA or RE address type.",
+                            suggestion: "'MA' (Mailing) and 'RE' (Residential) are student address types. Use ATYP_CODE = 'HR' for employee addresses." });
+                    } else {
+                        passes.push({ msg: "SPRADDR ATYP_CODE filter present." });
+                    }
+                } else {
+                    warnings.push({ msg: "SPRADDR used without ATYP_CODE filter.",
+                        suggestion: "Specify ATYP_CODE to get the correct address type. Use 'HR' for employees, 'MA' for students." });
+                }
+            }
+
+            if (hasPEBEMPL && upper.indexOf('CURRENT_HIRE_DATE') >= 0) {
+                warnings.push({ msg: "Using PEBEMPL_CURRENT_HIRE_DATE.",
+                    suggestion: "CURRENT_HIRE_DATE reflects rehires and position changes. Use PEBEMPL_FIRST_HIRE_DATE for the original hire date." });
+            }
+
+            if (hasPXRW2ST) {
+                warnings.push({ msg: "PXRW2ST used for state data.",
+                    suggestion: "PXRW2ST may not be up to date for all employees. Consider PWVEMPL_MAIL_STATE \u2014 it pulls from the HR address type and is more reliable." });
+            }
+
+            if (hasPHRHIST && upper.indexOf('PHRHIST_GROSS') >= 0 && !hasPHRDEDN) {
+                warnings.push({ msg: "Using PHRHIST_GROSS for wage totals.",
+                    suggestion: "For gross wage totals (SUI, unemployment), consider PERETOT_GRS instead. PERETOT is a pre-computed monthly summary that correctly nets payroll adjustments. PHRHIST can double-count when reversals are excluded." });
+            }
+
+            if (hasPHRHIST && upper.indexOf('GROSS') >= 0 && upper.indexOf('> 0') >= 0) {
+                warnings.push({ msg: "PHRHIST filtered with GROSS > 0.",
+                    suggestion: "This excludes negative reversal records (SEQ_NO=1). Adjustments may be double-counted (original + correction kept, reversal excluded). Let SUM() net all sequences, or use PERETOT for gross totals." });
+            }
+
+            if (hasPERETOT && upper.indexOf('SE9000') < 0 && (upper.indexOf('SUI') >= 0 || upper.indexOf('UNEMPLOY') >= 0 || upper.indexOf('IDES') >= 0)) {
+                warnings.push({ msg: "PERETOT for SUI/unemployment without student exclusion.",
+                    suggestion: "Student employment positions (e.g., SE9000) are not covered by unemployment insurance. Add an EXISTS check on PWVEMPL to exclude student-only employees." });
+            }
+
+            // 4. Structural checks
+            if (upper.indexOf('SELECT') < 0) {
+                errors.push({ msg: "No SELECT clause found." });
+            }
+            if (upper.indexOf('SELECT') >= 0 && upper.indexOf('FROM') < 0 && upper.indexOf('DUAL') < 0) {
+                errors.push({ msg: "SELECT without FROM clause." });
+            }
+            var openP = (sql.match(/\(/g) || []).length;
+            var closeP = (sql.match(/\)/g) || []).length;
+            if (openP !== closeP) {
+                errors.push({ msg: "Unmatched parentheses: " + openP + " opening, " + closeP + " closing." });
+            } else if (openP > 0) {
+                passes.push({ msg: "Parentheses balanced (" + openP + " pairs)." });
+            }
+
+            return { errors: errors, warnings: warnings, passes: passes };
+        }
+
+        function buildValidationSection(validation) {
+            var sec = h('div', { className: 'sql-val-section' });
+            var header = h('div', { className: 'sql-val-header' });
+            header.appendChild(h('div', { className: 'sql-val-title' }, 'SQL Validation'));
+            var badges = h('div', { className: 'sql-val-badges' });
+            if (validation.errors.length) badges.appendChild(h('span', { className: 'sql-val-badge errors' }, validation.errors.length + ' error' + (validation.errors.length !== 1 ? 's' : '')));
+            if (validation.warnings.length) badges.appendChild(h('span', { className: 'sql-val-badge warnings' }, validation.warnings.length + ' warning' + (validation.warnings.length !== 1 ? 's' : '')));
+            if (validation.passes.length) badges.appendChild(h('span', { className: 'sql-val-badge passes' }, validation.passes.length + ' passed'));
+            header.appendChild(badges);
+            sec.appendChild(header);
+
+            validation.errors.forEach(function(e) {
+                var item = h('div', { className: 'sql-val-item error' });
+                item.appendChild(h('span', { className: 'sql-val-icon' }, '\u2716'));
+                var msg = h('div', { className: 'sql-val-msg' });
+                msg.appendChild(h('span', {}, e.msg));
+                if (e.suggestion) msg.appendChild(h('span', { className: 'sql-val-suggestion' }, e.suggestion));
+                item.appendChild(msg);
+                sec.appendChild(item);
+            });
+            validation.warnings.forEach(function(w) {
+                var item = h('div', { className: 'sql-val-item warning' });
+                item.appendChild(h('span', { className: 'sql-val-icon' }, '\u26A0'));
+                var msg = h('div', { className: 'sql-val-msg' });
+                msg.appendChild(h('span', {}, w.msg));
+                if (w.suggestion) msg.appendChild(h('span', { className: 'sql-val-suggestion' }, w.suggestion));
+                item.appendChild(msg);
+                sec.appendChild(item);
+            });
+            validation.passes.forEach(function(p) {
+                var item = h('div', { className: 'sql-val-item pass' });
+                item.appendChild(h('span', { className: 'sql-val-icon' }, '\u2714'));
+                item.appendChild(h('div', { className: 'sql-val-msg' }, p.msg));
+                sec.appendChild(item);
+            });
+
+            return sec;
         }
 
         function findMatchingCases(tables) {
@@ -2111,8 +2388,8 @@
             // Title
             container.appendChild(h('h2', { style: 'margin-bottom: 8px;' }, 'SQL Explainer'));
             container.appendChild(h('p', { style: 'color: var(--text-muted); margin-bottom: 16px; font-size: 14px;' },
-                'Paste any Banner SQL query below. The tool will identify the tables, columns, joins, and filters, ' +
-                'then explain what the query does using the Banner schema metadata and real business case knowledge.'));
+                'Paste any Banner SQL query below. The tool validates table and column names against the schema, ' +
+                'checks for common Banner pitfalls (missing filters, wrong data sources), and explains what the query does.'));
 
             // Textarea
             var textarea = h('textarea', {
@@ -2123,7 +2400,7 @@
 
             // Button row
             var btnRow = h('div', { style: 'margin-top: 12px; display: flex; gap: 12px; align-items: center;' });
-            var explainBtn = h('button', { className: 'sql-explain-btn' }, 'Explain This SQL');
+            var explainBtn = h('button', { className: 'sql-explain-btn' }, 'Explain & Validate');
             var clearBtn = h('button', {
                 style: 'background: transparent; border: 1px solid var(--border); padding: 10px 20px; border-radius: var(--radius); cursor: pointer; color: var(--text-muted);'
             }, 'Clear');
@@ -2165,6 +2442,10 @@
 
         function buildExplanation(parsed, sql) {
             var frag = document.createDocumentFragment();
+
+            // === VALIDATION ===
+            var validation = validateSql(parsed, sql);
+            frag.appendChild(buildValidationSection(validation));
 
             // === TABLES ===
             if (parsed.tables.length) {
