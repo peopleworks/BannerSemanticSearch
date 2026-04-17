@@ -2128,6 +2128,57 @@
             return refs;
         }
 
+        // Catch bare Banner-style column references (no alias/table prefix),
+        // e.g. `SELECT PHRDEDN_BAD_COL FROM PHRDEDN`. These slip past
+        // extractColumnRefs which requires a dot. Only activates when the query
+        // has at least one known table to check against.
+        function extractBareColumnRefs(sql, parsed, alreadySeen) {
+            var validTables = parsed.tables.filter(function(t) { return SCHEMA.tables[t]; });
+            if (!validTables.length) return [];
+
+            // Strip comments, string literals, and bind variables so we don't
+            // match 'SE9000' or :payno as if they were columns.
+            var clean = sql
+                .replace(/--.*$/gm, '')
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/'[^']*'/g, "''")
+                .replace(/"[^"]*"/g, '""')
+                .replace(/:[A-Za-z_]\w*/g, '');
+
+            // Banner columns always contain at least one underscore and are
+            // uppercase. This skips bare SQL keywords (NULL, BETWEEN, etc.).
+            var re = /\b([A-Z]+_[A-Z_]+)\b/g;
+            var reserved = { IS_NULL:1 }; // rare — most keywords have no underscore
+            var refs = [], seen = {};
+            var m;
+            while ((m = re.exec(clean)) !== null) {
+                var word = m[1];
+                if (reserved[word]) continue;
+                // Skip if already matched via table.column form
+                if (alreadySeen && alreadySeen[word]) continue;
+                // Skip if preceded by '.' (dot-qualified — handled elsewhere)
+                if (m.index > 0 && clean[m.index - 1] === '.') continue;
+                // Skip if the same token is one of the known tables in FROM
+                if (parsed.tables.indexOf(word) >= 0) continue;
+                // Skip if followed by '(' — probably a function we don't know about
+                var tail = clean.slice(m.index + word.length).match(/^\s*\(/);
+                if (tail) continue;
+                if (seen[word]) continue;
+                seen[word] = true;
+                // Find the first table in FROM that actually has this column
+                var matchedTable = null;
+                for (var i = 0; i < validTables.length; i++) {
+                    var info = SCHEMA.tables[validTables[i]];
+                    for (var j = 0; j < info.c.length; j++) {
+                        if (info.c[j][0] === word) { matchedTable = validTables[i]; break; }
+                    }
+                    if (matchedTable) break;
+                }
+                refs.push({ col: word, table: matchedTable || validTables[0], found: !!matchedTable, bare: true });
+            }
+            return refs;
+        }
+
         function validateSql(parsed, sql) {
             var errors = [], warnings = [], passes = [];
             var upper = sql.toUpperCase();
@@ -2154,7 +2205,7 @@
             var badCols = 0, goodCols = 0;
             colRefs.forEach(function(ref) {
                 var tbl = SCHEMA.tables[ref.table];
-                if (!tbl) return;
+                if (!tbl) return;   // Missing table — already flagged above
                 var found = false;
                 for (var i = 0; i < tbl.c.length; i++) {
                     if (tbl.c[i][0] === ref.col) { found = true; break; }
@@ -2169,6 +2220,32 @@
                     });
                 }
             });
+
+            // 2b. Bare column refs (no alias/table prefix) — e.g. SELECT BAD_COL FROM PHRHIST
+            var alreadySeen = {};
+            colRefs.forEach(function(r) { alreadySeen[r.col] = true; });
+            var bareRefs = extractBareColumnRefs(sql, parsed, alreadySeen);
+            bareRefs.forEach(function(ref) {
+                if (ref.found) {
+                    goodCols++;
+                } else {
+                    badCols++;
+                    // Find best similar column across all tables in FROM
+                    var best = null;
+                    parsed.tables.forEach(function(tbl) {
+                        var sims = findSimilarColumns(ref.col, tbl);
+                        if (sims.length && (!best || sims[0].dist < best.dist)) {
+                            best = { name: sims[0].name, table: tbl };
+                        }
+                    });
+                    var tblList = parsed.tables.join(', ');
+                    errors.push({
+                        msg: "Column '" + ref.col + "' not found on any table in FROM (" + tblList + ").",
+                        suggestion: best ? "Did you mean " + best.name + " on " + best.table + "?" : "Add a table alias (e.g. h.COLUMN) or check the column name."
+                    });
+                }
+            });
+
             if (goodCols > 0 && badCols === 0) {
                 passes.push({ msg: goodCols + " column reference(s) validated against schema." });
             }
@@ -2262,6 +2339,17 @@
                 errors.push({ msg: "Unmatched parentheses: " + openP + " opening, " + closeP + " closing." });
             } else if (openP > 0) {
                 passes.push({ msg: "Parentheses balanced (" + openP + " pairs)." });
+            }
+
+            // Unclosed single-quoted string literal
+            var singleQuotes = (sql.match(/'/g) || []).length;
+            if (singleQuotes % 2 !== 0) {
+                errors.push({ msg: "Unclosed string literal — odd number of single quotes (" + singleQuotes + ")." });
+            }
+
+            // Always surface at least one message so the user knows the check ran.
+            if (!errors.length && !warnings.length && !passes.length) {
+                passes.push({ msg: "Query parsed — no issues detected." });
             }
 
             return { errors: errors, warnings: warnings, passes: passes };
