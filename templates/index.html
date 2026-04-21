@@ -489,6 +489,114 @@
         }
         .report-validate-btn:hover { background: var(--navy-light); }
 
+        /* Ask Banner — Intent-matched SQL answer card */
+        .intent-card {
+            background: linear-gradient(135deg, rgba(0, 51, 102, 0.04) 0%, rgba(255, 184, 28, 0.06) 100%);
+            border: 1px solid var(--border); border-left: 5px solid var(--gold);
+            border-radius: var(--radius); padding: 20px; margin-bottom: 24px;
+            box-shadow: var(--shadow-lg); position: relative;
+        }
+        .intent-card-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+        }
+        .intent-badge {
+            background: var(--gold); color: var(--navy-dark); padding: 4px 12px;
+            border-radius: 12px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .intent-card-dismiss {
+            position: absolute; top: 12px; right: 12px;
+            background: transparent; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 18px; padding: 2px 8px; border-radius: 4px;
+        }
+        .intent-card-dismiss:hover { background: var(--hover); color: var(--text); }
+        .intent-title {
+            font-size: 20px; font-weight: 700; color: var(--navy);
+            margin: 4px 0 6px 0; line-height: 1.3;
+        }
+        .intent-desc {
+            color: var(--text); font-size: 14px; line-height: 1.6; margin-bottom: 14px;
+        }
+        .intent-sql-wrap { position: relative; margin-bottom: 14px; }
+        .intent-sql {
+            background: #0f172a; color: #e2e8f0; padding: 16px 20px;
+            border-radius: var(--radius); overflow-x: auto;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 13px;
+            line-height: 1.6; white-space: pre; margin: 0;
+            border: 1px solid #1e293b;
+        }
+        .intent-sql .kw    { color: #93c5fd; font-weight: 600; }
+        .intent-sql .fn    { color: #fbbf24; }
+        .intent-sql .tbl   { color: #fde68a; }
+        .intent-sql .str   { color: #86efac; }
+        .intent-sql .num   { color: #f9a8d4; }
+        .intent-sql .cmt   { color: #64748b; font-style: italic; }
+        .intent-copy-btn {
+            position: absolute; top: 10px; right: 10px;
+            background: var(--gold); color: var(--navy-dark); border: none;
+            padding: 6px 14px; border-radius: 4px; cursor: pointer;
+            font-size: 12px; font-weight: 700;
+        }
+        .intent-copy-btn:hover { background: var(--gold-light); }
+        .intent-copy-btn.copied { background: #10b981; color: #fff; }
+        .intent-explain {
+            background: rgba(255, 255, 255, 0.5); border-radius: var(--radius);
+            padding: 12px 16px; margin-bottom: 14px;
+        }
+        .intent-explain-head {
+            font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--navy); font-weight: 700; margin-bottom: 8px;
+        }
+        .intent-explain ul { margin: 0; padding-left: 22px; }
+        .intent-explain li {
+            color: var(--text); font-size: 13px; line-height: 1.7; margin-bottom: 4px;
+        }
+        .intent-explain li code {
+            background: rgba(0, 51, 102, 0.08); color: var(--navy);
+            padding: 1px 6px; border-radius: 3px; font-size: 12px;
+        }
+        .intent-tables {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+            font-size: 12px; color: var(--text-muted);
+        }
+        .intent-tables-label {
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+            font-size: 11px; margin-right: 4px;
+        }
+        .intent-tables a {
+            font-family: monospace; background: var(--card-bg); padding: 3px 10px;
+            border-radius: 4px; color: var(--navy); cursor: pointer; font-weight: 600;
+            border: 1px solid var(--border);
+        }
+        .intent-tables a:hover { background: var(--hover); }
+        .intent-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .intent-btn-primary {
+            background: var(--navy); color: var(--gold); border: none;
+            padding: 10px 20px; border-radius: var(--radius); cursor: pointer;
+            font-size: 14px; font-weight: 700;
+        }
+        .intent-btn-primary:hover { background: var(--navy-light); }
+        .intent-btn-secondary {
+            background: transparent; color: var(--navy); border: 1px solid var(--navy);
+            padding: 10px 20px; border-radius: var(--radius); cursor: pointer;
+            font-size: 14px; font-weight: 600;
+        }
+        .intent-btn-secondary:hover { background: var(--navy); color: #fff; }
+        .intent-report-card {
+            background: rgba(123, 45, 123, 0.08); border: 1px solid rgba(123, 45, 123, 0.3);
+            padding: 14px; border-radius: var(--radius); margin-bottom: 12px;
+            display: flex; align-items: center; gap: 12px; cursor: pointer;
+            transition: all 0.15s;
+        }
+        .intent-report-card:hover { background: rgba(123, 45, 123, 0.15); transform: translateX(2px); }
+        .intent-report-id {
+            background: #7b2d7b; color: #fff; padding: 4px 10px; border-radius: 4px;
+            font-family: monospace; font-size: 12px; font-weight: 700;
+        }
+        .intent-report-title { font-weight: 600; color: var(--text); }
+        .intent-report-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
         .help-panel {
             position: fixed; top: 0; right: -380px; width: 380px; height: 100vh;
             background: var(--card-bg); box-shadow: -4px 0 20px rgba(0,0,0,0.15);
@@ -1388,6 +1496,26 @@
             if (REPORTS && REPORTS.length) {
                 frag.appendChild(h('div', {className: 'section-title'}, 'Tools'));
                 var toolsRow = h('div', { style: 'display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;' });
+
+                //  Ask Banner: intent-to-SQL engine. Click any example to run it.
+                var askCard = h('div', {
+                    className: 'module-card',
+                    style: 'border-left: 4px solid var(--gold); flex: 2; min-width: 340px;'
+                });
+                askCard.appendChild(h('div', {className: 'module-name'}, '💡 Ask Banner'));
+                askCard.appendChild(h('div', {className: 'module-desc'}, 'Type a question in English about security or access, and the tool generates the specific SQL that answers it — with line-by-line explanation and one-click validation.'));
+                var exRow = h('div', { style: 'display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;' });
+                ['Banner Student security classes','finance security classes','HR payroll classes','access to SHAINST','users in class SFAREGS','dormant accounts','terminated with access','violations last 30 days']
+                    .forEach(function(ex) {
+                        var chip = h('a', {
+                            onclick: (function(q) { return function() { document.getElementById('searchInput').value = q; navigate('search/' + encodeURIComponent(q)); }; })(ex),
+                            style: 'cursor:pointer; font-size: 12px; background: rgba(255,184,28,0.15); color: var(--navy); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,184,28,0.5); font-weight: 600;'
+                        }, ex);
+                        exRow.appendChild(chip);
+                    });
+                askCard.appendChild(exRow);
+                toolsRow.appendChild(askCard);
+
                 toolsRow.appendChild(h('div', {
                     className: 'module-card',
                     style: 'border-left: 4px solid #7b2d7b; flex: 1; min-width: 240px; cursor: pointer;',
@@ -1399,7 +1527,7 @@
                 ]));
                 toolsRow.appendChild(h('div', {
                     className: 'module-card',
-                    style: 'border-left: 4px solid var(--gold); flex: 1; min-width: 240px; cursor: pointer;',
+                    style: 'border-left: 4px solid var(--navy); flex: 1; min-width: 240px; cursor: pointer;',
                     onclick: function() { navigate('sql'); }
                 }, [
                     h('div', {className: 'module-name'}, '</> SQL Explainer'),
@@ -1478,6 +1606,343 @@
         }
 
         // ==================== GROUPED SEARCH RESULTS ====================
+        // ==================== ASK BANNER — intent-to-SQL engine ====================
+
+        var ASK_MODULES = {
+            'S': { name: 'Student',              kw: ['student','admission','admissions','registration','enroll','enrollment','course','academic','transcript','catalog','section'] },
+            'F': { name: 'Finance',              kw: ['finance','financial','budget','gl','general ledger','ledger','purchasing','purchase','vendor','ap','accounts payable','fixed asset','fund','grant accounting'] },
+            'P': { name: 'HR / Payroll',         kw: ['payroll','hr','human resources','human resource','employee','benefits','deduction','compensation','wage','salary','w-2','w2'] },
+            'A': { name: 'Advancement / Alumni', kw: ['alumni','advancement','development','donor','gift','campaign','pledge','prospect'] },
+            'R': { name: 'Financial Aid',        kw: ['financial aid','faid',' aid','loan','scholarship','award','fafsa'] },
+            'T': { name: 'Accounts Receivable',  kw: ['accounts receivable',' ar ','cashiering','student account','bill','payment'] },
+            'G': { name: 'General',               kw: [' general '] },
+            'N': { name: 'Position Control',     kw: ['position control'] },
+        };
+
+        function detectModule(q) {
+            var lo = ' ' + q.toLowerCase() + ' ';
+            var best = null, bestLen = 0;
+            for (var code in ASK_MODULES) {
+                var kws = ASK_MODULES[code].kw;
+                for (var i = 0; i < kws.length; i++) {
+                    if (lo.indexOf(kws[i]) !== -1 && kws[i].length > bestLen) {
+                        best = code; bestLen = kws[i].length;
+                    }
+                }
+            }
+            return best;
+        }
+
+        function highlightSql(sql) {
+            //  Light syntax highlighting for the intent card SQL block.
+            var kws = ['SELECT','FROM','WHERE','AND','OR','NOT','JOIN','LEFT','RIGHT','INNER','OUTER','ON','GROUP BY','ORDER BY','HAVING','AS','IN','IS','NULL','EXISTS','UNION','ALL','BETWEEN','LIKE','ESCAPE','CASE','WHEN','THEN','ELSE','END','DISTINCT','COUNT','SUM','AVG','MIN','MAX','NVL','COALESCE','DECODE','TO_CHAR','TO_DATE','TRUNC','SYSDATE','FETCH','FIRST','ROWS','ONLY','WITH','GREATEST','LEAST'];
+            var escaped = sql.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            //  Comments
+            escaped = escaped.replace(/(--[^\n]*)/g, '<span class="cmt">$1</span>');
+            //  String literals
+            escaped = escaped.replace(/('[^']*')/g, '<span class="str">$1</span>');
+            //  Keywords (whole-word, case-insensitive)
+            kws.sort(function(a,b) { return b.length - a.length; });
+            kws.forEach(function(kw) {
+                var re = new RegExp('\\b' + kw.replace(' ','\\s+') + '\\b', 'gi');
+                escaped = escaped.replace(re, function(m) { return '<span class="kw">' + m + '</span>'; });
+            });
+            //  Numbers
+            escaped = escaped.replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
+            return escaped;
+        }
+
+        function parseIntent(query) {
+            var q = query.trim();
+            if (!q) return null;
+            var lo = q.toLowerCase();
+
+            //  P4 — shortcuts to canonical reports
+            if (/\bdormant\b|\bnever logged\b|\binactive account/i.test(lo) && REPORTS.some(function(r){return r.id==='SR001';}))
+                return { kind: 'report', id: 'SR001', original: q };
+            if (/(terminat|separated).*\b(access|account|banner|employee)/i.test(lo) && REPORTS.some(function(r){return r.id==='SR002';}))
+                return { kind: 'report', id: 'SR002', original: q };
+            if (/\bviolation|\bguralog|\bsecurity log\b|\bfailed login/i.test(lo) && REPORTS.some(function(r){return r.id==='SR005';}))
+                return { kind: 'report', id: 'SR005', original: q };
+            if (/direct.{0,8}grant|guruobj.{0,15}bypass|privilege (creep|escalation)|bypass.{0,10}class/i.test(lo) && REPORTS.some(function(r){return r.id==='SR004';}))
+                return { kind: 'report', id: 'SR004', original: q };
+
+            //  P1 — {module} security classes
+            var mentionsClasses = /\bclass(es)?\b/i.test(lo);
+            var mentionsSecurity = /\bsecurity\b|\baccess\b|\bbansecr\b|\bpermission/i.test(lo);
+            if (mentionsClasses && (mentionsSecurity || /\bbanner\b/i.test(lo))) {
+                var mod = detectModule(q);
+                if (mod) return { kind: 'module_classes', module: mod, original: q };
+            }
+
+            //  P2 — users in class X / who has class X
+            var classMatch = q.match(/\b(?:users?\s+in|who\s+has|who\s+is\s+in|members?\s+of|assigned\s+to)\s+(?:class\s+)?([A-Z][A-Z0-9_]{2,})\b/i);
+            if (classMatch) return { kind: 'class_users', class_code: classMatch[1].toUpperCase(), original: q };
+
+            //  P3 — access to {OBJECT} / who can access X
+            var objMatch = q.match(/\b(?:access\s+to|who\s+can\s+access|who\s+(?:has\s+)?access(?:es)?|can\s+see)\s+([A-Z][A-Z0-9_]{2,})\b/i);
+            if (objMatch) return { kind: 'object_access', object_code: objMatch[1].toUpperCase(), original: q };
+
+            return null;
+        }
+
+        function generateIntentAnswer(intent) {
+            if (!intent) return null;
+
+            if (intent.kind === 'report') {
+                var rep = null;
+                for (var i = 0; i < REPORTS.length; i++) if (REPORTS[i].id === intent.id) { rep = REPORTS[i]; break; }
+                return rep ? { kind: 'report_shortcut', report: rep, original: intent.original } : null;
+            }
+
+            if (intent.kind === 'module_classes') {
+                var m = ASK_MODULES[intent.module];
+                var sql =
+                    'SELECT\n' +
+                    '    tc.gtvclas_class_code                              AS class_code,\n' +
+                    '    tc.gtvclas_comments                                AS description,\n' +
+                    '    tc.gtvclas_sysi_code                               AS system_code,\n' +
+                    '    (SELECT COUNT(DISTINCT gc.guracls_userid)\n' +
+                    '       FROM bansecr.guracls gc\n' +
+                    '      WHERE gc.guracls_class_code   = tc.gtvclas_class_code\n' +
+                    '        AND gc.guracls_audit_action <> \'D\'\n' +
+                    '        AND gc.guracls_audit_time   =\n' +
+                    '            (SELECT MAX(g2.guracls_audit_time)\n' +
+                    '               FROM bansecr.guracls g2\n' +
+                    '              WHERE g2.guracls_userid     = gc.guracls_userid\n' +
+                    '                AND g2.guracls_class_code = gc.guracls_class_code))  AS active_users,\n' +
+                    '    (SELECT COUNT(DISTINCT gv.guvuacc_object)\n' +
+                    '       FROM bansecr.guvuacc gv\n' +
+                    '      WHERE gv.guvuacc_class = tc.gtvclas_class_code)                AS object_count\n' +
+                    'FROM bansecr.gtvclas tc\n' +
+                    'WHERE tc.gtvclas_sysi_code = \'' + intent.module + '\'\n' +
+                    '   OR tc.gtvclas_class_code LIKE \'' + intent.module + '%\'\n' +
+                    'ORDER BY active_users DESC, tc.gtvclas_class_code;';
+                return {
+                    kind: 'generated',
+                    title: 'Banner ' + m.name + ' Security Classes',
+                    description: 'Lists every Banner security class scoped to the ' + m.name +
+                                 ' module, enriched with the count of active users currently assigned and the number of distinct objects each class grants access to. Classes at the top have the most people in them — a good starting point for access review.',
+                    sql: sql,
+                    tables: ['GTVCLAS','GURACLS','GUVUACC'],
+                    explain: [
+                        '<code>gtvclas_sysi_code = \'' + intent.module + '\'</code> filters classes flagged as <b>' + m.name + '</b> by Banner\'s system-indicator code.',
+                        'The <code>LIKE \'' + intent.module + '%\'</code> fallback catches sites where <code>SYSI_CODE</code> is sparsely populated.',
+                        'Active users use the canonical GURACLS audit pattern: <code>MAX(audit_time)</code> per (userid, class_code) plus <code>audit_action &lt;&gt; \'D\'</code> to exclude deletions.',
+                        '<code>GUVUACC</code> is the pre-joined effective-access view; counting distinct objects gives a size proxy for each class\'s footprint.',
+                    ],
+                    caveats: 'GTVCLAS_SYSI_CODE populates during Banner installation and may be empty at sites that never set it — the LIKE fallback is the belt-and-suspenders. For a deeper view of one class, drill into GUVUACC filtered by that class_code.',
+                    original: intent.original,
+                };
+            }
+
+            if (intent.kind === 'class_users') {
+                var cc = intent.class_code;
+                var sql =
+                    'SELECT\n' +
+                    '    gc.guracls_userid                                    AS username,\n' +
+                    '    ga.gobeacc_pidm                                      AS pidm,\n' +
+                    '    si.spriden_id                                        AS banner_id,\n' +
+                    '    si.spriden_first_name || \' \' || si.spriden_last_name AS full_name,\n' +
+                    '    gc.guracls_audit_time                                AS granted_on,\n' +
+                    '    pe.pebempl_term_date                                 AS employee_term_date\n' +
+                    'FROM        bansecr.guracls gc\n' +
+                    'LEFT JOIN   general.gobeacc ga ON ga.gobeacc_username = gc.guracls_userid\n' +
+                    'LEFT JOIN   spriden si         ON si.spriden_pidm     = ga.gobeacc_pidm\n' +
+                    '                              AND si.spriden_change_ind IS NULL\n' +
+                    '                              AND si.spriden_entity_ind = \'P\'\n' +
+                    'LEFT JOIN   pebempl pe         ON pe.pebempl_pidm     = ga.gobeacc_pidm\n' +
+                    'WHERE  gc.guracls_class_code = \'' + cc + '\'\n' +
+                    '  AND  gc.guracls_audit_time =\n' +
+                    '           (SELECT MAX(g2.guracls_audit_time)\n' +
+                    '              FROM bansecr.guracls g2\n' +
+                    '             WHERE g2.guracls_userid     = gc.guracls_userid\n' +
+                    '               AND g2.guracls_class_code = gc.guracls_class_code)\n' +
+                    '  AND  gc.guracls_audit_action <> \'D\'\n' +
+                    'ORDER BY gc.guracls_userid;';
+                return {
+                    kind: 'generated',
+                    title: 'Users Currently Assigned to Class ' + cc,
+                    description: 'Lists every Banner user with an active assignment to the <code>' + cc + '</code> class, joined to GOBEACC/SPRIDEN for identity and PEBEMPL to flag any terminated employees still holding the class.',
+                    sql: sql,
+                    tables: ['GURACLS','GOBEACC','SPRIDEN','PEBEMPL'],
+                    explain: [
+                        '<code>guracls_class_code = \'' + cc + '\'</code> scopes the query to one class.',
+                        'The MAX(audit_time) subquery is mandatory — without it, every past assignment change for each user duplicates in results.',
+                        '<code>audit_action &lt;&gt; \'D\'</code> excludes users whose assignment was deleted (~38% of GURACLS rows at WCC are deletions).',
+                        'Joining PEBEMPL surfaces the worst case: a terminated employee still holding this class.',
+                    ],
+                    caveats: 'Covers modern GURACLS only. If this class is legacy and users are in GURUCLS instead, UNION a GURUCLS query. Non-primary names are hidden by the SPRIDEN_CHANGE_IND IS NULL filter (intentional).',
+                    original: intent.original,
+                };
+            }
+
+            if (intent.kind === 'object_access') {
+                var obj = intent.object_code;
+                var sql =
+                    'SELECT\n' +
+                    '    gu.guvuacc_user                                      AS username,\n' +
+                    '    gu.guvuacc_class                                     AS via_class,\n' +
+                    '    gu.guvuacc_role                                      AS role,\n' +
+                    '    gu.guvuacc_type                                      AS access_type,\n' +
+                    '    si.spriden_first_name || \' \' || si.spriden_last_name AS full_name,\n' +
+                    '    pe.pebempl_term_date                                 AS employee_term_date\n' +
+                    'FROM        bansecr.guvuacc gu\n' +
+                    'LEFT JOIN   general.gobeacc ga ON ga.gobeacc_username = gu.guvuacc_user\n' +
+                    'LEFT JOIN   spriden si         ON si.spriden_pidm     = ga.gobeacc_pidm\n' +
+                    '                              AND si.spriden_change_ind IS NULL\n' +
+                    '                              AND si.spriden_entity_ind = \'P\'\n' +
+                    'LEFT JOIN   pebempl pe         ON pe.pebempl_pidm     = ga.gobeacc_pidm\n' +
+                    'WHERE  gu.guvuacc_object = \'' + obj + '\'\n' +
+                    'ORDER BY gu.guvuacc_type, gu.guvuacc_user;';
+                return {
+                    kind: 'generated',
+                    title: 'Who Can Access ' + obj,
+                    description: 'Every user with effective access to Banner object <code>' + obj + '</code>, whether via a class, a direct GURUOBJ grant, or a security group. GUVUACC pre-joins the full access graph so you don\'t have to.',
+                    sql: sql,
+                    tables: ['GUVUACC','GOBEACC','SPRIDEN','PEBEMPL'],
+                    explain: [
+                        'GUVUACC\'s rows are the effective-access graph — Banner already does the CLASS ∪ GURUOBJ ∪ GROUP union for you.',
+                        '<code>guvuacc_type</code> tells you HOW each user got access: <code>Class</code>, <code>Direct</code>, <code>Group Class</code>, or <code>Group Direct</code>.',
+                        '<code>guvuacc_class</code> is NULL when the grant came directly (<code>guruobj</code>), non-null when via a class.',
+                        'Joining PEBEMPL flags terminated employees that retained access to this object — high-severity audit finding.',
+                    ],
+                    caveats: 'GUVUACC is a view, not indexed on object — for frequently-run queries against hot objects, consider materializing or switching to a bespoke GURACLS + GURUOBJ UNION. Object names are case-sensitive in GUVUACC.',
+                    original: intent.original,
+                };
+            }
+
+            return null;
+        }
+
+        function renderIntentCard(answer) {
+            if (!answer) return null;
+            if (answer.kind === 'report_shortcut') {
+                var wrap = h('div', { className: 'intent-card' });
+                var header = h('div', { className: 'intent-card-header' });
+                header.appendChild(h('span', { className: 'intent-badge' }, ['💡 ', 'Matching report']));
+                wrap.appendChild(header);
+                wrap.appendChild(h('div', { className: 'intent-desc' },
+                    'Your question maps to a ready-to-run security report in this tool:'));
+                var rc = h('div', { className: 'intent-report-card', onclick: (function(id) { return function() { navigate('report/' + id); }; })(answer.report.id) });
+                rc.appendChild(h('span', { className: 'intent-report-id' }, answer.report.id));
+                var body = h('div', {});
+                body.appendChild(h('div', { className: 'intent-report-title' }, answer.report.title));
+                body.appendChild(h('div', { className: 'intent-report-desc' }, answer.report.description));
+                rc.appendChild(body);
+                rc.appendChild(h('span', { style: 'margin-left: auto; color: #7b2d7b; font-weight: 700;' }, 'Open →'));
+                wrap.appendChild(rc);
+                return wrap;
+            }
+
+            if (answer.kind !== 'generated') return null;
+
+            var card = h('div', { className: 'intent-card' });
+
+            var dismiss = h('button', { className: 'intent-card-dismiss', title: 'Hide', onclick: function() { card.style.display = 'none'; } }, '×');
+            card.appendChild(dismiss);
+
+            var header2 = h('div', { className: 'intent-card-header' });
+            header2.appendChild(h('span', { className: 'intent-badge' }, '💡  I can answer this with SQL'));
+            card.appendChild(header2);
+
+            card.appendChild(h('div', { className: 'intent-title' }, answer.title));
+
+            //  description may contain <code> tags, use innerHTML
+            var desc = h('div', { className: 'intent-desc' });
+            desc.innerHTML = answer.description;
+            card.appendChild(desc);
+
+            //  Tables referenced
+            if (answer.tables && answer.tables.length) {
+                var tblWrap = h('div', { className: 'intent-tables' });
+                tblWrap.appendChild(h('span', { className: 'intent-tables-label' }, 'Tables:'));
+                answer.tables.forEach(function(t) {
+                    tblWrap.appendChild(h('a', {
+                        onclick: (function(tn) { return function() { navigate('table/' + tn); }; })(t)
+                    }, t));
+                });
+                card.appendChild(tblWrap);
+            }
+
+            //  SQL block with syntax highlighting
+            var sqlWrap = h('div', { className: 'intent-sql-wrap' });
+            var pre = document.createElement('pre');
+            pre.className = 'intent-sql';
+            pre.innerHTML = highlightSql(answer.sql);
+            var copy = h('button', { className: 'intent-copy-btn' }, 'Copy');
+            copy.onclick = (function(sql, btn) {
+                return function(e) {
+                    e.stopPropagation();
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(sql).then(function() {
+                            btn.classList.add('copied'); btn.textContent = 'Copied!';
+                            setTimeout(function() { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 2000);
+                        });
+                    }
+                };
+            })(answer.sql, copy);
+            sqlWrap.appendChild(pre);
+            sqlWrap.appendChild(copy);
+            card.appendChild(sqlWrap);
+
+            //  Explanation bullets
+            if (answer.explain && answer.explain.length) {
+                var ex = h('div', { className: 'intent-explain' });
+                ex.appendChild(h('div', { className: 'intent-explain-head' }, 'How this works'));
+                var ul = document.createElement('ul');
+                answer.explain.forEach(function(line) {
+                    var li = document.createElement('li');
+                    li.innerHTML = line;
+                    ul.appendChild(li);
+                });
+                ex.appendChild(ul);
+                card.appendChild(ex);
+            }
+
+            //  Caveats
+            if (answer.caveats) {
+                var cav = h('div', { className: 'intent-explain', style: 'background: rgba(217, 119, 6, 0.08); border-left: 3px solid #d97706;' });
+                cav.appendChild(h('div', { className: 'intent-explain-head', style: 'color: #d97706;' }, 'Caveats'));
+                var cavBody = h('div', { style: 'font-size: 13px; line-height: 1.6;' });
+                cavBody.innerHTML = answer.caveats;
+                cav.appendChild(cavBody);
+                card.appendChild(cav);
+            }
+
+            //  Action buttons
+            var btns = h('div', { className: 'intent-buttons' });
+            var validateBtn = h('button', { className: 'intent-btn-primary' }, 'Validate in SQL Explainer →');
+            validateBtn.onclick = (function(sql) {
+                return function() {
+                    state.sqlText = sql;
+                    state.sqlResults = '';
+                    navigate('sql');
+                    setTimeout(function() {
+                        var b = document.getElementById('sqlExplainBtn');
+                        if (b) b.click();
+                    }, 80);
+                };
+            })(answer.sql);
+            btns.appendChild(validateBtn);
+
+            var copyBtn2 = h('button', { className: 'intent-btn-secondary' }, 'Copy SQL to clipboard');
+            copyBtn2.onclick = (function(sql, btn) {
+                return function() {
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(sql).then(function() {
+                            btn.textContent = 'Copied!';
+                            setTimeout(function() { btn.textContent = 'Copy SQL to clipboard'; }, 2000);
+                        });
+                    }
+                };
+            })(answer.sql, copyBtn2);
+            btns.appendChild(copyBtn2);
+            card.appendChild(btns);
+
+            return card;
+        }
+
         function renderSearchResults() {
             var searchResult;
             if (state.activeTerms.length > 0 && state.results) {
@@ -1521,6 +1986,14 @@
             }
 
             var frag = document.createDocumentFragment();
+
+            // ---- ASK BANNER: intent-matched SQL answer ----
+            var intent = parseIntent(state.query);
+            if (intent) {
+                var answer = generateIntentAnswer(intent);
+                var card = renderIntentCard(answer);
+                if (card) frag.appendChild(card);
+            }
 
             // ---- INTERACTIVE TERM BUILDER ----
             if (state.activeTerms.length > 0) {
