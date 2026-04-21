@@ -421,7 +421,7 @@
         .help-toggle.panel-open { right: 380px; }
 
         .reports-toggle {
-            position: fixed; right: 0; top: calc(50% - 180px);
+            position: fixed; right: 0; top: calc(50% - 230px);
             background: #7b2d7b; color: #fff; border: none; padding: 12px 6px;
             border-radius: var(--radius) 0 0 var(--radius); cursor: pointer; z-index: 200;
             font-size: 14px; writing-mode: vertical-rl; text-orientation: mixed;
@@ -788,13 +788,13 @@
     </main>
 
     <!-- SQL Explainer Button -->
-    <button class="sql-toggle" id="sqlToggle" title="SQL Explainer - Paste SQL to understand it">&lt;/&gt; SQL</button>
+    <button class="sql-toggle" id="sqlToggle" title="SQL Explainer - Paste SQL to understand it  (shortcut: `)">&lt;/&gt; SQL</button>
 
     <!-- Reports Button -->
-    <button class="reports-toggle" id="reportsToggle" title="Ready-to-run security / access reports">&#9776; REPORTS</button>
+    <button class="reports-toggle" id="reportsToggle" title="Ready-to-run security / access reports  (shortcut: ~)">&#9776; REPORTS</button>
 
     <!-- Help/Examples Side Panel -->
-    <button class="help-toggle" id="helpToggle" title="Search Examples &amp; Help">? HELP</button>
+    <button class="help-toggle" id="helpToggle" title="Search Examples &amp; Help  (shortcut: ?)">? HELP</button>
 
     <aside class="help-panel" id="helpPanel">
         <div class="help-panel-header">
@@ -1505,7 +1505,7 @@
                 askCard.appendChild(h('div', {className: 'module-name'}, '💡 Ask Banner'));
                 askCard.appendChild(h('div', {className: 'module-desc'}, 'Type a question in English about security or access, and the tool generates the specific SQL that answers it — with line-by-line explanation and one-click validation.'));
                 var exRow = h('div', { style: 'display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;' });
-                ['Banner Student security classes','finance security classes','HR payroll classes','access to SHAINST','users in class SFAREGS','dormant accounts','terminated with access','violations last 30 days']
+                ['Banner Student security classes','finance security classes','HR payroll classes','access to SHAINST','users in class SFAREGS','dormant accounts','terminated with access','violations last 30 days','most populated classes','super users','unused classes','recent access changes','PII access','object concentration']
                     .forEach(function(ex) {
                         var chip = h('a', {
                             onclick: (function(q) { return function() { document.getElementById('searchInput').value = q; navigate('search/' + encodeURIComponent(q)); }; })(ex),
@@ -1658,14 +1658,29 @@
             var lo = q.toLowerCase();
 
             //  P4 — shortcuts to canonical reports
-            if (/\bdormant\b|\bnever logged\b|\binactive account/i.test(lo) && REPORTS.some(function(r){return r.id==='SR001';}))
+            function _hasReport(id) { for (var i=0;i<REPORTS.length;i++) if (REPORTS[i].id===id) return true; return false; }
+            if (/\bdormant\b|\bnever logged\b|\binactive account/i.test(lo) && _hasReport('SR001'))
                 return { kind: 'report', id: 'SR001', original: q };
-            if (/(terminat|separated).*\b(access|account|banner|employee)/i.test(lo) && REPORTS.some(function(r){return r.id==='SR002';}))
+            if (/(terminat|separated).*\b(access|account|banner|employee)/i.test(lo) && _hasReport('SR002'))
                 return { kind: 'report', id: 'SR002', original: q };
-            if (/\bviolation|\bguralog|\bsecurity log\b|\bfailed login/i.test(lo) && REPORTS.some(function(r){return r.id==='SR005';}))
-                return { kind: 'report', id: 'SR005', original: q };
-            if (/direct.{0,8}grant|guruobj.{0,15}bypass|privilege (creep|escalation)|bypass.{0,10}class/i.test(lo) && REPORTS.some(function(r){return r.id==='SR004';}))
+            if (/class membership|who belongs to (?:every|all|each|every).{0,10}class/i.test(lo) && _hasReport('SR003'))
+                return { kind: 'report', id: 'SR003', original: q };
+            if (/direct.{0,8}grant|guruobj.{0,15}bypass|privilege (creep|escalation)|bypass.{0,10}class/i.test(lo) && _hasReport('SR004'))
                 return { kind: 'report', id: 'SR004', original: q };
+            if (/\bviolation|\bguralog|\bsecurity log\b|\bfailed login/i.test(lo) && _hasReport('SR005'))
+                return { kind: 'report', id: 'SR005', original: q };
+            if (/\bunused class|\bempty class|\borphan class|\bstale class|class(es)?.{0,10}(no|zero|without).{0,10}user/i.test(lo) && _hasReport('SR006'))
+                return { kind: 'report', id: 'SR006', original: q };
+            if (/(most|largest|biggest|top).{0,14}(populat|class|member)|\bbig(gest)? class|\bcrowded class/i.test(lo) && _hasReport('SR007'))
+                return { kind: 'report', id: 'SR007', original: q };
+            if (/\bsuper user|\btop admin|\bmost privileg|\bpower user|\bmaintenance role/i.test(lo) && _hasReport('SR008'))
+                return { kind: 'report', id: 'SR008', original: q };
+            if (/recent (access|grant|chang|modif)|audit trail|what changed|access history|grant history|recent.{0,10}grant/i.test(lo) && _hasReport('SR009'))
+                return { kind: 'report', id: 'SR009', original: q };
+            if (/(most|top).{0,14}(access|used|exposed).{0,14}object|\bobject.{0,14}concentration|\bmost (exposed|accessed) (form|page|object)/i.test(lo) && _hasReport('SR010'))
+                return { kind: 'report', id: 'SR010', original: q };
+            if (/\bpii\b|\bssn\b|\bsensitive data|\bferpa\b|sensitive.{0,12}access|personal.{0,10}info|demograph/i.test(lo) && _hasReport('SR011'))
+                return { kind: 'report', id: 'SR011', original: q };
 
             //  P1 — {module} security classes
             var mentionsClasses = /\bclass(es)?\b/i.test(lo);
@@ -3295,7 +3310,7 @@
             homeBtn.onclick = function() { navigate(''); };
             topBar.appendChild(homeBtn);
             topBar.appendChild(h('span', { style: 'color: var(--text-muted); font-size: 12px;' },
-                'Shortcuts: ` (backtick) = open SQL Explainer | Esc = back to home | / = search | ? = help'));
+                'Shortcuts: ` = SQL Explainer | ~ = Reports | / = search | ? = help | Esc = back to home'));
             container.appendChild(topBar);
 
             // Title
@@ -3516,10 +3531,13 @@
             if (e.key === '`' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
                 e.preventDefault(); navigate('sql');
             }
+            if (e.key === '~' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault(); navigate('reports');
+            }
             if (e.key === 'Escape') {
                 var panel = document.getElementById('helpPanel');
                 if (panel.classList.contains('open')) toggleHelpPanel();
-                else if (state.view === 'sql') navigate('');
+                else if (state.view === 'sql' || state.view === 'reports' || state.view === 'report') navigate('');
             }
         });
 
