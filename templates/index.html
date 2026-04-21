@@ -16,6 +16,7 @@
             --text: #1a1a2e;
             --text-muted: #6b7280;
             --border: #e5e7eb;
+            --hover: #f3f4f6;
             --highlight: #fff3cd;
             --success: #10b981;
             --radius: 8px;
@@ -25,7 +26,8 @@
         @media (prefers-color-scheme: dark) {
             :root {
                 --bg: #0f172a; --card-bg: #1e293b; --text: #e2e8f0;
-                --text-muted: #94a3b8; --border: #334155; --highlight: #854d0e33;
+                --text-muted: #94a3b8; --border: #334155;
+                --hover: #273449; --highlight: #854d0e33;
                 --navy: #1e3a5f; --navy-light: #2563eb; --navy-dark: #0f172a;
                 --shadow: 0 1px 3px rgba(0,0,0,0.3); --shadow-lg: 0 4px 12px rgba(0,0,0,0.3);
             }
@@ -596,6 +598,129 @@
         }
         .intent-report-title { font-weight: 600; color: var(--text); }
         .intent-report-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .intent-report-open { margin-left: auto; color: #7b2d7b; font-weight: 700; font-size: 14px; }
+        .reports-accent { color: #7b2d7b; }
+        .intent-caveats {
+            background: rgba(217, 119, 6, 0.08);
+            border-left: 3px solid #d97706;
+            border-radius: var(--radius);
+            padding: 12px 16px; margin-bottom: 14px;
+        }
+        .intent-caveats-head {
+            font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+            color: #b45309; font-weight: 700; margin-bottom: 6px;
+        }
+        .intent-caveats-body {
+            color: var(--text); font-size: 13px; line-height: 1.6;
+        }
+        .intent-caveats-body code {
+            background: rgba(180, 83, 9, 0.12); color: #92400e;
+            padding: 1px 6px; border-radius: 3px; font-size: 12px;
+        }
+
+        /* ======  Dark-mode theming for Ask Banner and Reports cards  ====== */
+        @media (prefers-color-scheme: dark) {
+            .intent-card {
+                background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(255, 184, 28, 0.10) 100%);
+                border-color: var(--border);
+                border-left-color: var(--gold);
+            }
+            .intent-card-dismiss { color: var(--text-muted); }
+            .intent-card-dismiss:hover { background: var(--hover); color: var(--text); }
+            .intent-title { color: var(--gold); }
+            .intent-desc { color: var(--text); }
+            .intent-desc code, .intent-explain li code {
+                background: rgba(255, 184, 28, 0.14);
+                color: #fde68a;
+            }
+            .intent-tables-label { color: var(--text-muted); }
+            .intent-tables a {
+                background: var(--card-bg);
+                color: #93c5fd;
+                border-color: var(--border);
+            }
+            .intent-tables a:hover {
+                background: var(--navy-light);
+                color: #fff;
+                border-color: var(--navy-light);
+            }
+            .intent-explain {
+                background: rgba(15, 23, 42, 0.55);
+                border: 1px solid var(--border);
+            }
+            .intent-explain-head { color: var(--gold); }
+            .intent-explain li { color: var(--text); }
+            .intent-btn-primary {
+                background: var(--gold);
+                color: var(--navy-dark);
+            }
+            .intent-btn-primary:hover { background: var(--gold-light); }
+            .intent-btn-secondary {
+                border-color: var(--gold);
+                color: var(--gold);
+            }
+            .intent-btn-secondary:hover {
+                background: var(--gold);
+                color: var(--navy-dark);
+            }
+            .intent-badge { background: var(--gold); color: var(--navy-dark); }
+
+            /* Purple report-shortcut card */
+            .intent-report-card {
+                background: rgba(168, 85, 247, 0.12);
+                border-color: rgba(168, 85, 247, 0.35);
+            }
+            .intent-report-card:hover { background: rgba(168, 85, 247, 0.22); }
+            .intent-report-id { background: #a855f7; color: #fff; }
+            .intent-report-title { color: var(--text); }
+            .intent-report-open { color: #d8b4fe; }
+
+            /* Reports list + detail pages */
+            .report-card {
+                border-left-color: #c084fc;
+            }
+            .report-card-id {
+                background: var(--hover);
+                color: var(--text-muted);
+            }
+            .report-card-title { color: var(--text); }
+            .report-card-cat {
+                background: rgba(168, 85, 247, 0.18);
+                color: #d8b4fe;
+            }
+            .report-card-sev.HIGH   { background: #7f1d1d; color: #fecaca; }
+            .report-card-sev.MEDIUM { background: #78350f; color: #fde68a; }
+            .report-card-sev.INFO   { background: #1e3a8a; color: #bfdbfe; }
+            .report-card-tables span {
+                background: var(--hover);
+                color: var(--text-muted);
+            }
+            .report-detail-section {
+                background: var(--card-bg);
+                border-left-color: #c084fc;
+            }
+            .report-detail-section h4 { color: #c084fc; }
+            .report-validate-btn {
+                background: var(--gold);
+                color: var(--navy-dark);
+            }
+            .report-validate-btn:hover { background: var(--gold-light); }
+
+            /* Caveats box in dark mode — amber text on subtle amber tint */
+            .intent-caveats {
+                background: rgba(217, 119, 6, 0.12);
+                border-left-color: #f59e0b;
+            }
+            .intent-caveats-head { color: #fbbf24; }
+            .intent-caveats-body { color: var(--text); }
+            .intent-caveats-body code {
+                background: rgba(251, 191, 36, 0.18);
+                color: #fde68a;
+            }
+
+            /* Purple accent text needs to lighten in dark mode */
+            .reports-accent { color: #d8b4fe; }
+        }
 
         .help-panel {
             position: fixed; top: 0; right: -380px; width: 380px; height: 100vh;
@@ -1521,7 +1646,7 @@
                     style: 'border-left: 4px solid #7b2d7b; flex: 1; min-width: 240px; cursor: pointer;',
                     onclick: function() { navigate('reports'); }
                 }, [
-                    h('div', {className: 'module-name', style: 'color: #7b2d7b;'}, '☰ Ready-to-run Reports'),
+                    h('div', {className: 'module-name reports-accent'}, '☰ Ready-to-run Reports'),
                     h('div', {className: 'module-desc'}, 'Vetted SQL for access reviews, dormant accounts, terminated-with-access, privilege audits, and violation monitoring.'),
                     h('div', {className: 'module-count'}, REPORTS.length + ' report(s) available'),
                 ]));
@@ -1845,7 +1970,7 @@
                 body.appendChild(h('div', { className: 'intent-report-title' }, answer.report.title));
                 body.appendChild(h('div', { className: 'intent-report-desc' }, answer.report.description));
                 rc.appendChild(body);
-                rc.appendChild(h('span', { style: 'margin-left: auto; color: #7b2d7b; font-weight: 700;' }, 'Open →'));
+                rc.appendChild(h('span', { className: 'intent-report-open' }, 'Open →'));
                 wrap.appendChild(rc);
                 return wrap;
             }
@@ -1917,9 +2042,9 @@
 
             //  Caveats
             if (answer.caveats) {
-                var cav = h('div', { className: 'intent-explain', style: 'background: rgba(217, 119, 6, 0.08); border-left: 3px solid #d97706;' });
-                cav.appendChild(h('div', { className: 'intent-explain-head', style: 'color: #d97706;' }, 'Caveats'));
-                var cavBody = h('div', { style: 'font-size: 13px; line-height: 1.6;' });
+                var cav = h('div', { className: 'intent-caveats' });
+                cav.appendChild(h('div', { className: 'intent-caveats-head' }, 'Caveats'));
+                var cavBody = h('div', { className: 'intent-caveats-body' });
                 cavBody.innerHTML = answer.caveats;
                 cav.appendChild(cavBody);
                 card.appendChild(cav);
@@ -2499,7 +2624,7 @@
             });
 
             Object.keys(byCat).sort().forEach(function(cat) {
-                container.appendChild(h('h3', { style: 'margin: 24px 0 12px 0; color: #7b2d7b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;' }, cat));
+                container.appendChild(h('h3', { className: 'reports-accent', style: 'margin: 24px 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;' }, cat));
                 byCat[cat].forEach(function(rep) {
                     var id = rep.id;
                     var card = h('div', { className: 'report-card', onclick: function() { navigate('report/' + id); } });
