@@ -600,6 +600,139 @@
         .intent-report-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
         .intent-report-open { margin-left: auto; color: #7b2d7b; font-weight: 700; font-size: 14px; }
         .reports-accent { color: #7b2d7b; }
+
+        /* Ask Banner example chips (dashboard) */
+        .ask-chip {
+            cursor: pointer; font-size: 12px; font-weight: 600;
+            background: rgba(255, 184, 28, 0.18); color: var(--navy-dark);
+            padding: 5px 11px; border-radius: 14px;
+            border: 1px solid rgba(255, 184, 28, 0.55);
+            transition: all 0.15s;
+        }
+        .ask-chip:hover {
+            background: var(--gold); color: var(--navy-dark);
+            border-color: var(--gold);
+            transform: translateY(-1px);
+        }
+
+        /* ===================== COMMAND PALETTE (Ctrl+Shift+F) ===================== */
+        .palette-backdrop {
+            position: fixed; inset: 0; background: rgba(10, 15, 30, 0.55);
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            z-index: 1000; display: none; align-items: flex-start; justify-content: center;
+            padding-top: 10vh;
+        }
+        .palette-backdrop.open { display: flex; animation: paletteFade 0.15s ease-out; }
+        @keyframes paletteFade {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .palette {
+            width: 90%; max-width: 640px; max-height: 70vh;
+            background: var(--card-bg); border-radius: 12px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--border);
+            display: flex; flex-direction: column; overflow: hidden;
+            animation: paletteSlide 0.2s ease-out;
+        }
+        @keyframes paletteSlide {
+            from { transform: translateY(-12px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .palette-head {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 18px; border-bottom: 1px solid var(--border);
+        }
+        .palette-search-icon { color: var(--text-muted); flex-shrink: 0; }
+        .palette-input {
+            flex: 1; border: none; outline: none; background: transparent;
+            font-size: 17px; color: var(--text); font-family: inherit;
+        }
+        .palette-input::placeholder { color: var(--text-muted); }
+        .palette-kbd {
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 11px;
+            background: var(--hover); color: var(--text-muted);
+            padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);
+            font-weight: 600;
+        }
+        .palette-body {
+            flex: 1; overflow-y: auto; padding: 8px 0;
+        }
+        .palette-group-label {
+            font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--text-muted); font-weight: 700;
+            padding: 10px 18px 4px 18px;
+        }
+        .palette-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 18px; cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+        .palette-item.active {
+            background: rgba(255, 184, 28, 0.12);
+            border-left-color: var(--gold);
+        }
+        .palette-item:hover { background: var(--hover); }
+        .palette-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 14px; color: #fff; flex-shrink: 0;
+        }
+        .palette-icon.t  { background: #2563eb; }
+        .palette-icon.v  { background: #059669; }
+        .palette-icon.m  { background: #7b2d7b; }
+        .palette-icon.r  { background: #c026d3; }
+        .palette-icon.c  { background: #d97706; }
+        .palette-icon.a  { background: var(--navy); color: var(--gold); }
+        .palette-icon.q  { background: var(--gold); color: var(--navy-dark); }
+        .palette-item-body { flex: 1; min-width: 0; }
+        .palette-item-title {
+            font-size: 14px; font-weight: 600; color: var(--text);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .palette-item-sub {
+            font-size: 12px; color: var(--text-muted); margin-top: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .palette-item-hint {
+            font-size: 11px; color: var(--text-muted);
+            font-family: 'Consolas', monospace; flex-shrink: 0;
+        }
+        .palette-item mark {
+            background: rgba(255, 184, 28, 0.35); color: var(--text);
+            padding: 0 2px; border-radius: 2px;
+        }
+        .palette-foot {
+            padding: 10px 18px; border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 11px; color: var(--text-muted);
+        }
+        .palette-foot-left { display: flex; gap: 14px; }
+        .palette-foot-left span { display: flex; align-items: center; gap: 5px; }
+        .palette-empty {
+            padding: 40px 20px; text-align: center; color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .ask-chip {
+                background: rgba(255, 184, 28, 0.15);
+                color: var(--gold);
+                border-color: rgba(255, 184, 28, 0.45);
+            }
+            .ask-chip:hover {
+                background: var(--gold); color: var(--navy-dark);
+                border-color: var(--gold);
+            }
+            .palette {
+                box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border);
+            }
+            .palette-item.active {
+                background: rgba(255, 184, 28, 0.08);
+            }
+            .palette-item mark {
+                background: rgba(255, 184, 28, 0.25); color: var(--gold);
+            }
+        }
         .intent-caveats {
             background: rgba(217, 119, 6, 0.08);
             border-left: 3px solid #d97706;
@@ -921,6 +1054,28 @@
     <!-- Help/Examples Side Panel -->
     <button class="help-toggle" id="helpToggle" title="Search Examples &amp; Help  (shortcut: ?)">? HELP</button>
 
+    <!-- Command Palette (Ctrl+Shift+F) -->
+    <div class="palette-backdrop" id="paletteBackdrop">
+        <div class="palette" id="palette">
+            <div class="palette-head">
+                <svg class="palette-search-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="text" class="palette-input" id="paletteInput" placeholder="Search tables, columns, reports, cases, modules…" autocomplete="off" spellcheck="false">
+                <span class="palette-kbd">Esc</span>
+            </div>
+            <div class="palette-body" id="paletteBody"></div>
+            <div class="palette-foot">
+                <div class="palette-foot-left">
+                    <span><span class="palette-kbd">↑↓</span> navigate</span>
+                    <span><span class="palette-kbd">Enter</span> open</span>
+                    <span><span class="palette-kbd">Esc</span> close</span>
+                </div>
+                <div>Tables · Reports · Modules · Cases · Actions</div>
+            </div>
+        </div>
+    </div>
+
     <aside class="help-panel" id="helpPanel">
         <div class="help-panel-header">
             <div class="help-panel-top">
@@ -944,6 +1099,50 @@
                 <strong>Smart Search:</strong> This tool understands Banner abbreviations.
                 Type natural English like <code>employee hire date</code> and it automatically
                 expands to search EMPL, EMP, PEBEMPL and related terms. Click any example below to try it.
+            </div>
+
+            <div class="help-tip" style="background: rgba(123, 45, 123, 0.08); border-left: 3px solid #7b2d7b; padding-left: 12px;">
+                <strong style="color: #7b2d7b;">&#128274; Security &amp; Access Reviews:</strong>
+                This tool has a full Banner Security (BANSECR) module. Three ways to use it:
+                <ul style="margin: 8px 0 4px 20px; padding: 0;">
+                    <li>Click <code>&#9776; REPORTS</code> (shortcut <code>~</code>) to open 11 ready-to-run audit reports: dormant accounts, terminated-with-access, PII access, super users, violation dashboard, and more.</li>
+                    <li>Type an English question like <code>Banner Student security classes</code> in the search bar — the tool auto-generates the SQL answer.</li>
+                    <li>Press <code>Ctrl+Shift+F</code> for the command palette: instant fuzzy search across tables, reports, modules, cases, and actions.</li>
+                </ul>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128274;</span> Security &amp; Access</div>
+                <a class="help-query" data-q="Banner Student security classes"><code>Banner Student security classes</code><span class="help-hint">Ask Banner &rarr; GTVCLAS query for Student module</span></a>
+                <a class="help-query" data-q="finance security classes"><code>finance security classes</code><span class="help-hint">Finance-module class catalog</span></a>
+                <a class="help-query" data-q="HR payroll classes"><code>HR payroll classes</code><span class="help-hint">HR/Payroll class catalog</span></a>
+                <a class="help-query" data-q="dormant accounts"><code>dormant accounts</code><span class="help-hint">&rarr; SR001 — never logged in 180+ days</span></a>
+                <a class="help-query" data-q="terminated with access"><code>terminated with access</code><span class="help-hint">&rarr; SR002 — the #1 auditor finding</span></a>
+                <a class="help-query" data-q="super users"><code>super users</code><span class="help-hint">&rarr; SR008 — top _M grant holders</span></a>
+                <a class="help-query" data-q="unused classes"><code>unused classes</code><span class="help-hint">&rarr; SR006 — classes with no users (cleanup)</span></a>
+                <a class="help-query" data-q="most populated classes"><code>most populated classes</code><span class="help-hint">&rarr; SR007 — biggest attack surfaces</span></a>
+                <a class="help-query" data-q="PII access"><code>PII access</code><span class="help-hint">&rarr; SR011 — SSN/DOB access (FERPA)</span></a>
+                <a class="help-query" data-q="violations last 30 days"><code>violations last 30 days</code><span class="help-hint">&rarr; SR005 — GURALOG violation dashboard</span></a>
+                <a class="help-query" data-q="recent access changes"><code>recent access changes</code><span class="help-hint">&rarr; SR009 — 30-day audit trail</span></a>
+                <a class="help-query" data-q="object concentration"><code>object concentration</code><span class="help-hint">&rarr; SR010 — most-exposed Banner objects</span></a>
+                <a class="help-query" data-q="access to SHAINST"><code>access to SHAINST</code><span class="help-hint">Ask Banner &rarr; who can access a specific form</span></a>
+                <a class="help-query" data-q="users in class SFAREGS"><code>users in class SFAREGS</code><span class="help-hint">Ask Banner &rarr; class membership</span></a>
+                <a class="help-query" data-q="GURACLS"><code>GURACLS</code><span class="help-hint">Modern user-class assignments</span></a>
+                <a class="help-query" data-q="GUVUACC"><code>GUVUACC</code><span class="help-hint">Pre-joined effective-access view (415K rows at WCC)</span></a>
+                <a class="help-query" data-q="GURALOG"><code>GURALOG</code><span class="help-hint">Security violation log</span></a>
+                <a class="help-query" data-q="GURLOGN"><code>GURLOGN</code><span class="help-hint">Login history — Oracle / INB / Web</span></a>
+            </div>
+
+            <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#9000;</span> Keyboard Shortcuts</div>
+                <div class="help-tip" style="margin: 0 -8px;">
+                    <code>Ctrl+Shift+F</code> &mdash; Command palette (search everything)<br>
+                    <code>/</code> &mdash; Focus the main search bar<br>
+                    <code>`</code> (backtick) &mdash; Open SQL Explainer<br>
+                    <code>~</code> (tilde) &mdash; Open Reports<br>
+                    <code>?</code> &mdash; Open this Help panel<br>
+                    <code>Esc</code> &mdash; Close the current panel / return home
+                </div>
             </div>
 
             <div class="help-category">
@@ -1633,8 +1832,8 @@
                 ['Banner Student security classes','finance security classes','HR payroll classes','access to SHAINST','users in class SFAREGS','dormant accounts','terminated with access','violations last 30 days','most populated classes','super users','unused classes','recent access changes','PII access','object concentration']
                     .forEach(function(ex) {
                         var chip = h('a', {
-                            onclick: (function(q) { return function() { document.getElementById('searchInput').value = q; navigate('search/' + encodeURIComponent(q)); }; })(ex),
-                            style: 'cursor:pointer; font-size: 12px; background: rgba(255,184,28,0.15); color: var(--navy); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,184,28,0.5); font-weight: 600;'
+                            className: 'ask-chip',
+                            onclick: (function(q) { return function() { document.getElementById('searchInput').value = q; navigate('search/' + encodeURIComponent(q)); }; })(ex)
                         }, ex);
                         exRow.appendChild(chip);
                     });
@@ -3647,6 +3846,12 @@
         parseRoute(); render();
 
         document.addEventListener('keydown', function(e) {
+            //  Ctrl+Shift+F (or Cmd+Shift+F) — command palette. Works from anywhere.
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
+                e.preventDefault();
+                openPalette();
+                return;
+            }
             if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
                 e.preventDefault(); searchInput.focus();
             }
@@ -3661,9 +3866,271 @@
             }
             if (e.key === 'Escape') {
                 var panel = document.getElementById('helpPanel');
+                if (paletteState.open) { closePalette(); return; }
                 if (panel.classList.contains('open')) toggleHelpPanel();
                 else if (state.view === 'sql' || state.view === 'reports' || state.view === 'report') navigate('');
             }
+        });
+
+        // ==================== COMMAND PALETTE ====================
+        var paletteState = { open: false, results: [], selectedIdx: 0, query: '' };
+
+        function openPalette() {
+            paletteState.open = true;
+            paletteState.query = '';
+            paletteState.selectedIdx = 0;
+            document.getElementById('paletteBackdrop').classList.add('open');
+            var inp = document.getElementById('paletteInput');
+            inp.value = '';
+            setTimeout(function() { inp.focus(); paletteRun(''); }, 20);
+        }
+
+        function closePalette() {
+            paletteState.open = false;
+            document.getElementById('paletteBackdrop').classList.remove('open');
+        }
+
+        function paletteHighlight(text, q) {
+            if (!q) return text;
+            var safe = (text || '').replace(/[&<>]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; });
+            var esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return safe.replace(new RegExp('(' + esc + ')', 'gi'), '<mark>$1</mark>');
+        }
+
+        function paletteSearch(q) {
+            var ql = q.toLowerCase().trim();
+            var results = [];
+
+            if (!ql) {
+                //  Default suggestions when palette is empty — tool discovery
+                results.push({ group: 'Start here', type: 'a', title: 'Ready-to-run Reports', sub: REPORTS.length + ' security & access reports', hint: '~', action: function() { navigate('reports'); } });
+                results.push({ group: 'Start here', type: 'a', title: 'SQL Explainer', sub: 'Paste any Banner SQL to validate', hint: '`', action: function() { navigate('sql'); } });
+                results.push({ group: 'Start here', type: 'q', title: 'Try: "Banner Student security classes"', sub: 'Ask Banner — auto-generates SQL', hint: '', action: function() { document.getElementById('searchInput').value = 'Banner Student security classes'; navigate('search/' + encodeURIComponent('Banner Student security classes')); } });
+                //  Top 3 reports
+                REPORTS.slice(0, 3).forEach(function(r) {
+                    results.push({ group: 'Reports', type: 'r', title: r.id + ' — ' + r.title, sub: r.category, hint: 'open', action: (function(id) { return function() { navigate('report/' + id); }; })(r.id) });
+                });
+                return results;
+            }
+
+            //  Quick actions
+            var actions = [
+                { kw: ['sql','explainer','explain','validate'],            title: 'Open SQL Explainer',      sub: 'Validate & explain SQL',           route: 'sql' },
+                { kw: ['reports','report','audit','access review'],        title: 'Open Reports',            sub: REPORTS.length + ' templated reports', route: 'reports' },
+                { kw: ['home','dashboard','back','main'],                  title: 'Go Home',                 sub: 'Dashboard view',                   route: '' },
+                { kw: ['help','examples','shortcut'],                      title: 'Open Help panel',         sub: 'Search examples & shortcuts',      route: null, action: function() { closePalette(); toggleHelpPanel(); } },
+            ];
+            actions.forEach(function(a) {
+                var hit = a.title.toLowerCase().indexOf(ql) !== -1 ||
+                          a.kw.some(function(k) { return k.indexOf(ql) !== -1 || ql.indexOf(k) !== -1; });
+                if (hit) results.push({ group: 'Actions', type: 'a', score: 950, title: a.title, sub: a.sub, hint: '→',
+                    action: a.action || (function(rt) { return function() { navigate(rt); }; })(a.route) });
+            });
+
+            //  Reports
+            REPORTS.forEach(function(r) {
+                var s = 0, where = '';
+                if (r.id.toLowerCase() === ql) s = 1200;
+                else if (r.id.toLowerCase().indexOf(ql) !== -1) { s = 800; where = 'id'; }
+                else if (r.title.toLowerCase().indexOf(ql) !== -1) { s = 700; where = 'title'; }
+                else if ((r.category || '').toLowerCase().indexOf(ql) !== -1) { s = 400; where = 'cat'; }
+                else if ((r.description || '').toLowerCase().indexOf(ql) !== -1) { s = 200; where = 'desc'; }
+                if (s > 0) results.push({ group: 'Reports', type: 'r', score: s,
+                    title: r.id + ' — ' + r.title, sub: r.category + (r.severity ? ' · ' + r.severity : ''),
+                    hint: '', action: (function(id) { return function() { navigate('report/' + id); }; })(r.id) });
+            });
+
+            //  Modules
+            for (var mod in SCHEMA.modules) {
+                if (mod.toLowerCase().indexOf(ql) !== -1) {
+                    var info = SCHEMA.modules[mod];
+                    results.push({ group: 'Modules', type: 'm', score: 600,
+                        title: mod, sub: info.description + ' · ' + info.count + ' objects',
+                        hint: '', action: (function(mn) { return function() { navigate('module/' + mn); }; })(mod) });
+                }
+            }
+
+            //  Tables / Views — best-score per name, capped
+            var tblResults = [];
+            for (var name in SCHEMA.tables) {
+                var lo = name.toLowerCase();
+                var score = 0;
+                if (lo === ql) score = 1100;
+                else if (lo.indexOf(ql) === 0) score = 700;
+                else if (lo.indexOf(ql) !== -1) score = 300;
+                else {
+                    var d = (SCHEMA.tables[name].d || '').toLowerCase();
+                    if (d.indexOf(ql) !== -1) score = 80;
+                }
+                if (score > 0) {
+                    var t = SCHEMA.tables[name];
+                    tblResults.push({ group: t.t === 'TABLE' ? 'Tables' : 'Views',
+                        type: t.t === 'TABLE' ? 't' : 'v', score: score,
+                        title: name, sub: (t.m ? t.m + ' · ' : '') + (t.d || '').substring(0, 90),
+                        hint: '', action: (function(nm) { return function() { navigate('table/' + nm); }; })(name) });
+                }
+            }
+            tblResults.sort(function(a, b) { return b.score - a.score; });
+            results = results.concat(tblResults.slice(0, 15));
+
+            //  Business/Security cases
+            BUSINESS_CASES.forEach(function(c) {
+                var s = 0;
+                if ((c.title || '').toLowerCase().indexOf(ql) !== -1) s = 500;
+                else if ((c.description || '').toLowerCase().indexOf(ql) !== -1) s = 120;
+                if (s > 0) {
+                    var firstTable = (c.tables && c.tables.length) ? c.tables[0] : null;
+                    results.push({ group: 'Knowledge cases', type: 'c', score: s,
+                        title: c.id + ' — ' + c.title, sub: c.category,
+                        hint: firstTable || '',
+                        action: firstTable ? (function(tn) { return function() { navigate('table/' + tn); }; })(firstTable) : function() {} });
+                }
+            });
+
+            //  Ask Banner intent shortcuts (based on keywords)
+            var askShortcuts = [
+                { kw: 'dormant',          q: 'dormant accounts' },
+                { kw: 'terminat',         q: 'terminated with access' },
+                { kw: 'pii',              q: 'PII access' },
+                { kw: 'ferpa',            q: 'PII access' },
+                { kw: 'super',            q: 'super users' },
+                { kw: 'unused',           q: 'unused classes' },
+                { kw: 'violation',        q: 'violations last 30 days' },
+                { kw: 'concentration',    q: 'object concentration' },
+                { kw: 'most populat',     q: 'most populated classes' },
+                { kw: 'recent',           q: 'recent access changes' },
+            ];
+            askShortcuts.forEach(function(a) {
+                if (ql.indexOf(a.kw) !== -1) {
+                    results.push({ group: 'Ask Banner', type: 'q', score: 350,
+                        title: 'Ask: "' + a.q + '"', sub: 'Auto-generate the SQL answer',
+                        hint: '', action: (function(qq) { return function() { document.getElementById('searchInput').value = qq; navigate('search/' + encodeURIComponent(qq)); }; })(a.q) });
+                }
+            });
+
+            //  Sort: by group priority then by score
+            var groupOrder = { 'Actions': 0, 'Ask Banner': 1, 'Reports': 2, 'Modules': 3,
+                               'Tables': 4, 'Views': 5, 'Knowledge cases': 6 };
+            results.sort(function(a, b) {
+                var ga = groupOrder[a.group] || 99, gb = groupOrder[b.group] || 99;
+                if (ga !== gb) return ga - gb;
+                return (b.score || 0) - (a.score || 0);
+            });
+
+            return results.slice(0, 50);
+        }
+
+        function paletteRun(q) {
+            paletteState.query = q;
+            paletteState.results = paletteSearch(q);
+            paletteState.selectedIdx = 0;
+            paletteRender();
+        }
+
+        function paletteRender() {
+            var body = document.getElementById('paletteBody');
+            body.innerHTML = '';
+            var results = paletteState.results;
+
+            if (!results.length) {
+                var empty = document.createElement('div');
+                empty.className = 'palette-empty';
+                empty.textContent = 'No matches. Try a table name, a report ID (e.g. SR001), a module name, or a question.';
+                body.appendChild(empty);
+                return;
+            }
+
+            var lastGroup = null;
+            var q = paletteState.query;
+
+            results.forEach(function(r, idx) {
+                if (r.group !== lastGroup) {
+                    var gl = document.createElement('div');
+                    gl.className = 'palette-group-label';
+                    gl.textContent = r.group;
+                    body.appendChild(gl);
+                    lastGroup = r.group;
+                }
+                var item = document.createElement('div');
+                item.className = 'palette-item' + (idx === paletteState.selectedIdx ? ' active' : '');
+                item.setAttribute('data-idx', idx);
+
+                var icon = document.createElement('div');
+                icon.className = 'palette-icon ' + r.type;
+                icon.textContent = { t:'T', v:'V', m:'M', r:'R', c:'C', a:'⚡', q:'?' }[r.type] || '•';
+                item.appendChild(icon);
+
+                var bodyDiv = document.createElement('div');
+                bodyDiv.className = 'palette-item-body';
+                var title = document.createElement('div');
+                title.className = 'palette-item-title';
+                title.innerHTML = paletteHighlight(r.title, q);
+                bodyDiv.appendChild(title);
+                if (r.sub) {
+                    var sub = document.createElement('div');
+                    sub.className = 'palette-item-sub';
+                    sub.innerHTML = paletteHighlight(r.sub, q);
+                    bodyDiv.appendChild(sub);
+                }
+                item.appendChild(bodyDiv);
+
+                if (r.hint) {
+                    var hint = document.createElement('div');
+                    hint.className = 'palette-item-hint';
+                    hint.textContent = r.hint;
+                    item.appendChild(hint);
+                }
+
+                item.addEventListener('mouseenter', (function(i) { return function() {
+                    paletteState.selectedIdx = i;
+                    paletteUpdateActive();
+                }; })(idx));
+                item.addEventListener('click', (function(action) { return function() {
+                    closePalette();
+                    if (action) action();
+                }; })(r.action));
+                body.appendChild(item);
+            });
+        }
+
+        function paletteUpdateActive() {
+            var items = document.querySelectorAll('.palette-item');
+            items.forEach(function(el, i) {
+                el.classList.toggle('active', i === paletteState.selectedIdx);
+            });
+            var active = items[paletteState.selectedIdx];
+            if (active) active.scrollIntoView({ block: 'nearest' });
+        }
+
+        //  Palette input event
+        document.getElementById('paletteInput').addEventListener('input', function(e) {
+            paletteRun(e.target.value);
+        });
+
+        //  Palette keyboard navigation
+        document.getElementById('paletteInput').addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (paletteState.selectedIdx < paletteState.results.length - 1) {
+                    paletteState.selectedIdx++;
+                    paletteUpdateActive();
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (paletteState.selectedIdx > 0) {
+                    paletteState.selectedIdx--;
+                    paletteUpdateActive();
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                var r = paletteState.results[paletteState.selectedIdx];
+                if (r) { closePalette(); if (r.action) r.action(); }
+            }
+        });
+
+        //  Click on backdrop closes palette
+        document.getElementById('paletteBackdrop').addEventListener('click', function(e) {
+            if (e.target.id === 'paletteBackdrop') closePalette();
         });
 
         // ==================== HELP PANEL ====================
