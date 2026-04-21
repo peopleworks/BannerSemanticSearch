@@ -420,6 +420,75 @@
         .help-toggle:hover { background: var(--navy-light); padding-right: 10px; }
         .help-toggle.panel-open { right: 380px; }
 
+        .reports-toggle {
+            position: fixed; right: 0; top: calc(50% - 180px);
+            background: #7b2d7b; color: #fff; border: none; padding: 12px 6px;
+            border-radius: var(--radius) 0 0 var(--radius); cursor: pointer; z-index: 200;
+            font-size: 14px; writing-mode: vertical-rl; text-orientation: mixed;
+            letter-spacing: 1px; font-weight: 700; box-shadow: var(--shadow-lg);
+            transition: all 0.2s;
+        }
+        .reports-toggle:hover { background: #9a4a9a; padding-right: 10px; }
+
+        .report-card {
+            border: 1px solid var(--border); border-left: 4px solid #7b2d7b;
+            border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+            background: var(--card-bg); cursor: pointer; transition: all 0.2s;
+        }
+        .report-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+        .report-card-head {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;
+        }
+        .report-card-id {
+            font-family: 'Consolas', monospace; font-size: 11px; color: var(--text-muted);
+            background: var(--hover); padding: 2px 8px; border-radius: 10px;
+        }
+        .report-card-title { font-size: 16px; font-weight: 700; color: var(--text); }
+        .report-card-cat {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 2px 8px; border-radius: 10px; font-weight: 600;
+            background: rgba(123, 45, 123, 0.15); color: #7b2d7b;
+        }
+        .report-card-sev { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+        .report-card-sev.HIGH { background: #fee2e2; color: #991b1b; }
+        .report-card-sev.MEDIUM { background: #fef3c7; color: #92400e; }
+        .report-card-sev.INFO { background: #dbeafe; color: #1e40af; }
+        .report-card-desc { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+        .report-card-tables { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+        .report-card-tables span {
+            font-size: 11px; font-family: monospace; color: var(--text-muted);
+            background: var(--hover); padding: 2px 6px; border-radius: 4px;
+        }
+
+        .report-detail-section {
+            margin-bottom: 16px; padding: 14px; background: var(--card-bg);
+            border-left: 3px solid #7b2d7b; border-radius: var(--radius);
+        }
+        .report-detail-section h4 {
+            margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase;
+            letter-spacing: 0.5px; color: #7b2d7b; font-weight: 700;
+        }
+        .report-sql-block {
+            position: relative; background: #0f172a; color: #e2e8f0;
+            padding: 16px; border-radius: var(--radius); overflow-x: auto;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 13px;
+            line-height: 1.5; white-space: pre; margin-top: 10px;
+        }
+        .report-copy-btn {
+            position: absolute; top: 10px; right: 10px;
+            background: var(--gold); color: var(--navy-dark); border: none;
+            padding: 6px 12px; border-radius: 4px; cursor: pointer;
+            font-size: 12px; font-weight: 600;
+        }
+        .report-copy-btn:hover { background: var(--gold-light); }
+        .report-copy-btn.copied { background: #10b981; color: #fff; }
+        .report-validate-btn {
+            background: var(--navy); color: var(--gold); border: none;
+            padding: 8px 16px; border-radius: var(--radius); cursor: pointer;
+            font-size: 13px; font-weight: 600; margin-top: 10px; margin-right: 8px;
+        }
+        .report-validate-btn:hover { background: var(--navy-light); }
+
         .help-panel {
             position: fixed; top: 0; right: -380px; width: 380px; height: 100vh;
             background: var(--card-bg); box-shadow: -4px 0 20px rgba(0,0,0,0.15);
@@ -612,6 +681,9 @@
 
     <!-- SQL Explainer Button -->
     <button class="sql-toggle" id="sqlToggle" title="SQL Explainer - Paste SQL to understand it">&lt;/&gt; SQL</button>
+
+    <!-- Reports Button -->
+    <button class="reports-toggle" id="reportsToggle" title="Ready-to-run security / access reports">&#9776; REPORTS</button>
 
     <!-- Help/Examples Side Panel -->
     <button class="help-toggle" id="helpToggle" title="Search Examples &amp; Help">? HELP</button>
@@ -1312,6 +1384,31 @@
             }
             frag.appendChild(mgrid);
 
+            //  Quick-access tools row
+            if (REPORTS && REPORTS.length) {
+                frag.appendChild(h('div', {className: 'section-title'}, 'Tools'));
+                var toolsRow = h('div', { style: 'display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;' });
+                toolsRow.appendChild(h('div', {
+                    className: 'module-card',
+                    style: 'border-left: 4px solid #7b2d7b; flex: 1; min-width: 240px; cursor: pointer;',
+                    onclick: function() { navigate('reports'); }
+                }, [
+                    h('div', {className: 'module-name', style: 'color: #7b2d7b;'}, '☰ Ready-to-run Reports'),
+                    h('div', {className: 'module-desc'}, 'Vetted SQL for access reviews, dormant accounts, terminated-with-access, privilege audits, and violation monitoring.'),
+                    h('div', {className: 'module-count'}, REPORTS.length + ' report(s) available'),
+                ]));
+                toolsRow.appendChild(h('div', {
+                    className: 'module-card',
+                    style: 'border-left: 4px solid var(--gold); flex: 1; min-width: 240px; cursor: pointer;',
+                    onclick: function() { navigate('sql'); }
+                }, [
+                    h('div', {className: 'module-name'}, '</> SQL Explainer'),
+                    h('div', {className: 'module-desc'}, 'Paste any Banner SQL: the tool validates tables/columns, detects Banner-specific pitfalls, and surfaces matching knowledge-base cases.'),
+                    h('div', {className: 'module-count'}, 'Banner-aware + security-aware validation'),
+                ]));
+                frag.appendChild(toolsRow);
+            }
+
             frag.appendChild(h('div', {className: 'section-title'}, 'All Tables'));
             frag.appendChild(renderFlatTableList(getAllTables(), true));
             return frag;
@@ -1889,6 +1986,152 @@
             return results.sort();
         }
 
+        // ==================== REPORTS ====================
+
+        function renderReportsList() {
+            var container = h('div', { className: 'container' });
+            var nav = h('div', { style: 'margin-bottom: 16px;' });
+            nav.appendChild(h('a', { onclick: function() { navigate(''); }, style: 'cursor:pointer; color: var(--navy); font-weight: 600;' }, '← Home'));
+            container.appendChild(nav);
+
+            container.appendChild(h('h2', { style: 'margin-bottom: 6px;' }, 'Ready-to-run Reports'));
+            container.appendChild(h('p', { className: 'muted', style: 'margin-bottom: 20px;' },
+                REPORTS.length + ' report(s) available — vetted SQL for access reviews, privilege audits, and security monitoring. Click any report to view the full SQL, caveats, and validation in the SQL Explainer.'));
+
+            if (!REPORTS || !REPORTS.length) {
+                container.appendChild(h('p', { className: 'muted' }, 'No reports loaded. Add .sql files to data/reports/ and rebuild.'));
+                return container;
+            }
+
+            // Group by category
+            var byCat = {};
+            REPORTS.forEach(function(r) {
+                if (!byCat[r.category]) byCat[r.category] = [];
+                byCat[r.category].push(r);
+            });
+
+            Object.keys(byCat).sort().forEach(function(cat) {
+                container.appendChild(h('h3', { style: 'margin: 24px 0 12px 0; color: #7b2d7b; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;' }, cat));
+                byCat[cat].forEach(function(rep) {
+                    var id = rep.id;
+                    var card = h('div', { className: 'report-card', onclick: function() { navigate('report/' + id); } });
+                    var head = h('div', { className: 'report-card-head' });
+                    head.appendChild(h('span', { className: 'report-card-id' }, rep.id));
+                    head.appendChild(h('span', { className: 'report-card-title' }, rep.title));
+                    head.appendChild(h('span', { className: 'report-card-sev ' + rep.severity }, rep.severity));
+                    card.appendChild(head);
+                    card.appendChild(h('div', { className: 'report-card-desc' }, rep.description));
+                    if (rep.tables && rep.tables.length) {
+                        var tblWrap = h('div', { className: 'report-card-tables' });
+                        rep.tables.forEach(function(t) {
+                            tblWrap.appendChild(h('span', {}, t));
+                        });
+                        card.appendChild(tblWrap);
+                    }
+                    container.appendChild(card);
+                });
+            });
+
+            return container;
+        }
+
+        function renderReportDetail() {
+            var container = h('div', { className: 'container' });
+            var rep = null;
+            for (var i = 0; i < REPORTS.length; i++) {
+                if (REPORTS[i].id === state.reportId) { rep = REPORTS[i]; break; }
+            }
+            if (!rep) {
+                container.appendChild(h('p', {}, 'Report not found: ' + state.reportId));
+                container.appendChild(h('a', { onclick: function() { navigate('reports'); }, style: 'cursor:pointer;' }, '← Back to reports'));
+                return container;
+            }
+
+            var nav = h('div', { style: 'margin-bottom: 16px;' });
+            nav.appendChild(h('a', { onclick: function() { navigate('reports'); }, style: 'cursor:pointer; color: var(--navy); font-weight: 600;' }, '← All reports'));
+            container.appendChild(nav);
+
+            var head = h('div', { style: 'margin-bottom: 20px;' });
+            var headRow = h('div', { style: 'display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;' });
+            headRow.appendChild(h('span', { className: 'report-card-id' }, rep.id));
+            headRow.appendChild(h('span', { className: 'report-card-sev ' + rep.severity }, rep.severity));
+            headRow.appendChild(h('span', { className: 'report-card-cat' }, rep.category));
+            head.appendChild(headRow);
+            head.appendChild(h('h2', { style: 'margin: 0 0 8px 0;' }, rep.title));
+            head.appendChild(h('p', { className: 'muted', style: 'line-height: 1.5;' }, rep.description));
+            container.appendChild(head);
+
+            if (rep.when_to_use) {
+                var sec = h('div', { className: 'report-detail-section' });
+                sec.appendChild(h('h4', {}, 'When to use'));
+                sec.appendChild(h('div', {}, rep.when_to_use));
+                container.appendChild(sec);
+            }
+            if (rep.caveats) {
+                var sec2 = h('div', { className: 'report-detail-section', style: 'border-left-color: #d97706;' });
+                sec2.appendChild(h('h4', { style: 'color: #d97706;' }, 'Caveats'));
+                sec2.appendChild(h('div', {}, rep.caveats));
+                container.appendChild(sec2);
+            }
+            if (rep.tables && rep.tables.length) {
+                var sec3 = h('div', { className: 'report-detail-section' });
+                sec3.appendChild(h('h4', {}, 'Tables referenced'));
+                var tblWrap = h('div', { style: 'display: flex; flex-wrap: wrap; gap: 6px;' });
+                rep.tables.forEach(function(t) {
+                    var link = h('a', {
+                        onclick: (function(tn) { return function() { navigate('table/' + tn); }; })(t),
+                        style: 'cursor:pointer; font-family: monospace; background: var(--hover); padding: 4px 10px; border-radius: 4px; color: var(--navy); font-weight: 600;'
+                    }, t);
+                    tblWrap.appendChild(link);
+                });
+                sec3.appendChild(tblWrap);
+                container.appendChild(sec3);
+            }
+
+            // SQL block with copy + validate buttons
+            var sqlSec = h('div', { className: 'report-detail-section' });
+            sqlSec.appendChild(h('h4', {}, 'SQL'));
+
+            var btnRow = h('div', {});
+            var validateBtn = h('button', {
+                className: 'report-validate-btn',
+                onclick: (function(sql) {
+                    return function() {
+                        state.sqlText = sql;
+                        state.sqlResults = '';
+                        navigate('sql');
+                        setTimeout(function() {
+                            var btn = document.getElementById('sqlExplainBtn');
+                            if (btn) btn.click();
+                        }, 80);
+                    };
+                })(rep.sql)
+            }, 'Validate in SQL Explainer →');
+            btnRow.appendChild(validateBtn);
+            sqlSec.appendChild(btnRow);
+
+            var sqlBlock = h('div', { className: 'report-sql-block' });
+            var copyBtn = h('button', { className: 'report-copy-btn' }, 'Copy');
+            copyBtn.onclick = (function(sql, btn) {
+                return function(e) {
+                    e.stopPropagation();
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(sql).then(function() {
+                            btn.classList.add('copied');
+                            btn.textContent = 'Copied!';
+                            setTimeout(function() { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 2000);
+                        });
+                    }
+                };
+            })(rep.sql, copyBtn);
+            sqlBlock.appendChild(copyBtn);
+            sqlBlock.appendChild(document.createTextNode(rep.sql));
+            sqlSec.appendChild(sqlBlock);
+            container.appendChild(sqlSec);
+
+            return container;
+        }
+
         // ==================== ROUTER ====================
         function navigate(path) { window.location.hash = '#/' + path; }
 
@@ -1901,6 +2144,11 @@
                 state.view = 'module'; state.moduleName = decodeURIComponent(parts[1]); state.page = 1;
             } else if (parts[0] === 'sql') {
                 state.view = 'sql';
+            } else if (parts[0] === 'reports') {
+                state.view = 'reports';
+            } else if (parts[0] === 'report' && parts[1]) {
+                state.view = 'report';
+                state.reportId = decodeURIComponent(parts[1]);
             } else if (parts[0] === 'search' && parts[1]) {
                 var newQuery = decodeURIComponent(parts[1]);
                 var queryChanged = newQuery !== state.query;
@@ -1925,6 +2173,8 @@
                 case 'table': content = renderTableDetail(); break;
                 case 'module': content = renderModuleView(); break;
                 case 'sql': content = renderSqlExplainer(); break;
+                case 'reports': content = renderReportsList(); break;
+                case 'report': content = renderReportDetail(); break;
                 default: content = renderDashboard();
             }
             if (content) app.appendChild(content);
@@ -1994,6 +2244,10 @@
             navigate('sql');
         });
 
+        document.getElementById('reportsToggle').addEventListener('click', function() {
+            navigate('reports');
+        });
+
         // ==================== SQL EXPLAINER ====================
         var BDCA_CODES = {
             'FED': 'Federal Income Tax', 'FIM': 'FICA Medicare (Employee + Employer)',
@@ -2009,6 +2263,7 @@
         };
 
         var BUSINESS_CASES = {{ business_cases_json | default('[]') }};
+        var REPORTS = {{ reports_json | default('[]') }};
 
         function parseSql(sql) {
             var clean = sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
@@ -2389,9 +2644,23 @@
                     warnings.push({ msg: "GOBEACC referenced with BANSECR schema prefix.",
                         suggestion: "GOBEACC lives in the GENERAL schema at WCC, not BANSECR. Use GENERAL.GOBEACC or the unqualified synonym GOBEACC. BANSECR.GOBEACC will fail with ORA-00942." });
                 }
-                if (!/GOBEACC_DISABLE|GOBEACC_EXPIRATION_DATE|GOBEACC_LAST_LOGIN_DATE/i.test(upper)) {
-                    warnings.push({ msg: "GOBEACC used without active-account filter.",
-                        suggestion: "Add gobeacc_disable <> 'Y' AND (gobeacc_expiration_date IS NULL OR gobeacc_expiration_date > SYSDATE) unless you're specifically auditing inactive/expired/dormant accounts. Without it, disabled and expired accounts inflate the result set." });
+                //  Only warn about missing active-account filter if the status columns actually exist.
+                //  WCC's GOBEACC is minimalist and has none of disable/expiration/last_login — see SC003/SC004.
+                var gobTbl = SCHEMA.tables.GOBEACC;
+                var gobCols = {};
+                if (gobTbl && gobTbl.c) { gobTbl.c.forEach(function(c) { gobCols[c[0]] = true; }); }
+                var hasAnyGobStatusCol = gobCols.GOBEACC_DISABLE || gobCols.GOBEACC_EXPIRATION_DATE || gobCols.GOBEACC_LAST_LOGIN_DATE;
+                if (hasAnyGobStatusCol) {
+                    if (!/GOBEACC_DISABLE|GOBEACC_EXPIRATION_DATE|GOBEACC_LAST_LOGIN_DATE/i.test(upper)) {
+                        warnings.push({ msg: "GOBEACC used without active-account filter.",
+                            suggestion: "Add gobeacc_disable <> 'Y' AND (gobeacc_expiration_date IS NULL OR gobeacc_expiration_date > SYSDATE) unless you're specifically auditing inactive/expired accounts." });
+                    }
+                } else if (gobTbl) {
+                    //  This site's GOBEACC has no status columns — steer the user to GURLOGN instead.
+                    if (!/GURLOGN/i.test(upper)) {
+                        warnings.push({ msg: "GOBEACC at this site has no disable/expiration/last-login columns.",
+                            suggestion: "Account status at WCC must come from GURLOGN. Join bansecr.gurlogn gl ON gl.gurlogn_user = ga.gobeacc_username, then use gurlogn_last_logon_date / inb_last_logon_date / hrzn_last_logon_date for dormancy. See report SR001." });
+                    }
                 }
             }
 
@@ -2571,7 +2840,7 @@
 
             // Button row
             var btnRow = h('div', { style: 'margin-top: 12px; display: flex; gap: 12px; align-items: center;' });
-            var explainBtn = h('button', { className: 'sql-explain-btn' }, 'Explain & Validate');
+            var explainBtn = h('button', { className: 'sql-explain-btn', id: 'sqlExplainBtn' }, 'Explain & Validate');
             var clearBtn = h('button', {
                 style: 'background: transparent; border: 1px solid var(--border); padding: 10px 20px; border-radius: var(--radius); cursor: pointer; color: var(--text-muted);'
             }, 'Clear');

@@ -4,12 +4,66 @@ Renders the SPA template with embedded data.
 """
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
 from src.relationships import serialize_relationships
+
+
+_REPORT_HEADER_RE = re.compile(r'^--\s*([A-Z_]+):\s*(.+?)\s*$')
+
+
+def parse_reports(reports_dir: Path) -> list:
+    """
+    Parse report .sql files with metadata in leading -- KEY: VALUE comments.
+    Recognized keys: REPORT_ID, TITLE, CATEGORY, TABLES, SEVERITY,
+                     DESCRIPTION, WHEN_TO_USE, CAVEATS.
+    The SQL body is everything after the header block.
+    """
+    if not reports_dir.exists():
+        return []
+
+    reports = []
+    for sql_file in sorted(reports_dir.glob('*.sql')):
+        text = sql_file.read_text(encoding='utf-8', errors='replace')
+        meta = {
+            'id': '', 'title': '', 'category': 'Uncategorized',
+            'tables': [], 'severity': 'INFO',
+            'description': '', 'when_to_use': '', 'caveats': '',
+        }
+        sql_lines = []
+        in_header = True
+
+        for raw in text.splitlines():
+            if in_header:
+                stripped = raw.strip()
+                if not stripped:
+                    continue
+                m = _REPORT_HEADER_RE.match(stripped)
+                if m:
+                    key = m.group(1).lower()
+                    val = m.group(2).strip()
+                    if key == 'report_id':
+                        meta['id'] = val
+                    elif key == 'tables':
+                        meta['tables'] = [t.strip().upper() for t in val.split(',') if t.strip()]
+                    elif key == 'when_to_use':
+                        meta['when_to_use'] = val
+                    elif key in meta:
+                        meta[key] = val
+                    continue
+                #  Header block is over once we hit a non-metadata line
+                in_header = False
+            sql_lines.append(raw)
+
+        meta['sql'] = '\n'.join(sql_lines).strip()
+        if meta['id']:
+            reports.append(meta)
+
+    return reports
 
 
 def build_schema_data(tables: dict, module_summary: dict) -> dict:
@@ -130,6 +184,11 @@ def generate_site(
                 loaded += 1
         print(f"       Loaded {loaded} cases from {cases_filename}")
 
+    # Load security reports (one .sql per report under data/reports/)
+    reports = parse_reports(data_dir / 'reports')
+    if reports:
+        print(f"       Loaded {len(reports)} templated reports")
+
     # Render template
     env = Environment(
         loader=FileSystemLoader(template_dir),
@@ -142,6 +201,7 @@ def generate_site(
         index_json=json.dumps(search_index, separators=(',', ':')),
         rels_json=json.dumps(rels_data, separators=(',', ':')),
         business_cases_json=json.dumps(business_cases, separators=(',', ':')),
+        reports_json=json.dumps(reports, separators=(',', ':')),
         build_time=schema_data['stats']['built'],
         stats=schema_data['stats'],
     )
