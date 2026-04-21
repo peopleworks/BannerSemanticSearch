@@ -2326,6 +2326,89 @@
                     suggestion: "Student employment positions (e.g., SE9000) are not covered by unemployment insurance. Add an EXISTS check on PWVEMPL to exclude student-only employees." });
             }
 
+            // 3b. Banner Security (BANSECR) warnings
+            var hasGURACLS = parsed.tables.indexOf('GURACLS') >= 0;
+            var hasGURUCLS = parsed.tables.indexOf('GURUCLS') >= 0;
+            var hasGURUOBJ = parsed.tables.indexOf('GURUOBJ') >= 0;
+            var hasGURALGN = parsed.tables.indexOf('GURALGN') >= 0;
+            var hasGURALOG = parsed.tables.indexOf('GURALOG') >= 0;
+            var hasGOBEACC = parsed.tables.indexOf('GOBEACC') >= 0;
+            var hasGUVUACC = parsed.tables.indexOf('GUVUACC') >= 0;
+            var hasFGACTbl = parsed.tables.indexOf('GORFGAC') >= 0 || parsed.tables.indexOf('GORFDPL') >= 0;
+            var hasMEPTbl  = parsed.tables.indexOf('GURUSRI') >= 0 || parsed.tables.indexOf('GTVVPDI') >= 0;
+
+            if (hasGURACLS) {
+                var hasMaxAudit   = /MAX\s*\(\s*\w*\.?GURACLS_AUDIT_TIME\s*\)/i.test(sql) || /MAX\s*\(\s*\w*\.?AUDIT_TIME\s*\)/i.test(sql);
+                var filtersDelete = /GURACLS_AUDIT_ACTION\s*(?:<>|!=|NOT\s+IN|=|<)/i.test(upper);
+                if (!hasMaxAudit) {
+                    warnings.push({ msg: "GURACLS used without MAX(GURACLS_AUDIT_TIME) per (userid, class_code).",
+                        suggestion: "GURACLS keeps full audit history (30,932 rows total at WCC for ~19K active assignments). Without MAX(audit_time) per (userid+class_code), every assignment change duplicates in results. Canonical pattern: WHERE guracls_audit_time = (SELECT MAX(audit_time) FROM guracls g2 WHERE g2.userid=g.userid AND g2.class_code=g.class_code)." });
+                } else {
+                    passes.push({ msg: "GURACLS_AUDIT_TIME MAX() pattern present." });
+                }
+                if (!filtersDelete) {
+                    warnings.push({ msg: "GURACLS used without GURACLS_AUDIT_ACTION filter.",
+                        suggestion: "Add guracls_audit_action <> 'D' to exclude deleted assignments. Without it, ~38% of GURACLS rows at WCC are deletes and will show up as if access were still granted." });
+                } else {
+                    passes.push({ msg: "GURACLS_AUDIT_ACTION filter present." });
+                }
+            }
+
+            if (hasGURUCLS && !hasGURACLS) {
+                warnings.push({ msg: "Using GURUCLS (legacy) without GURACLS.",
+                    suggestion: "GURUCLS is the pre-9.x user-class table. GURACLS is the current source of truth with audit trail. Both are populated at WCC (7,582 legacy + 19,293 modern active). For a complete picture of who belongs to which class, UNION both — or use the GUVUACC view that pre-joins effective access." });
+            }
+
+            if (hasGURUOBJ && /SUBSTR\s*\(\s*\w*\.?(?:GURUOBJ_)?ROLE\s*,\s*-\s*1/i.test(sql)) {
+                warnings.push({ msg: "Using SUBSTR(GURUOBJ_ROLE, -1) as access-level indicator.",
+                    suggestion: "This shortcut works for 99.97% of rows (Q=Query, M=Maintenance, B=Both, U=Update) but fails on custom Banner roles. At WCC 3 of 12,096 rows break it: BAN_DEFAULT_NO_ACCESS (ends in S), BAN_DEFAULT_CONNECT (T), BAN_DEFAULT_CMQUERYEXECUTE_HR (R). Prefer GURUOBJ_ROLE LIKE '%\\_Q' ESCAPE '\\' or join to GUBROLE / GURAOBJ to resolve the real meaning." });
+            }
+
+            if (hasGURALGN) {
+                var hasDateBound = /GURALGN_\w*DATE\s*(?:>=|>|BETWEEN)/i.test(upper) ||
+                                   /\w*\.?GURALGN_\w*DATE\s*>=?\s*(SYSDATE|TRUNC|DATE|TO_DATE)/i.test(upper);
+                if (!hasDateBound) {
+                    warnings.push({ msg: "GURALGN used without a date-range filter.",
+                        suggestion: "GURALGN has ~86 MILLION rows at WCC. Always bound by date: WHERE guralgn_login_date >= SYSDATE - N. Unfiltered queries will timeout or create contention on a hot table." });
+                } else {
+                    passes.push({ msg: "GURALGN date-range filter present." });
+                }
+            }
+
+            if (hasGURALOG) {
+                if (/GURALOG_ACTIVITY_DATE\s*(?:>=|>|BETWEEN)/i.test(upper)) {
+                    passes.push({ msg: "GURALOG date filter present — scoped to recent violations." });
+                } else {
+                    warnings.push({ msg: "GURALOG (violation log) queried without date filter.",
+                        suggestion: "GURALOG has 233K rows at WCC growing ~26/day. Add WHERE guralog_activity_date >= SYSDATE-30 for monitoring dashboards; full-scan is rarely what you want." });
+                }
+            }
+
+            if (hasGOBEACC) {
+                if (/BANSECR\.GOBEACC/i.test(sql)) {
+                    warnings.push({ msg: "GOBEACC referenced with BANSECR schema prefix.",
+                        suggestion: "GOBEACC lives in the GENERAL schema at WCC, not BANSECR. Use GENERAL.GOBEACC or the unqualified synonym GOBEACC. BANSECR.GOBEACC will fail with ORA-00942." });
+                }
+                if (!/GOBEACC_DISABLE|GOBEACC_EXPIRATION_DATE|GOBEACC_LAST_LOGIN_DATE/i.test(upper)) {
+                    warnings.push({ msg: "GOBEACC used without active-account filter.",
+                        suggestion: "Add gobeacc_disable <> 'Y' AND (gobeacc_expiration_date IS NULL OR gobeacc_expiration_date > SYSDATE) unless you're specifically auditing inactive/expired/dormant accounts. Without it, disabled and expired accounts inflate the result set." });
+                }
+            }
+
+            if (hasGUVUACC) {
+                passes.push({ msg: "GUVUACC used — Banner's pre-joined effective-access view (415K rows at WCC)." });
+            }
+
+            if (hasFGACTbl) {
+                warnings.push({ msg: "GORFGAC / FGAC table referenced.",
+                    suggestion: "Fine-Grained Access Control (FGAC / Value-Based Security) is NOT installed at WCC. These tables either don't exist or are empty. Confirm with a COUNT(*) before building reports on them." });
+            }
+
+            if (hasMEPTbl) {
+                warnings.push({ msg: "GURUSRI / GTVVPDI (MEP tables) referenced.",
+                    suggestion: "Multi-Entity Processing (MEP) is NOT enabled at WCC — both tables are empty (0 rows). If your query depends on setmepcontext or VPD_INSTITUTION, it won't filter anything." });
+            }
+
             // 4. Structural checks
             if (upper.indexOf('SELECT') < 0) {
                 errors.push({ msg: "No SELECT clause found." });
