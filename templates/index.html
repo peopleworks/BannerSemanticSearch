@@ -615,6 +615,35 @@
             transform: translateY(-1px);
         }
 
+        /* Back / navigation links (adapt to theme) */
+        .back-link {
+            cursor: pointer; color: var(--navy); font-weight: 600;
+            text-decoration: none; font-size: 14px;
+        }
+        .back-link:hover { color: var(--navy-light); }
+
+        /* Table-reference chips (report detail, etc.) */
+        .table-chip {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: var(--hover); color: var(--navy);
+            padding: 4px 10px; border-radius: 4px; font-weight: 600;
+            font-size: 13px; border: 1px solid var(--border);
+            cursor: pointer; transition: all 0.15s;
+        }
+        .table-chip:hover {
+            background: var(--navy); color: var(--gold);
+            border-color: var(--navy);
+        }
+
+        /* Syntax highlighting in the report-detail SQL block
+           (same token classes as .intent-sql so highlightSql() works for both) */
+        .report-sql-block .kw    { color: #93c5fd; font-weight: 600; }
+        .report-sql-block .fn    { color: #fbbf24; }
+        .report-sql-block .tbl   { color: #fde68a; }
+        .report-sql-block .str   { color: #86efac; }
+        .report-sql-block .num   { color: #f9a8d4; }
+        .report-sql-block .cmt   { color: #64748b; font-style: italic; }
+
         /* ===================== COMMAND PALETTE (Ctrl+Shift+F) ===================== */
         .palette-backdrop {
             position: fixed; inset: 0; background: rgba(10, 15, 30, 0.55);
@@ -853,6 +882,22 @@
 
             /* Purple accent text needs to lighten in dark mode */
             .reports-accent { color: #d8b4fe; }
+
+            /* Back link: dark-navy on dark bg becomes invisible. Use light-blue/gold. */
+            .back-link { color: #93c5fd; }
+            .back-link:hover { color: var(--gold); }
+
+            /* Table chips: same contrast issue as Ask Banner intent chips. */
+            .table-chip {
+                background: var(--card-bg);
+                color: #93c5fd;
+                border-color: var(--border);
+            }
+            .table-chip:hover {
+                background: var(--navy-light);
+                color: #fff;
+                border-color: var(--navy-light);
+            }
         }
 
         .help-panel {
@@ -2803,7 +2848,7 @@
         function renderReportsList() {
             var container = h('div', { className: 'container' });
             var nav = h('div', { style: 'margin-bottom: 16px;' });
-            nav.appendChild(h('a', { onclick: function() { navigate(''); }, style: 'cursor:pointer; color: var(--navy); font-weight: 600;' }, '← Home'));
+            nav.appendChild(h('a', { className: 'back-link', onclick: function() { navigate(''); } }, '← Home'));
             container.appendChild(nav);
 
             container.appendChild(h('h2', { style: 'margin-bottom: 6px;' }, 'Ready-to-run Reports'));
@@ -2860,7 +2905,7 @@
             }
 
             var nav = h('div', { style: 'margin-bottom: 16px;' });
-            nav.appendChild(h('a', { onclick: function() { navigate('reports'); }, style: 'cursor:pointer; color: var(--navy); font-weight: 600;' }, '← All reports'));
+            nav.appendChild(h('a', { className: 'back-link', onclick: function() { navigate('reports'); } }, '← All reports'));
             container.appendChild(nav);
 
             var head = h('div', { style: 'margin-bottom: 20px;' });
@@ -2891,8 +2936,8 @@
                 var tblWrap = h('div', { style: 'display: flex; flex-wrap: wrap; gap: 6px;' });
                 rep.tables.forEach(function(t) {
                     var link = h('a', {
-                        onclick: (function(tn) { return function() { navigate('table/' + tn); }; })(t),
-                        style: 'cursor:pointer; font-family: monospace; background: var(--hover); padding: 4px 10px; border-radius: 4px; color: var(--navy); font-weight: 600;'
+                        className: 'table-chip',
+                        onclick: (function(tn) { return function() { navigate('table/' + tn); }; })(t)
                     }, t);
                     tblWrap.appendChild(link);
                 });
@@ -2923,6 +2968,8 @@
             sqlSec.appendChild(btnRow);
 
             var sqlBlock = h('div', { className: 'report-sql-block' });
+            //  Use the same highlightSql() pipeline as Ask Banner for visual consistency.
+            sqlBlock.innerHTML = highlightSql(rep.sql);
             var copyBtn = h('button', { className: 'report-copy-btn' }, 'Copy');
             copyBtn.onclick = (function(sql, btn) {
                 return function(e) {
@@ -2937,7 +2984,6 @@
                 };
             })(rep.sql, copyBtn);
             sqlBlock.appendChild(copyBtn);
-            sqlBlock.appendChild(document.createTextNode(rep.sql));
             sqlSec.appendChild(sqlBlock);
             container.appendChild(sqlSec);
 
