@@ -355,6 +355,55 @@
             background: var(--card-bg); color: var(--text); resize: vertical; line-height: 1.5;
         }
         .sql-textarea:focus { border-color: var(--gold); outline: none; }
+
+        /* Live-highlighted SQL editor (overlay technique)
+           A <pre> behind the textarea renders the highlighted SQL; the textarea
+           itself is transparent so you see the overlay but type normally into
+           the textarea. Scroll is synced on every input/scroll event. */
+        .sql-editor {
+            position: relative; width: 100%;
+            border: 2px solid var(--border); border-radius: var(--radius);
+            background: var(--card-bg); overflow: hidden;
+            min-height: 240px;
+        }
+        .sql-editor:focus-within { border-color: var(--gold); }
+        .sql-editor-hl, .sql-editor-ta {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px; line-height: 1.5;
+            padding: 16px; margin: 0; border: 0;
+            white-space: pre-wrap; word-wrap: break-word;
+            overflow-wrap: break-word; tab-size: 4;
+            box-sizing: border-box;
+        }
+        .sql-editor-hl {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none; color: var(--text);
+            overflow: hidden; z-index: 1;
+        }
+        .sql-editor-hl.placeholder {
+            color: var(--text-muted); font-style: italic; white-space: pre-wrap;
+        }
+        .sql-editor-ta {
+            position: relative; z-index: 2; width: 100%;
+            min-height: 240px; max-height: 520px;
+            background: transparent; outline: none;
+            color: transparent; caret-color: var(--text);
+            resize: vertical; overflow: auto; display: block;
+        }
+        .sql-editor-ta::selection { background: rgba(255, 184, 28, 0.35); color: transparent; }
+        /* Token colors — light mode: WCC-style navy/gold palette */
+        .sql-editor-hl .kw  { color: #1e40af; font-weight: 600; }
+        .sql-editor-hl .fn  { color: #b45309; }
+        .sql-editor-hl .str { color: #047857; }
+        .sql-editor-hl .num { color: #be185d; }
+        .sql-editor-hl .cmt { color: #6b7280; font-style: italic; }
+        @media (prefers-color-scheme: dark) {
+            .sql-editor-hl .kw  { color: #93c5fd; }
+            .sql-editor-hl .fn  { color: #fbbf24; }
+            .sql-editor-hl .str { color: #86efac; }
+            .sql-editor-hl .num { color: #f9a8d4; }
+            .sql-editor-hl .cmt { color: #64748b; }
+        }
         .sql-explain-btn {
             background: var(--gold); color: var(--navy-dark); border: none; padding: 10px 24px;
             border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer;
@@ -2372,11 +2421,12 @@
             var frag = document.createDocumentFragment();
 
             // ---- ASK BANNER: intent-matched SQL answer ----
+            var intentFired = false;
             var intent = parseIntent(state.query);
             if (intent) {
                 var answer = generateIntentAnswer(intent);
                 var card = renderIntentCard(answer);
-                if (card) frag.appendChild(card);
+                if (card) { frag.appendChild(card); intentFired = true; }
             }
 
             // ---- INTERACTIVE TERM BUILDER ----
@@ -2544,11 +2594,18 @@
 
             // ---- RESULTS ----
             if (filtered.length === 0) {
-                frag.appendChild(h('div', {className: 'no-results'}, [
-                    h('div', {className: 'no-results-icon', innerHTML: '&#128269;'}),
-                    h('div', null, 'No results found' + (refineQ ? ' matching "' + state.refineQuery + '"' : ' for "' + state.query + '"')),
-                    h('div', {style: 'font-size:13px;margin-top:8px'}, refineQ ? 'Try a different refine filter or clear it' : 'Try different keywords, Banner abbreviations, or check spelling'),
-                ]));
+                if (intentFired) {
+                    //  Ask Banner answered above — don't show a 'No results' block that would make
+                    //  the answer look like a broken search. A subtle note is friendlier.
+                    frag.appendChild(h('div', { style: 'color: var(--text-muted); font-size: 13px; text-align: center; padding: 16px;' },
+                        'No additional table-level matches for "' + state.query + '". The generated answer above is scoped to the tables it references.'));
+                } else {
+                    frag.appendChild(h('div', {className: 'no-results'}, [
+                        h('div', {className: 'no-results-icon', innerHTML: '&#128269;'}),
+                        h('div', null, 'No results found' + (refineQ ? ' matching "' + state.refineQuery + '"' : ' for "' + state.query + '"')),
+                        h('div', {style: 'font-size:13px;margin-top:8px'}, refineQ ? 'Try a different refine filter or clear it' : 'Try different keywords, Banner abbreviations, or check spelling'),
+                    ]));
+                }
                 return frag;
             }
 
@@ -3689,12 +3746,19 @@
                 'Paste any Banner SQL query below. The tool validates table and column names against the schema, ' +
                 'checks for common Banner pitfalls (missing filters, wrong data sources), and explains what the query does.'));
 
-            // Textarea
+            //  Live-highlighted SQL editor (overlay <pre> + transparent textarea)
+            var editor = h('div', { className: 'sql-editor' });
+            var highlight = document.createElement('pre');
+            highlight.className = 'sql-editor-hl placeholder';
+            highlight.id = 'sqlHighlight';
+            highlight.textContent = 'Paste your SQL query here...\n\nExample:\nSELECT d.PHRDEDN_BDCA_CODE, SUM(d.PHRDEDN_APPLICABLE_GROSS)\nFROM PHRDEDN d\nJOIN PHRHIST h ON h.PHRHIST_PIDM = d.PHRDEDN_PIDM\nWHERE d.PHRDEDN_YEAR = 2025\nGROUP BY d.PHRDEDN_BDCA_CODE';
             var textarea = h('textarea', {
-                className: 'sql-textarea', id: 'sqlInput',
-                placeholder: 'Paste your SQL query here...\n\nExample:\nSELECT d.PHRDEDN_BDCA_CODE, SUM(d.PHRDEDN_APPLICABLE_GROSS)\nFROM PHRDEDN d\nJOIN PHRHIST h ON h.PHRHIST_PIDM = d.PHRDEDN_PIDM\nWHERE d.PHRDEDN_YEAR = 2025\nGROUP BY d.PHRDEDN_BDCA_CODE'
+                className: 'sql-editor-ta', id: 'sqlInput',
+                spellcheck: 'false', autocomplete: 'off'
             });
-            container.appendChild(textarea);
+            editor.appendChild(highlight);
+            editor.appendChild(textarea);
+            container.appendChild(editor);
 
             // Button row
             var btnRow = h('div', { style: 'margin-top: 12px; display: flex; gap: 12px; align-items: center;' });
@@ -3710,16 +3774,35 @@
             var resultsDiv = h('div', { id: 'sqlResults' });
             container.appendChild(resultsDiv);
 
+            //  Live syntax highlighting: re-render overlay whenever the textarea changes.
+            function renderSqlHighlight() {
+                var val = textarea.value;
+                if (!val) {
+                    highlight.classList.add('placeholder');
+                    highlight.textContent = 'Paste your SQL query here...\n\nExample:\nSELECT d.PHRDEDN_BDCA_CODE, SUM(d.PHRDEDN_APPLICABLE_GROSS)\nFROM PHRDEDN d\nJOIN PHRHIST h ON h.PHRHIST_PIDM = d.PHRDEDN_PIDM\nWHERE d.PHRDEDN_YEAR = 2025\nGROUP BY d.PHRDEDN_BDCA_CODE';
+                    return;
+                }
+                highlight.classList.remove('placeholder');
+                //  Trailing newline keeps the caret on the last line visible
+                highlight.innerHTML = highlightSql(val) + '\n';
+            }
+            textarea.addEventListener('input', renderSqlHighlight);
+            textarea.addEventListener('scroll', function() {
+                highlight.scrollTop = textarea.scrollTop;
+                highlight.scrollLeft = textarea.scrollLeft;
+            });
+
             // Restore previous SQL if any
             if (state.sqlText) {
                 setTimeout(function() {
-                    document.getElementById('sqlInput').value = state.sqlText;
+                    textarea.value = state.sqlText;
+                    renderSqlHighlight();
                     if (state.sqlResults) document.getElementById('sqlResults').innerHTML = state.sqlResults;
                 }, 0);
             }
 
             explainBtn.addEventListener('click', function() {
-                var sql = document.getElementById('sqlInput').value.trim();
+                var sql = textarea.value.trim();
                 if (!sql) return;
                 state.sqlText = sql;
                 var parsed = parseSql(sql);
@@ -3730,7 +3813,8 @@
             });
 
             clearBtn.addEventListener('click', function() {
-                document.getElementById('sqlInput').value = '';
+                textarea.value = '';
+                renderSqlHighlight();
                 document.getElementById('sqlResults').innerHTML = '';
                 state.sqlText = ''; state.sqlResults = '';
             });
