@@ -107,10 +107,14 @@ def generate_site(
     schema_data['stats']['totalRelationships'] = total_rels
     schema_data['stats']['tablesWithRelationships'] = tables_with_rels
 
-    # Load business cases
+    # Load business cases (business + security knowledge bases)
     business_cases = []
-    cases_file = Path(template_dir).parent / 'data' / 'business_cases.txt'
-    if cases_file.exists():
+    data_dir = Path(template_dir).parent / 'data'
+    for cases_filename in ('business_cases.txt', 'security_cases.txt'):
+        cases_file = data_dir / cases_filename
+        if not cases_file.exists():
+            continue
+        loaded = 0
         for line in cases_file.read_text(encoding='utf-8', errors='replace').splitlines():
             if line.startswith('CASE_ID') or not line.strip():
                 continue
@@ -123,7 +127,8 @@ def generate_site(
                     'tables': [t.strip().upper() for t in parts[3].split(',')],
                     'description': parts[5].strip(),
                 })
-        print(f"       Loaded {len(business_cases)} business cases")
+                loaded += 1
+        print(f"       Loaded {loaded} cases from {cases_filename}")
 
     # Render template
     env = Environment(

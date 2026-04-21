@@ -134,6 +134,15 @@ def get_module(table_name: str) -> tuple:
     return ('Other', 'Uncategorized')
 
 
+# Modules whose membership is decided at parse-time (not by prefix).
+# BANSECR overlaps with General prefixes (GO/GU/GT), so we honor the
+# parser's pre-assignment instead of running get_module() on these.
+PREASSIGNED_MODULES = {
+    'Security': 'Banner Security (BANSECR schema): CLASS/OBJECT access control, '
+                'audit logs, roles, and enterprise accounts.',
+}
+
+
 def categorize_tables(tables: dict) -> dict:
     """
     Assign module to each TableInfo in the dict.
@@ -142,8 +151,13 @@ def categorize_tables(tables: dict) -> dict:
     module_summary = {}
 
     for table in tables.values():
-        mod_name, mod_desc = get_module(table.name)
-        table.module = mod_name
+        # Respect pre-assigned modules (BANSECR → Security) to avoid prefix clash
+        if table.module in PREASSIGNED_MODULES:
+            mod_name = table.module
+            mod_desc = PREASSIGNED_MODULES[mod_name]
+        else:
+            mod_name, mod_desc = get_module(table.name)
+            table.module = mod_name
 
         if mod_name not in module_summary:
             module_summary[mod_name] = {

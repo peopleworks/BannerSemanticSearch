@@ -60,11 +60,17 @@ def parse_table_info(filepath: str) -> dict:
     return tables
 
 
-def parse_field_info(filepath: str, tables: dict) -> dict:
+#  Identifier sanity — skips SQL*Plus header garbage like TRIM(C.TABLE_NAME)
+IDENT_RE = re.compile(r'^[A-Z_$][A-Z0-9_$]*$')
+
+
+def parse_field_info(filepath: str, tables: dict, force_module: str = '') -> dict:
     """
     Parse field_info.txt (pipe-delimited: TABLE_NAME|COLUMN_NAME|DESCRIPTION).
     Attaches columns to existing TableInfo objects.
     Creates synthetic TableInfo for tables not in table_info.
+    If force_module is set, any synthetic TableInfo gets that module stamped
+    on it (used for BANSECR so the categorizer leaves it as 'Security').
     Returns the updated tables dict.
     """
     path = Path(filepath)
@@ -96,17 +102,49 @@ def parse_field_info(filepath: str, tables: dict) -> dict:
         if not table_name or not col_name:
             continue
 
+        #  Reject SQL*Plus header garbage (parentheses, quotes, etc.)
+        if not IDENT_RE.match(table_name) or not IDENT_RE.match(col_name):
+            continue
+
         # Create synthetic table entry if not in table_info
         if table_name not in tables:
             tables[table_name] = TableInfo(
                 name=table_name,
                 type='TABLE',
                 description='',
+                module=force_module,
             )
+        elif force_module and not tables[table_name].module:
+            tables[table_name].module = force_module
 
         col = ColumnInfo(name=col_name, description=col_desc)
         tables[table_name].columns.append(col)
         last_col = col
+
+    return tables
+
+
+def parse_bansecr(data_dir: Path, tables: dict) -> dict:
+    """
+    Optionally parse the BANSECR security-schema extracts.
+    These files are gitignored (local-only; not part of the public repo).
+    Every BANSECR table is stamped with module='Security' so the prefix-based
+    categorizer leaves it alone (BANSECR shares prefixes with General).
+    """
+    bs_tables_file = data_dir / 'bansecr_tables.txt'
+    bs_cols_file   = data_dir / 'bansecr_columns.txt'
+
+    if not bs_tables_file.exists() and not bs_cols_file.exists():
+        return tables
+
+    if bs_tables_file.exists():
+        sec_tables = parse_table_info(str(bs_tables_file))
+        for name, tinfo in sec_tables.items():
+            tinfo.module = 'Security'
+            tables[name] = tinfo
+
+    if bs_cols_file.exists():
+        tables = parse_field_info(str(bs_cols_file), tables, force_module='Security')
 
     return tables
 
@@ -128,5 +166,8 @@ def parse_all(data_dir: str) -> dict:
 
     tables = parse_table_info(str(table_file))
     tables = parse_field_info(str(field_file), tables)
+
+    # Optional: BANSECR security schema extracts (gitignored; local only)
+    tables = parse_bansecr(data_path, tables)
 
     return tables

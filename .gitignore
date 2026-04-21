@@ -1,0 +1,29 @@
+# BANSECR extracts — do NOT commit to public repo.
+# These files describe the exact security-schema shape at Waubonsee
+# (tables, columns, constraints). The .sql scripts ARE committed so
+# any institution can regenerate their own locally.
+data/bansecr_tables.txt
+data/bansecr_columns.txt
+data/bansecr_relationships.txt
+data/security_health_check.txt
+data/security_health_check.csv
+data/security_health_check_commented.sql
+
+# Oracle / SQL*Plus artifacts
+*.lst
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
