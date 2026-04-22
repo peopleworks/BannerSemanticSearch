@@ -1210,6 +1210,9 @@
                 <a class="help-query" data-q="Banner Student security classes"><code>Banner Student security classes</code><span class="help-hint">Ask Banner &rarr; GTVCLAS query for Student module</span></a>
                 <a class="help-query" data-q="finance security classes"><code>finance security classes</code><span class="help-hint">Finance-module class catalog</span></a>
                 <a class="help-query" data-q="HR payroll classes"><code>HR payroll classes</code><span class="help-hint">HR/Payroll class catalog</span></a>
+                <a class="help-query" data-q="finance user access inventory"><code>finance user access inventory</code><span class="help-hint">&rarr; SR012 &mdash; users + Finance forms (Argos-ready)</span></a>
+                <a class="help-query" data-q="Student user access inventory"><code>Student user access inventory</code><span class="help-hint">Ask Banner &rarr; same query scoped to Student</span></a>
+                <a class="help-query" data-q="HR user access inventory"><code>HR user access inventory</code><span class="help-hint">Ask Banner &rarr; same query scoped to HR/Payroll</span></a>
                 <a class="help-query" data-q="dormant accounts"><code>dormant accounts</code><span class="help-hint">&rarr; SR001 — never logged in 180+ days</span></a>
                 <a class="help-query" data-q="terminated with access"><code>terminated with access</code><span class="help-hint">&rarr; SR002 — the #1 auditor finding</span></a>
                 <a class="help-query" data-q="super users"><code>super users</code><span class="help-hint">&rarr; SR008 — top _M grant holders</span></a>
@@ -1923,7 +1926,7 @@
                 askCard.appendChild(h('div', {className: 'module-name'}, '💡 Ask Banner'));
                 askCard.appendChild(h('div', {className: 'module-desc'}, 'Type a question in English about security or access, and the tool generates the specific SQL that answers it — with line-by-line explanation and one-click validation.'));
                 var exRow = h('div', { style: 'display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;' });
-                ['Banner Student security classes','finance security classes','HR payroll classes','access to SHAINST','users in class SFAREGS','dormant accounts','terminated with access','violations last 30 days','most populated classes','super users','unused classes','recent access changes','PII access','object concentration']
+                ['Banner Student security classes','finance security classes','HR payroll classes','finance user access inventory','Student user access inventory','access to SHAINST','users in class SFAREGS','dormant accounts','terminated with access','violations last 30 days','most populated classes','super users','unused classes','recent access changes','PII access','object concentration']
                     .forEach(function(ex) {
                         var chip = h('a', {
                             className: 'ask-chip',
@@ -2099,6 +2102,9 @@
                 return { kind: 'report', id: 'SR010', original: q };
             if (/\bpii\b|\bssn\b|\bsensitive data|\bferpa\b|sensitive.{0,12}access|personal.{0,10}info|demograph/i.test(lo) && _hasReport('SR011'))
                 return { kind: 'report', id: 'SR011', original: q };
+            //  SR012 shortcut fires only when no module keyword is present — otherwise P5 generates the module-specific variant inline
+            if (/\buser access inventory\b|\bform access inventory\b|\buser.{0,10}form.{0,10}inventory|\bbanner form per user|\blist.{0,14}user.{0,14}form/i.test(lo) && !detectModule(q) && _hasReport('SR012'))
+                return { kind: 'report', id: 'SR012', original: q };
 
             //  P1 — {module} security classes
             var mentionsClasses = /\bclass(es)?\b/i.test(lo);
@@ -2106,6 +2112,14 @@
             if (mentionsClasses && (mentionsSecurity || /\bbanner\b/i.test(lo))) {
                 var mod = detectModule(q);
                 if (mod) return { kind: 'module_classes', module: mod, original: q };
+            }
+
+            //  P5 — {module} user access inventory (who can access which forms)
+            var mentionsUsers  = /\buser|\buserid|\busers?\b|\baccount|\bwho can\b/i.test(lo);
+            var mentionsForms  = /\bforms?\b|\bscreens?\b|\bpages?\b|\bobjects?\b|\bgranted\b|\baccess\b|\binventory\b|\blist\b/i.test(lo);
+            if (mentionsUsers && mentionsForms && !mentionsClasses) {
+                var mod5 = detectModule(q);
+                if (mod5) return { kind: 'module_user_access', module: mod5, original: q };
             }
 
             //  P2 — users in class X / who has class X
@@ -2165,6 +2179,74 @@
                         '<code>GUVUACC</code> is the pre-joined effective-access view; counting distinct objects gives a size proxy for each class\'s footprint.',
                     ],
                     caveats: 'GTVCLAS_SYSI_CODE populates during Banner installation and may be empty at sites that never set it — the LIKE fallback is the belt-and-suspenders. For a deeper view of one class, drill into GUVUACC filtered by that class_code.',
+                    original: intent.original,
+                };
+            }
+
+            if (intent.kind === 'module_user_access') {
+                var mUA = ASK_MODULES[intent.module];
+                var sqlUA =
+                    '-- PART 1 — Detail: one row per (user, ' + mUA.name + ' form, role)\n' +
+                    'SELECT\n' +
+                    '    gu.guvuacc_user                                      AS username,\n' +
+                    '    ga.gobeacc_pidm                                      AS pidm,\n' +
+                    '    si.spriden_id                                        AS banner_id,\n' +
+                    '    si.spriden_first_name || \' \' || si.spriden_last_name AS full_name,\n' +
+                    '    pe.pebempl_term_date                                 AS employee_term_date,\n' +
+                    '    gu.guvuacc_object                                    AS banner_form,\n' +
+                    '    gu.guvuacc_role                                      AS role_name,\n' +
+                    '    CASE\n' +
+                    '        WHEN gu.guvuacc_role LIKE \'%\\_Q\' ESCAPE \'\\\' THEN \'Query\'\n' +
+                    '        WHEN gu.guvuacc_role LIKE \'%\\_M\' ESCAPE \'\\\' THEN \'Maintenance\'\n' +
+                    '        WHEN gu.guvuacc_role LIKE \'%\\_B\' ESCAPE \'\\\' THEN \'Both\'\n' +
+                    '        WHEN gu.guvuacc_role LIKE \'%\\_U\' ESCAPE \'\\\' THEN \'Update\'\n' +
+                    '        ELSE \'Other/Custom\'\n' +
+                    '    END                                                  AS access_level,\n' +
+                    '    gu.guvuacc_type                                      AS access_via,\n' +
+                    '    gu.guvuacc_class                                     AS via_class\n' +
+                    'FROM        bansecr.guvuacc gu\n' +
+                    'INNER JOIN  bansecr.guraobj ao ON ao.guraobj_object     = gu.guvuacc_object\n' +
+                    'LEFT JOIN   general.gobeacc ga ON ga.gobeacc_username  = gu.guvuacc_user\n' +
+                    'LEFT JOIN   spriden si         ON si.spriden_pidm      = ga.gobeacc_pidm\n' +
+                    '                              AND si.spriden_change_ind IS NULL\n' +
+                    '                              AND si.spriden_entity_ind = \'P\'\n' +
+                    'LEFT JOIN   pebempl pe         ON pe.pebempl_pidm      = ga.gobeacc_pidm\n' +
+                    'WHERE       ao.guraobj_sysi_code = \'' + intent.module + '\'\n' +
+                    'ORDER BY    gu.guvuacc_user, gu.guvuacc_object;\n' +
+                    '\n' +
+                    '-- PART 2 — Summary: one row per user with aggregated form list\n' +
+                    'SELECT\n' +
+                    '    gu.guvuacc_user                                      AS username,\n' +
+                    '    si.spriden_first_name || \' \' || si.spriden_last_name AS full_name,\n' +
+                    '    COUNT(DISTINCT gu.guvuacc_object)                    AS form_count,\n' +
+                    '    COUNT(CASE WHEN gu.guvuacc_role LIKE \'%\\_M\' ESCAPE \'\\\' THEN 1 END) AS maintenance_count,\n' +
+                    '    COUNT(CASE WHEN gu.guvuacc_role LIKE \'%\\_Q\' ESCAPE \'\\\' THEN 1 END) AS query_count,\n' +
+                    '    LISTAGG(DISTINCT gu.guvuacc_object, \', \')\n' +
+                    '        WITHIN GROUP (ORDER BY gu.guvuacc_object)        AS forms,\n' +
+                    '    MAX(pe.pebempl_term_date)                            AS employee_term_date\n' +
+                    'FROM        bansecr.guvuacc gu\n' +
+                    'INNER JOIN  bansecr.guraobj ao ON ao.guraobj_object     = gu.guvuacc_object\n' +
+                    'LEFT JOIN   general.gobeacc ga ON ga.gobeacc_username  = gu.guvuacc_user\n' +
+                    'LEFT JOIN   spriden si         ON si.spriden_pidm      = ga.gobeacc_pidm\n' +
+                    '                              AND si.spriden_change_ind IS NULL\n' +
+                    '                              AND si.spriden_entity_ind = \'P\'\n' +
+                    'LEFT JOIN   pebempl pe         ON pe.pebempl_pidm      = ga.gobeacc_pidm\n' +
+                    'WHERE       ao.guraobj_sysi_code = \'' + intent.module + '\'\n' +
+                    'GROUP BY    gu.guvuacc_user, si.spriden_first_name, si.spriden_last_name\n' +
+                    'ORDER BY    form_count DESC, gu.guvuacc_user;';
+                return {
+                    kind: 'generated',
+                    title: 'Banner ' + mUA.name + ' Users — Form Access Inventory',
+                    description: 'Every Banner user who can reach a <b>' + mUA.name + '</b>-module form, joined with their identity (GOBEACC + SPRIDEN) and termination status (PEBEMPL). Two-part output ready to paste into Argos: (1) detail with one row per user-form-role, (2) summary with a LISTAGG of all ' + mUA.name + ' forms per user.',
+                    sql: sqlUA,
+                    tables: ['GUVUACC','GURAOBJ','GOBEACC','SPRIDEN','PEBEMPL'],
+                    explain: [
+                        '<code>GUVUACC</code> is Banner\'s pre-joined effective-access view — it already unions class-based, direct (<code>GURUOBJ</code>), and group-based grants. No need to reassemble.',
+                        '<code>ao.guraobj_sysi_code = \'' + intent.module + '\'</code> scopes to ' + mUA.name + ' forms only. Change to <code>\'S\'</code> for Student, <code>\'P\'</code> for HR/Payroll, etc.',
+                        'The <code>CASE</code> on role suffix translates Banner\'s <code>_Q</code>/<code>_M</code>/<code>_B</code>/<code>_U</code> conventions into human terms (Query / Maintenance / Both / Update). Custom roles fall into Other/Custom — review them separately.',
+                        '<code>pebempl_term_date</code> is carried through so you can instantly spot terminated employees still holding ' + mUA.name + ' access (the #1 audit finding).',
+                    ],
+                    caveats: 'Uses <code>GURAOBJ_SYSI_CODE</code> to scope by module — if your site has objects missing this code, add a fallback like <code>OR gu.guvuacc_object LIKE \'' + intent.module + '%\'</code>. LISTAGG in the summary is 4000-byte capped; a user with 600+ forms may truncate. The detail part never truncates. This is SR012 packaged for a single module.',
                     original: intent.original,
                 };
             }
