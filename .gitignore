@@ -33,3 +33,10 @@ templates/*.bak_*
 
 # Ad-hoc screenshots saved at repo root — real screenshots live in docs/img/
 /20*-*.png
+
+# Internal launch / publication materials — drafts, strategy, copy for LinkedIn /
+# HN / Reddit / X. Stays local; not part of the public repo.
+LAUNCH_PLAN.md
+launch/
+marketing/
+drafts/
