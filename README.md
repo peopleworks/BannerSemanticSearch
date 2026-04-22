@@ -49,6 +49,8 @@ That's it. You now have a fully searchable Banner data dictionary + query builde
 
 ## 🧱 Banner Lego — The Visual Query Builder
 
+![Banner Lego — the visual query builder](docs/img/banner-lego.png)
+
 **Think Scratch for Banner SQL.** New users building their first Banner report typically hit the same walls: *"is the enrollment table SFRSTCR or SFRSTCA?"*, *"what's the canonical join to SCBCRSE?"*, *"why do I need MAX(effective_date)?"*. Banner Lego solves this by turning the query into visual blocks where each block carries its own canonical join pattern and a plain-English "why" tooltip.
 
 Three block kinds, color-coded:
@@ -92,6 +94,8 @@ When the SQL is ready, one click sends it to the **SQL Explainer** for pitfall c
 
 ## 🛡️ Security Posture Scorecard
 
+![Security Posture Scorecard](docs/img/scorecard.png)
+
 **SR014 → 8 traffic-light gauges in one view.** The scorecard is a one-row SELECT (runs in ~2-5 seconds at a typical site) whose output you paste into a textarea in the app. The dashboard paints itself with gauges for every major audit risk:
 
 | Metric | Green if ≤ | Watch if ≤ | Source report |
@@ -110,6 +114,8 @@ Everything runs **client-side**. Pasted values persist in `localStorage` — a n
 ---
 
 ## 💡 Ask Banner — Natural Language → SQL
+
+![Ask Banner generating SQL from an English question](docs/img/ask-banner.png)
 
 Type a question in plain English. The tool recognizes 8 intent patterns and generates SQL inline with step-by-step explanation:
 
@@ -133,6 +139,8 @@ Every intent answer includes:
 ---
 
 ## 14 Ready-to-Run Security Reports
+
+![Reports index](docs/img/reports-index.png)
 
 Every report is vetted SQL with header metadata (category, severity, tables, description, when-to-use, caveats):
 
@@ -159,6 +167,8 @@ All use canonical Banner patterns: `GURACLS` with `MAX(audit_time)` + `audit_act
 
 ## 🔧 SQL Explainer & Validator
 
+![SQL Explainer catching phantom columns with "Did you mean…?" suggestions](docs/img/sql-explainer.png)
+
 Paste any Banner SQL and the tool inspects it against the live schema and a curated knowledge base of real Banner integration cases.
 
 - **Schema validation** — Every table and column referenced is checked against the embedded Banner schema. Unknown identifiers flagged with "Did you mean…?" suggestions (Levenshtein distance).
@@ -175,6 +185,22 @@ Paste any Banner SQL and the tool inspects it against the live schema and a cura
 - **Business-case matching** — Compares your query's tables against `data/business_cases.txt` (W-2 reporting, SURS exemptions, payroll adjustments, Federal/Medicare/SS tax) and `data/security_cases.txt` (12 security-specific cases) and surfaces matching scenarios with lessons learned.
 - **Live syntax highlighting** — As you type.
 - **All offline** — Everything runs in the browser. Your SQL never leaves your machine.
+
+---
+
+## 🔎 Schema Search — BM25 + Banner Synonyms
+
+![Search with synonym expansion and term builder chips](docs/img/search-synonyms.png)
+
+Type English, get Banner tables. `"employee hire date"` expands into `empl`, `emp`, `pebempl`, `hired`, `employment`, `current_hire`, `dt`, `activity_date`, `effective_date` — all visible as toggleable chips above the results so you can see exactly what the ranker is looking at. Typos are handled via trigram similarity (`addres` still finds SPRADDR). 905 matches across 379 tables for this query — ranked by BM25 in <50 ms.
+
+---
+
+## 🗺️ Discover Every Module on Your Site
+
+![Module overview card with 8-card reference grid](docs/img/module-grid.png)
+
+Ask `"list banner modules"` and the tool shows the canonical Ellucian module catalog (Finance, Student, HR, Advancement, Financial Aid, Accounts Receivable, General, Position Control) plus the SQL (SR013) that lists whatever modules actually exist at **your** site. Click any card and it auto-fires the per-module user-access inventory for that module.
 
 ---
 
