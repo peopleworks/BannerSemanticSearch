@@ -27,3 +27,9 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Transient backups from one-off maintenance scripts
+templates/*.bak_*
+
+# Ad-hoc screenshots saved at repo root — real screenshots live in docs/img/
+/20*-*.png

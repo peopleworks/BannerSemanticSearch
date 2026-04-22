@@ -71,12 +71,25 @@ def main():
     print(f'       {len(index_result["index"]):,} tokens in inverted index')
 
     # Step 4: Build relationships
-    print(f'\n[4/5] Building table relationships...')
+    print(f'\n[4/6] Building table relationships...')
     relationships = build_relationships(tables, args.data)
 
-    # Step 5: Generate site
+    # Step 5: Validate Banner Lego catalog against schema
+    print(f'\n[5/6] Validating Banner Lego catalog columns...')
+    try:
+        from scripts.validate_lego_catalog import load_schema, validate as validate_lego
+        lego_schema = load_schema()
+        lego_status = validate_lego(lego_schema)
+        if lego_status != 0:
+            print('       [ERROR] Banner Lego catalog has invalid column references. '
+                  'Fix the blocks above before the build can continue.')
+            sys.exit(lego_status)
+    except ImportError:
+        print('       (validator not available — skipping)')
+
+    # Step 6: Generate site
     template_dir = str(PROJECT_ROOT / 'templates')
-    print(f'\n[5/5] Generating site to: {args.output}')
+    print(f'\n[6/6] Generating site to: {args.output}')
     output_file = generate_site(
         tables=tables,
         module_summary=module_summary,

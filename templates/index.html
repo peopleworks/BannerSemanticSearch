@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Banner Schema Search</title>
+    <script>
+        //  ======  EARLY THEME BOOT (pre-CSS, prevents flash of wrong theme)  ======
+        (function() {
+            var pref = 'auto';
+            try { pref = localStorage.getItem('theme') || 'auto'; } catch(e) {}
+            var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var root = document.documentElement;
+            root.setAttribute('data-theme', pref);
+            if (pref === 'dark' || (pref === 'auto' && systemDark)) root.classList.add('dark');
+            else root.classList.remove('dark');
+        })();
+    </script>
     <style>
         :root {
             --navy: #003366;
@@ -23,15 +35,13 @@
             --shadow: 0 1px 3px rgba(0,0,0,0.1);
             --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
         }
-        @media (prefers-color-scheme: dark) {
-            :root {
+        html.dark {
                 --bg: #0f172a; --card-bg: #1e293b; --text: #e2e8f0;
                 --text-muted: #94a3b8; --border: #334155;
                 --hover: #273449; --highlight: #854d0e33;
                 --navy: #1e3a5f; --navy-light: #2563eb; --navy-dark: #0f172a;
                 --shadow: 0 1px 3px rgba(0,0,0,0.3); --shadow-lg: 0 4px 12px rgba(0,0,0,0.3);
             }
-        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -60,14 +70,39 @@
         }
         .search-clear {
             position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-            background: rgba(255,255,255,0.2); border: none; color: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.35); border: none; color: white;
             width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
-            font-size: 14px; line-height: 1; display: none; align-items: center;
-            justify-content: center; transition: background 0.15s;
+            font-size: 15px; line-height: 1; display: none; align-items: center;
+            justify-content: center; transition: background 0.15s; z-index: 5;
+            font-weight: 700;
         }
-        .search-clear:hover { background: rgba(255,255,255,0.4); }
+        .search-clear:hover { background: rgba(255,255,255,0.55); }
         .search-clear.visible { display: flex; }
         .header-stats { font-size: 12px; color: rgba(255,255,255,0.7); white-space: nowrap; }
+        .theme-toggle {
+            background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.20);
+            color: white; cursor: pointer; border-radius: 999px;
+            width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+            font-size: 16px; line-height: 1; transition: transform 0.15s ease, background 0.15s ease;
+            padding: 0; position: relative;
+        }
+        .theme-toggle:hover { background: rgba(255,255,255,0.22); transform: rotate(15deg); }
+        .theme-toggle:active { transform: scale(0.92); }
+        .theme-icon { display: none; line-height: 1; }
+        html[data-theme="auto"]  .theme-icon-auto  { display: inline; }
+        html[data-theme="light"] .theme-icon-light { display: inline; }
+        html[data-theme="dark"]  .theme-icon-dark  { display: inline; }
+        /* Default (no attribute set yet) shows the auto icon */
+        html:not([data-theme]) .theme-icon-auto { display: inline; }
+        .theme-toggle::after {
+            content: attr(data-label);
+            position: absolute; bottom: -22px; right: 0;
+            font-size: 10px; color: rgba(255,255,255,0.65);
+            background: rgba(0,0,0,0.65); padding: 2px 6px; border-radius: 3px;
+            opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
+            white-space: nowrap;
+        }
+        .theme-toggle.show-label::after { opacity: 1; }
         .filters-bar {
             display: flex; align-items: center; gap: 12px; padding: 8px 24px;
             background: var(--navy-dark); font-size: 13px; flex-wrap: wrap;
@@ -100,14 +135,14 @@
         }
         .stat-number { font-size: 28px; font-weight: 700; color: var(--navy-light); }
         .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-        @media (prefers-color-scheme: dark) { .stat-number { color: var(--gold); } }
+        html.dark .stat-number { color: var(--gold); }
 
         /* Modules */
         .section-title {
             font-size: 18px; font-weight: 700; margin-bottom: 16px; padding-bottom: 8px;
             border-bottom: 2px solid var(--gold); color: var(--navy-light);
         }
-        @media (prefers-color-scheme: dark) { .section-title { color: var(--gold); } }
+        html.dark .section-title { color: var(--gold); }
         .modules-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 12px; margin-bottom: 32px;
@@ -121,7 +156,7 @@
         .module-name { font-weight: 700; font-size: 15px; }
         .module-desc { font-size: 12px; color: var(--text-muted); margin: 4px 0; }
         .module-count { font-size: 13px; color: var(--navy-light); font-weight: 600; }
-        @media (prefers-color-scheme: dark) { .module-count { color: var(--gold); } }
+        html.dark .module-count { color: var(--gold); }
 
         /* Tables */
         .table-list {
@@ -135,19 +170,21 @@
         .table-list td { padding: 8px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
         .table-list tr:hover td { background: var(--highlight); }
         .table-list tr:nth-child(even) td { background: rgba(0,0,0,0.02); }
-        @media (prefers-color-scheme: dark) { .table-list tr:nth-child(even) td { background: rgba(255,255,255,0.02); } }
+        html.dark .table-list tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
         .table-link {
             color: var(--navy-light); text-decoration: none; font-weight: 600;
             font-family: 'Consolas','Monaco',monospace; cursor: pointer;
         }
         .table-link:hover { color: var(--gold); text-decoration: underline; }
-        @media (prefers-color-scheme: dark) { .table-link { color: #60a5fa; } .table-link:hover { color: var(--gold); } }
+        html.dark .table-link { color: #60a5fa; }
+        html.dark .table-link:hover { color: var(--gold); }
         .type-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
         .type-table { background: #dbeafe; color: #1e40af; }
         .type-view { background: #dcfce7; color: #166534; }
-        @media (prefers-color-scheme: dark) { .type-table { background: #1e3a5f; color: #93c5fd; } .type-view { background: #14532d; color: #86efac; } }
+        html.dark .type-table { background: #1e3a5f; color: #93c5fd; }
+        html.dark .type-view { background: #14532d; color: #86efac; }
         .module-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; background: #f3f4f6; color: var(--text-muted); }
-        @media (prefers-color-scheme: dark) { .module-badge { background: #374151; color: #d1d5db; } }
+        html.dark .module-badge { background: #374151; color: #d1d5db; }
         .score-bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--gold); min-width: 4px; }
         .desc-text { max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -157,7 +194,7 @@
             margin-bottom: 20px; box-shadow: var(--shadow); border-top: 4px solid var(--gold);
         }
         .detail-title { font-size: 24px; font-weight: 700; font-family: 'Consolas','Monaco',monospace; color: var(--navy-light); }
-        @media (prefers-color-scheme: dark) { .detail-title { color: var(--gold); } }
+        html.dark .detail-title { color: var(--gold); }
         .detail-meta { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
         .detail-desc { margin-top: 12px; color: var(--text-muted); }
         .col-filter {
@@ -206,13 +243,11 @@
         .tag-gold { background: #fef3c7; color: #92400e; }
         .tag-red { background: #fee2e2; color: #991b1b; }
         .tag:hover { background: var(--gold); color: var(--navy-dark); }
-        @media (prefers-color-scheme: dark) {
-            .tag-blue { background: #1e3a5f; color: #93c5fd; }
-            .tag-purple { background: #2e1065; color: #c4b5fd; }
-            .tag-gold { background: #78350f; color: #fde68a; }
-            .tag-red { background: #450a0a; color: #fca5a5; }
-            .tag:hover { background: var(--gold); color: var(--navy-dark); }
-        }
+        html.dark .tag-blue { background: #1e3a5f; color: #93c5fd; }
+        html.dark .tag-purple { background: #2e1065; color: #c4b5fd; }
+        html.dark .tag-gold { background: #78350f; color: #fde68a; }
+        html.dark .tag-red { background: #450a0a; color: #fca5a5; }
+        html.dark .tag:hover { background: var(--gold); color: var(--navy-dark); }
 
         /* Column pattern badges */
         .col-badge {
@@ -230,7 +265,7 @@
         .group-header:hover { border-left-color: var(--gold); }
         .group-header.expanded { border-left-color: var(--navy-light); margin-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
         .group-name { font-weight: 700; font-family: 'Consolas','Monaco',monospace; font-size: 14px; color: var(--navy-light); }
-        @media (prefers-color-scheme: dark) { .group-name { color: #60a5fa; } }
+        html.dark .group-name { color: #60a5fa; }
         .group-meta { font-size: 12px; color: var(--text-muted); }
         .group-score-bar { height: 4px; border-radius: 2px; background: var(--gold); }
         .group-toggle { margin-left: auto; color: var(--text-muted); font-size: 18px; transition: transform 0.2s; }
@@ -252,9 +287,9 @@
             background: #fef3c7; border-radius: var(--radius); padding: 12px 18px;
             margin-bottom: 16px; font-size: 13px; color: #92400e;
         }
-        @media (prefers-color-scheme: dark) { .did-you-mean { background: #78350f; color: #fde68a; } }
+        html.dark .did-you-mean { background: #78350f; color: #fde68a; }
         .did-you-mean a { color: #b45309; font-weight: 600; cursor: pointer; text-decoration: underline; }
-        @media (prefers-color-scheme: dark) { .did-you-mean a { color: var(--gold); } }
+        html.dark .did-you-mean a { color: var(--gold); }
 
         /* Interactive term tags */
         .term-tag {
@@ -267,12 +302,10 @@
         .term-tag.synonym { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
         .term-tag.custom { background: #dcfce7; color: #166534; border-color: #86efac; }
         .term-tag.disabled { background: var(--bg); color: var(--text-muted); border-color: var(--border); opacity: 0.6; text-decoration: line-through; }
-        @media (prefers-color-scheme: dark) {
-            .term-tag.original { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
-            .term-tag.synonym { background: #78350f; color: #fde68a; border-color: #b45309; }
-            .term-tag.custom { background: #14532d; color: #86efac; border-color: #16a34a; }
-            .term-tag.disabled { background: #1e293b; color: #64748b; border-color: #334155; }
-        }
+        html.dark .term-tag.original { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
+        html.dark .term-tag.synonym { background: #78350f; color: #fde68a; border-color: #b45309; }
+        html.dark .term-tag.custom { background: #14532d; color: #86efac; border-color: #16a34a; }
+        html.dark .term-tag.disabled { background: #1e293b; color: #64748b; border-color: #334155; }
         .term-tag-x {
             display: inline-flex; align-items: center; justify-content: center;
             width: 14px; height: 14px; border-radius: 50%; font-size: 10px;
@@ -397,13 +430,11 @@
         .sql-editor-hl .str { color: #047857; }
         .sql-editor-hl .num { color: #be185d; }
         .sql-editor-hl .cmt { color: #6b7280; font-style: italic; }
-        @media (prefers-color-scheme: dark) {
-            .sql-editor-hl .kw  { color: #93c5fd; }
-            .sql-editor-hl .fn  { color: #fbbf24; }
-            .sql-editor-hl .str { color: #86efac; }
-            .sql-editor-hl .num { color: #f9a8d4; }
-            .sql-editor-hl .cmt { color: #64748b; }
-        }
+        html.dark .sql-editor-hl .kw { color: #93c5fd; }
+        html.dark .sql-editor-hl .fn { color: #fbbf24; }
+        html.dark .sql-editor-hl .str { color: #86efac; }
+        html.dark .sql-editor-hl .num { color: #f9a8d4; }
+        html.dark .sql-editor-hl .cmt { color: #64748b; }
         .sql-explain-btn {
             background: var(--gold); color: var(--navy-dark); border: none; padding: 10px 24px;
             border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer;
@@ -452,14 +483,12 @@
         .sql-val-icon { flex-shrink: 0; }
         .sql-val-msg { flex: 1; }
         .sql-val-suggestion { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; font-style: italic; }
-        @media (prefers-color-scheme: dark) {
-            .sql-val-badge.errors { background: #7f1d1d44; }
-            .sql-val-badge.warnings { background: #78350f44; }
-            .sql-val-badge.passes { background: #14532d44; }
-            .sql-val-item.error { background: #7f1d1d22; }
-            .sql-val-item.warning { background: #78350f22; }
-            .sql-val-item.pass { background: #14532d22; }
-        }
+        html.dark .sql-val-badge.errors { background: #7f1d1d44; }
+        html.dark .sql-val-badge.warnings { background: #78350f44; }
+        html.dark .sql-val-badge.passes { background: #14532d44; }
+        html.dark .sql-val-item.error { background: #7f1d1d22; }
+        html.dark .sql-val-item.warning { background: #78350f22; }
+        html.dark .sql-val-item.pass { background: #14532d22; }
         .help-toggle {
             position: fixed; right: 0; top: calc(50% + 30px);
             background: var(--navy); color: var(--gold); border: none; padding: 12px 6px;
@@ -791,26 +820,24 @@
             font-size: 13px;
         }
 
-        @media (prefers-color-scheme: dark) {
-            .ask-chip {
+        html.dark .ask-chip {
                 background: rgba(255, 184, 28, 0.15);
                 color: var(--gold);
                 border-color: rgba(255, 184, 28, 0.45);
             }
-            .ask-chip:hover {
+        html.dark .ask-chip:hover {
                 background: var(--gold); color: var(--navy-dark);
                 border-color: var(--gold);
             }
-            .palette {
+        html.dark .palette {
                 box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border);
             }
-            .palette-item.active {
+        html.dark .palette-item.active {
                 background: rgba(255, 184, 28, 0.08);
             }
-            .palette-item mark {
+        html.dark .palette-item mark {
                 background: rgba(255, 184, 28, 0.25); color: var(--gold);
             }
-        }
         .intent-caveats {
             background: rgba(217, 119, 6, 0.08);
             border-left: 3px solid #d97706;
@@ -829,125 +856,467 @@
             padding: 1px 6px; border-radius: 3px; font-size: 12px;
         }
 
+        /* ======  Banner Lego — Visual Query Builder  ====== */
+        .builder-container { max-width: 1400px; }
+        .builder-recipes {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .builder-recipes-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
+        .builder-recipe-btn {
+            background: linear-gradient(135deg, #003366 0%, #1e4d7b 100%);
+            color: white; border: none; padding: 8px 14px; border-radius: 6px;
+            font-weight: 600; font-size: 13px; cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+        .builder-recipe-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,51,102,0.30); }
+        .builder-recipe-btn.active { background: linear-gradient(135deg, #FFB81C 0%, #b8860b 100%); color: #1a1a1a; }
+        .builder-recipe-desc {
+            background: rgba(37, 99, 235, 0.06);
+            border-left: 3px solid #2563eb;
+            padding: 10px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: var(--text);
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+        html.dark .builder-recipe-desc { background: rgba(147, 197, 253, 0.10); border-left-color: #93c5fd; }
+        .builder-clear-btn {
+            background: transparent; color: var(--text-muted); border: 1px solid var(--border);
+            padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+        }
+        .builder-clear-btn:hover { background: var(--hover); color: var(--text); }
+
+        .builder-grid {
+            display: grid;
+            grid-template-columns: 260px 1fr 1fr;
+            gap: 14px;
+            min-height: 600px;
+        }
+        @media (max-width: 1100px) {
+            .builder-grid { grid-template-columns: 1fr; }
+        }
+        .builder-col-title {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+            color: var(--text-muted); text-transform: uppercase;
+            margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--border);
+        }
+        .builder-palette, .builder-canvas, .builder-output {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 14px;
+        }
+        .builder-palette-cat { margin-bottom: 14px; }
+        .builder-palette-cat-title {
+            font-size: 10px; font-weight: 700; color: var(--text-muted);
+            letter-spacing: 0.5px; margin-bottom: 6px; padding-left: 4px;
+        }
+        .builder-pblock {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 10px; margin-bottom: 6px;
+            background: var(--bg); border-radius: 6px; cursor: pointer;
+            border-left: 4px solid var(--border);
+            transition: transform 0.12s ease, box-shadow 0.12s ease, border-left-color 0.12s ease;
+            position: relative;
+        }
+        .builder-pblock:not(.disabled):hover {
+            transform: translateX(3px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        .builder-pblock.kind-source { border-left-color: #16a34a; }
+        .builder-pblock.kind-join   { border-left-color: #2563eb; }
+        .builder-pblock.kind-filter { border-left-color: #ca8a04; }
+        .builder-pblock.disabled { opacity: 0.45; cursor: not-allowed; }
+        .builder-pblock-icon { font-size: 18px; line-height: 1; }
+        .builder-pblock-txt  { flex: 1; min-width: 0; }
+        .builder-pblock-name { font-size: 12px; font-weight: 600; color: var(--text); }
+        .builder-pblock-table {
+            font-size: 10px; color: var(--text-muted); font-family: 'Courier New', monospace;
+            letter-spacing: 0.3px;
+        }
+        .builder-pblock-lock { font-size: 11px; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
+
+        .builder-canvas { min-height: 400px; }
+        .builder-canvas-empty {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 350px; text-align: center; color: var(--text-muted);
+        }
+        .builder-cblock {
+            background: var(--bg); border-radius: 8px; padding: 12px 14px;
+            border-left: 6px solid var(--border);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            position: relative;
+        }
+        .builder-cblock.kind-source {
+            border-left-color: #16a34a;
+            background: linear-gradient(90deg, rgba(22,163,74,0.06) 0%, var(--bg) 40%);
+        }
+        .builder-cblock.kind-join {
+            border-left-color: #2563eb;
+            background: linear-gradient(90deg, rgba(37,99,235,0.06) 0%, var(--bg) 40%);
+        }
+        .builder-cblock.kind-filter {
+            border-left-color: #ca8a04;
+            background: linear-gradient(90deg, rgba(202,138,4,0.08) 0%, var(--bg) 40%);
+        }
+        .builder-cblock-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .builder-cblock-icon { font-size: 22px; line-height: 1; }
+        .builder-cblock-heading { flex: 1; }
+        .builder-cblock-name { font-size: 14px; font-weight: 700; color: var(--text); }
+        .builder-cblock-table {
+            font-size: 11px; color: var(--text-muted); font-family: 'Courier New', monospace;
+            letter-spacing: 0.3px;
+        }
+        .builder-cblock-remove {
+            background: transparent; border: none; color: var(--text-muted);
+            font-size: 20px; line-height: 1; cursor: pointer; padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .builder-cblock-remove:hover { background: rgba(220,38,38,0.15); color: #b91c1c; }
+        .builder-cblock-desc {
+            font-size: 12px; color: var(--text-muted); line-height: 1.5;
+            padding-left: 32px;
+        }
+        .builder-cblock-param {
+            display: flex; align-items: center; gap: 8px; margin-top: 8px;
+            padding-left: 32px;
+        }
+        .builder-cblock-param label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+        .builder-cblock-input {
+            font-family: 'Courier New', monospace; font-size: 13px; padding: 5px 8px;
+            border: 1px solid var(--border); border-radius: 4px;
+            background: var(--card-bg); color: var(--text);
+        }
+        .builder-cblock-input:focus { outline: none; border-color: var(--gold); }
+
+        .builder-connector {
+            text-align: center; color: var(--text-muted); font-size: 18px;
+            margin: 4px 0; line-height: 1;
+        }
+        .builder-canvas-hint {
+            margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border);
+            font-size: 12px; color: var(--text-muted); text-align: center;
+        }
+
+        .builder-output .builder-sql-box { margin-bottom: 10px; }
+        .builder-output .intent-sql {
+            background: var(--bg); border: 1px solid var(--border);
+            margin: 0; max-height: 420px; overflow-y: auto;
+        }
+        .builder-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+        .builder-actions button { flex: 1; }
+        .builder-explain {
+            background: rgba(37,99,235,0.05); border: 1px solid rgba(37,99,235,0.20);
+            border-radius: 8px; padding: 12px 14px;
+        }
+        .builder-explain-head {
+            font-size: 12px; font-weight: 700; color: #1e40af;
+            text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px;
+        }
+        .builder-explain-list { padding-left: 20px; margin: 0; color: var(--text); font-size: 12px; line-height: 1.65; }
+        .builder-explain-list li { margin-bottom: 8px; }
+        .builder-explain-list code {
+            background: rgba(37,99,235,0.12); color: #1e40af;
+            padding: 1px 5px; border-radius: 3px; font-size: 11px;
+        }
+
+        html.dark .builder-pblock { background: var(--bg); }
+        html.dark .builder-cblock.kind-source { background: linear-gradient(90deg, rgba(22,163,74,0.12) 0%, var(--bg) 50%); }
+        html.dark .builder-cblock.kind-join { background: linear-gradient(90deg, rgba(37,99,235,0.14) 0%, var(--bg) 50%); }
+        html.dark .builder-cblock.kind-filter { background: linear-gradient(90deg, rgba(202,138,4,0.18) 0%, var(--bg) 50%); }
+        html.dark .builder-explain {
+                background: rgba(37,99,235,0.12);
+                border-color: rgba(147,197,253,0.30);
+            }
+        html.dark .builder-explain-head { color: #93c5fd; }
+        html.dark .builder-explain-list code { background: rgba(147,197,253,0.18); color: #93c5fd; }
+        html.dark .builder-recipe-btn.active { background: linear-gradient(135deg, #FFB81C 0%, #d97706 100%); color: #1a1a1a; }
+
+        /* ======  Security Posture Scorecard  ====== */
+        .scorecard-instr {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 12px 16px; margin-bottom: 14px;
+        }
+        .scorecard-instr-head {
+            font-weight: 600; color: var(--text); font-size: 14px; user-select: none;
+        }
+        .scorecard-instr-body { margin-top: 10px; color: var(--text); font-size: 13px; line-height: 1.6; }
+        .scorecard-instr-body.collapsed { display: none; }
+        .scorecard-instr-body ol { padding-left: 20px; margin: 0; }
+        .scorecard-instr-body li { margin-bottom: 4px; }
+        .scorecard-paste {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 14px 16px; margin-bottom: 18px;
+        }
+        .scorecard-paste-label { font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 8px; }
+        .scorecard-paste-area {
+            width: 100%; min-height: 90px; font-family: 'Courier New', monospace; font-size: 12px;
+            background: var(--bg); color: var(--text); border: 1px solid var(--border);
+            border-radius: 6px; padding: 10px; box-sizing: border-box; resize: vertical;
+        }
+        .scorecard-paste-btns { display: flex; gap: 8px; margin-top: 10px; }
+        .scorecard-paste-error {
+            margin-top: 8px; color: #b91c1c; font-size: 12px;
+            background: rgba(185, 28, 28, 0.08); padding: 8px 12px; border-radius: 4px;
+        }
+        .scorecard-summary {
+            border-radius: 10px; padding: 18px 22px; margin-bottom: 18px;
+            display: flex; flex-direction: column; gap: 6px;
+            border-left: 6px solid var(--border);
+            background: var(--card-bg);
+        }
+        .scorecard-summary.status-green  { border-left-color: #16a34a; background: linear-gradient(90deg, rgba(22,163,74,0.10), var(--card-bg) 60%); }
+        .scorecard-summary.status-yellow { border-left-color: #ca8a04; background: linear-gradient(90deg, rgba(202,138,4,0.12), var(--card-bg) 60%); }
+        .scorecard-summary.status-red    { border-left-color: #dc2626; background: linear-gradient(90deg, rgba(220,38,38,0.12), var(--card-bg) 60%); }
+        .scorecard-summary.status-empty  { border-left-color: var(--border); }
+        .scorecard-summary-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+        .scorecard-summary-value { font-size: 22px; font-weight: 700; color: var(--text); }
+        .scorecard-summary-meta { font-size: 12px; color: var(--text-muted); }
+        .scorecard-summary-dots { display: flex; gap: 14px; margin-top: 6px; }
+        .scorecard-dot { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+        .scorecard-dot::before {
+            content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+        }
+        .scorecard-dot.green::before  { background: #16a34a; }
+        .scorecard-dot.yellow::before { background: #ca8a04; }
+        .scorecard-dot.red::before    { background: #dc2626; }
+
+        .scorecard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .scorecard-gauge {
+            background: var(--card-bg); border: 1px solid var(--border); border-left: 5px solid var(--border);
+            border-radius: 8px; padding: 14px 16px; cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .scorecard-gauge:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,51,102,0.12); }
+        .scorecard-gauge.status-green  { border-left-color: #16a34a; }
+        .scorecard-gauge.status-yellow { border-left-color: #ca8a04; }
+        .scorecard-gauge.status-red    { border-left-color: #dc2626; }
+        .scorecard-gauge.status-unknown { opacity: 0.72; }
+        .scorecard-gauge-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .scorecard-gauge-icon { font-size: 22px; line-height: 1; }
+        .scorecard-gauge-status {
+            font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700;
+            padding: 2px 8px; border-radius: 10px; background: var(--hover); color: var(--text-muted);
+        }
+        .scorecard-gauge.status-green  .scorecard-gauge-status { background: rgba(22,163,74,0.15); color: #15803d; }
+        .scorecard-gauge.status-yellow .scorecard-gauge-status { background: rgba(202,138,4,0.18); color: #854d0e; }
+        .scorecard-gauge.status-red    .scorecard-gauge-status { background: rgba(220,38,38,0.15); color: #b91c1c; }
+        .scorecard-gauge-value { font-size: 34px; font-weight: 700; color: var(--text); line-height: 1.1; }
+        .scorecard-gauge.status-green  .scorecard-gauge-value { color: #15803d; }
+        .scorecard-gauge.status-yellow .scorecard-gauge-value { color: #a16207; }
+        .scorecard-gauge.status-red    .scorecard-gauge-value { color: #b91c1c; }
+        .scorecard-gauge-label { font-size: 14px; font-weight: 600; color: var(--text); }
+        .scorecard-gauge-sub   { font-size: 12px; color: var(--text-muted); line-height: 1.4; min-height: 32px; }
+        .scorecard-gauge-foot {
+            display: flex; justify-content: space-between; align-items: center; margin-top: 8px;
+            padding-top: 8px; border-top: 1px dashed var(--border);
+            font-size: 11px; color: var(--text-muted);
+        }
+        .scorecard-gauge-report { font-weight: 700; color: var(--navy); }
+
+        .scorecard-baseline {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 14px 18px;
+        }
+        .scorecard-baseline-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 10px; }
+        .scorecard-baseline-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+        .scorecard-baseline-cell { display: flex; align-items: center; gap: 10px; }
+        .scorecard-baseline-icon { font-size: 22px; }
+        .scorecard-baseline-value { font-size: 20px; font-weight: 700; color: var(--text); }
+        .scorecard-baseline-name  { font-size: 12px; color: var(--text-muted); }
+
+        html.dark .scorecard-gauge-report { color: #93c5fd; }
+        html.dark .scorecard-gauge:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+        html.dark .scorecard-gauge.status-green  .scorecard-gauge-status { color: #86efac; background: rgba(22,163,74,0.20); }
+        html.dark .scorecard-gauge.status-yellow .scorecard-gauge-status { color: #fde68a; background: rgba(202,138,4,0.25); }
+        html.dark .scorecard-gauge.status-red    .scorecard-gauge-status { color: #fca5a5; background: rgba(220,38,38,0.22); }
+        html.dark .scorecard-gauge.status-green  .scorecard-gauge-value { color: #86efac; }
+        html.dark .scorecard-gauge.status-yellow .scorecard-gauge-value { color: #fde68a; }
+        html.dark .scorecard-gauge.status-red    .scorecard-gauge-value { color: #fca5a5; }
+        html.dark .scorecard-paste-error { color: #fca5a5; background: rgba(220, 38, 38, 0.18); }
+
+        /* ======  Module discovery grid (Ask Banner P6 — list banner modules)  ====== */
+        .intent-extra { margin: 14px 0 10px 0; }
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+        }
+        .module-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--navy);
+            border-radius: 8px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-left-color 0.15s ease;
+            position: relative;
+        }
+        .module-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 51, 102, 0.15);
+            border-left-color: var(--gold);
+        }
+        .module-card-top {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .module-card-icon { font-size: 22px; line-height: 1; }
+        .module-card-code {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--navy);
+            background: rgba(0, 51, 102, 0.10);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .module-card-name {
+            font-weight: 700; font-size: 14px; color: var(--navy); margin-bottom: 4px;
+        }
+        .module-card-sub {
+            font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;
+        }
+        .module-card-hint {
+            font-size: 11px; color: var(--text-muted); font-style: normal;
+            border-top: 1px dashed var(--border); padding-top: 6px;
+        }
+        .module-card-hint i { color: var(--navy); font-style: italic; }
+        .module-grid-note {
+            margin-top: 10px; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+        }
+        .module-grid-note code {
+            background: rgba(0, 51, 102, 0.08); color: var(--navy);
+            padding: 1px 5px; border-radius: 3px; font-size: 11px;
+        }
+        html.dark .module-card {
+                background: var(--card-bg);
+                border-color: var(--border);
+                border-left-color: #93c5fd;
+            }
+        html.dark .module-card:hover { border-left-color: var(--gold); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
+        html.dark .module-card-name { color: #93c5fd; }
+        html.dark .module-card-code { color: #93c5fd; background: rgba(147, 197, 253, 0.12); }
+        html.dark .module-card-hint i { color: #93c5fd; }
+        html.dark .module-grid-note code { background: rgba(147, 197, 253, 0.12); color: #93c5fd; }
+
         /* ======  Dark-mode theming for Ask Banner and Reports cards  ====== */
-        @media (prefers-color-scheme: dark) {
-            .intent-card {
+        html.dark .intent-card {
                 background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(255, 184, 28, 0.10) 100%);
                 border-color: var(--border);
                 border-left-color: var(--gold);
             }
-            .intent-card-dismiss { color: var(--text-muted); }
-            .intent-card-dismiss:hover { background: var(--hover); color: var(--text); }
-            .intent-title { color: var(--gold); }
-            .intent-desc { color: var(--text); }
-            .intent-desc code, .intent-explain li code {
+        html.dark .intent-card-dismiss { color: var(--text-muted); }
+        html.dark .intent-card-dismiss:hover { background: var(--hover); color: var(--text); }
+        html.dark .intent-title { color: var(--gold); }
+        html.dark .intent-desc { color: var(--text); }
+        html.dark .intent-desc code, html.dark .intent-explain li code {
                 background: rgba(255, 184, 28, 0.14);
                 color: #fde68a;
             }
-            .intent-tables-label { color: var(--text-muted); }
-            .intent-tables a {
+        html.dark .intent-tables-label { color: var(--text-muted); }
+        html.dark .intent-tables a {
                 background: var(--card-bg);
                 color: #93c5fd;
                 border-color: var(--border);
             }
-            .intent-tables a:hover {
+        html.dark .intent-tables a:hover {
                 background: var(--navy-light);
                 color: #fff;
                 border-color: var(--navy-light);
             }
-            .intent-explain {
+        html.dark .intent-explain {
                 background: rgba(15, 23, 42, 0.55);
                 border: 1px solid var(--border);
             }
-            .intent-explain-head { color: var(--gold); }
-            .intent-explain li { color: var(--text); }
-            .intent-btn-primary {
+        html.dark .intent-explain-head { color: var(--gold); }
+        html.dark .intent-explain li { color: var(--text); }
+        html.dark .intent-btn-primary {
                 background: var(--gold);
                 color: var(--navy-dark);
             }
-            .intent-btn-primary:hover { background: var(--gold-light); }
-            .intent-btn-secondary {
+        html.dark .intent-btn-primary:hover { background: var(--gold-light); }
+        html.dark .intent-btn-secondary {
                 border-color: var(--gold);
                 color: var(--gold);
             }
-            .intent-btn-secondary:hover {
+        html.dark .intent-btn-secondary:hover {
                 background: var(--gold);
                 color: var(--navy-dark);
             }
-            .intent-badge { background: var(--gold); color: var(--navy-dark); }
-
-            /* Purple report-shortcut card */
+        html.dark .intent-badge { background: var(--gold); color: var(--navy-dark); }
+        html.dark /* Purple report-shortcut card */
             .intent-report-card {
                 background: rgba(168, 85, 247, 0.12);
                 border-color: rgba(168, 85, 247, 0.35);
             }
-            .intent-report-card:hover { background: rgba(168, 85, 247, 0.22); }
-            .intent-report-id { background: #a855f7; color: #fff; }
-            .intent-report-title { color: var(--text); }
-            .intent-report-open { color: #d8b4fe; }
-
-            /* Reports list + detail pages */
+        html.dark .intent-report-card:hover { background: rgba(168, 85, 247, 0.22); }
+        html.dark .intent-report-id { background: #a855f7; color: #fff; }
+        html.dark .intent-report-title { color: var(--text); }
+        html.dark .intent-report-open { color: #d8b4fe; }
+        html.dark /* Reports list + detail pages */
             .report-card {
                 border-left-color: #c084fc;
             }
-            .report-card-id {
+        html.dark .report-card-id {
                 background: var(--hover);
                 color: var(--text-muted);
             }
-            .report-card-title { color: var(--text); }
-            .report-card-cat {
+        html.dark .report-card-title { color: var(--text); }
+        html.dark .report-card-cat {
                 background: rgba(168, 85, 247, 0.18);
                 color: #d8b4fe;
             }
-            .report-card-sev.HIGH   { background: #7f1d1d; color: #fecaca; }
-            .report-card-sev.MEDIUM { background: #78350f; color: #fde68a; }
-            .report-card-sev.INFO   { background: #1e3a8a; color: #bfdbfe; }
-            .report-card-tables span {
+        html.dark .report-card-sev.HIGH { background: #7f1d1d; color: #fecaca; }
+        html.dark .report-card-sev.MEDIUM { background: #78350f; color: #fde68a; }
+        html.dark .report-card-sev.INFO { background: #1e3a8a; color: #bfdbfe; }
+        html.dark .report-card-tables span {
                 background: var(--hover);
                 color: var(--text-muted);
             }
-            .report-detail-section {
+        html.dark .report-detail-section {
                 background: var(--card-bg);
                 border-left-color: #c084fc;
             }
-            .report-detail-section h4 { color: #c084fc; }
-            .report-validate-btn {
+        html.dark .report-detail-section h4 { color: #c084fc; }
+        html.dark .report-validate-btn {
                 background: var(--gold);
                 color: var(--navy-dark);
             }
-            .report-validate-btn:hover { background: var(--gold-light); }
-
-            /* Caveats box in dark mode — amber text on subtle amber tint */
+        html.dark .report-validate-btn:hover { background: var(--gold-light); }
+        html.dark /* Caveats box in dark mode — amber text on subtle amber tint */
             .intent-caveats {
                 background: rgba(217, 119, 6, 0.12);
                 border-left-color: #f59e0b;
             }
-            .intent-caveats-head { color: #fbbf24; }
-            .intent-caveats-body { color: var(--text); }
-            .intent-caveats-body code {
+        html.dark .intent-caveats-head { color: #fbbf24; }
+        html.dark .intent-caveats-body { color: var(--text); }
+        html.dark .intent-caveats-body code {
                 background: rgba(251, 191, 36, 0.18);
                 color: #fde68a;
             }
-
-            /* Purple accent text needs to lighten in dark mode */
+        html.dark /* Purple accent text needs to lighten in dark mode */
             .reports-accent { color: #d8b4fe; }
-
-            /* Back link: dark-navy on dark bg becomes invisible. Use light-blue/gold. */
+        html.dark /* Back link: dark-navy on dark bg becomes invisible. Use light-blue/gold. */
             .back-link { color: #93c5fd; }
-            .back-link:hover { color: var(--gold); }
-
-            /* Table chips: same contrast issue as Ask Banner intent chips. */
+        html.dark .back-link:hover { color: var(--gold); }
+        html.dark /* Table chips: same contrast issue as Ask Banner intent chips. */
             .table-chip {
                 background: var(--card-bg);
                 color: #93c5fd;
                 border-color: var(--border);
             }
-            .table-chip:hover {
+        html.dark .table-chip:hover {
                 background: var(--navy-light);
                 color: #fff;
                 border-color: var(--navy-light);
             }
-        }
 
         .help-panel {
             position: fixed; top: 0; right: -380px; width: 380px; height: 100vh;
@@ -1018,10 +1387,8 @@
             font-size: 10px; font-weight: 600; background: #dbeafe; color: #1e40af;
         }
         .rels-label.fk { background: #fef3c7; color: #92400e; }
-        @media (prefers-color-scheme: dark) {
-            .rels-label { background: #1e3a5f; color: #93c5fd; }
-            .rels-label.fk { background: #78350f; color: #fde68a; }
-        }
+        html.dark .rels-label { background: #1e3a5f; color: #93c5fd; }
+        html.dark .rels-label.fk { background: #78350f; color: #fde68a; }
         .rels-arrow { color: var(--text-muted); font-size: 14px; }
 
         .help-panel-body { padding: 16px 20px; }
@@ -1043,7 +1410,7 @@
             border-bottom: 2px solid var(--gold);
             display: flex; align-items: center; gap: 8px;
         }
-        @media (prefers-color-scheme: dark) { .help-cat-title { color: var(--gold); } }
+        html.dark .help-cat-title { color: var(--gold); }
         .help-cat-icon { font-size: 15px; }
 
         .help-query {
@@ -1054,12 +1421,12 @@
         .help-query:hover {
             background: var(--highlight); border-color: var(--gold); color: var(--navy-light);
         }
-        @media (prefers-color-scheme: dark) { .help-query:hover { color: var(--gold); } }
+        html.dark .help-query:hover { color: var(--gold); }
         .help-query code {
             font-family: 'Consolas','Monaco',monospace; background: rgba(0,0,0,0.06);
             padding: 1px 5px; border-radius: 3px; font-size: 12px;
         }
-        @media (prefers-color-scheme: dark) { .help-query code { background: rgba(255,255,255,0.08); } }
+        html.dark .help-query code { background: rgba(255,255,255,0.08); }
         .help-query .help-hint {
             display: block; font-size: 11px; color: var(--text-muted); margin-top: 1px;
         }
@@ -1069,9 +1436,9 @@
             margin: 12px 0; font-size: 12px; line-height: 1.5;
             border-left: 3px solid var(--navy-light); color: var(--text);
         }
-        @media (prefers-color-scheme: dark) { .help-tip { background: #1e293b; } }
+        html.dark .help-tip { background: #1e293b; }
         .help-tip strong { color: var(--navy-light); }
-        @media (prefers-color-scheme: dark) { .help-tip strong { color: var(--gold); } }
+        html.dark .help-tip strong { color: var(--gold); }
 
         .help-kbd {
             display: inline-block; padding: 2px 6px; border: 1px solid var(--border);
@@ -1117,6 +1484,11 @@
                 {{ stats.totalColumns }} columns &middot;
                 {{ stats.totalRelationships }} relationships
             </div>
+            <button id="themeToggle" class="theme-toggle" title="Toggle theme (click to cycle: Auto → Light → Dark)" aria-label="Toggle theme">
+                <span class="theme-icon theme-icon-auto">🌓</span>
+                <span class="theme-icon theme-icon-light">☀️</span>
+                <span class="theme-icon theme-icon-dark">🌙</span>
+            </button>
         </div>
         <div class="filters-bar">
             <div class="filter-group">
@@ -1210,18 +1582,21 @@
                 <a class="help-query" data-q="Banner Student security classes"><code>Banner Student security classes</code><span class="help-hint">Ask Banner &rarr; GTVCLAS query for Student module</span></a>
                 <a class="help-query" data-q="finance security classes"><code>finance security classes</code><span class="help-hint">Finance-module class catalog</span></a>
                 <a class="help-query" data-q="HR payroll classes"><code>HR payroll classes</code><span class="help-hint">HR/Payroll class catalog</span></a>
+                <a class="help-query" data-q="__builder__"><code>Banner Lego (query builder)</code><span class="help-hint">Visual block-based SQL builder — Scratch for Banner joins</span></a>
+                <a class="help-query" data-q="__scorecard__"><code>Security Posture Scorecard</code><span class="help-hint">Dashboard view &rarr; 8 traffic-light gauges (paste SR014 row)</span></a>
+                <a class="help-query" data-q="list banner modules"><code>list banner modules</code><span class="help-hint">&rarr; SR013 &mdash; discover every Banner module on your site (8-card grid)</span></a>
                 <a class="help-query" data-q="finance user access inventory"><code>finance user access inventory</code><span class="help-hint">&rarr; SR012 &mdash; users + Finance forms (Argos-ready)</span></a>
                 <a class="help-query" data-q="Student user access inventory"><code>Student user access inventory</code><span class="help-hint">Ask Banner &rarr; same query scoped to Student</span></a>
                 <a class="help-query" data-q="HR user access inventory"><code>HR user access inventory</code><span class="help-hint">Ask Banner &rarr; same query scoped to HR/Payroll</span></a>
-                <a class="help-query" data-q="dormant accounts"><code>dormant accounts</code><span class="help-hint">&rarr; SR001 — never logged in 180+ days</span></a>
-                <a class="help-query" data-q="terminated with access"><code>terminated with access</code><span class="help-hint">&rarr; SR002 — the #1 auditor finding</span></a>
-                <a class="help-query" data-q="super users"><code>super users</code><span class="help-hint">&rarr; SR008 — top _M grant holders</span></a>
-                <a class="help-query" data-q="unused classes"><code>unused classes</code><span class="help-hint">&rarr; SR006 — classes with no users (cleanup)</span></a>
-                <a class="help-query" data-q="most populated classes"><code>most populated classes</code><span class="help-hint">&rarr; SR007 — biggest attack surfaces</span></a>
-                <a class="help-query" data-q="PII access"><code>PII access</code><span class="help-hint">&rarr; SR011 — SSN/DOB access (FERPA)</span></a>
-                <a class="help-query" data-q="violations last 30 days"><code>violations last 30 days</code><span class="help-hint">&rarr; SR005 — GURALOG violation dashboard</span></a>
-                <a class="help-query" data-q="recent access changes"><code>recent access changes</code><span class="help-hint">&rarr; SR009 — 30-day audit trail</span></a>
-                <a class="help-query" data-q="object concentration"><code>object concentration</code><span class="help-hint">&rarr; SR010 — most-exposed Banner objects</span></a>
+                <a class="help-query" data-q="__report:SR001__"><code>dormant accounts</code><span class="help-hint">&rarr; SR001 — never logged in 180+ days</span></a>
+                <a class="help-query" data-q="__report:SR002__"><code>terminated with access</code><span class="help-hint">&rarr; SR002 — the #1 auditor finding</span></a>
+                <a class="help-query" data-q="__report:SR008__"><code>super users</code><span class="help-hint">&rarr; SR008 — top _M grant holders</span></a>
+                <a class="help-query" data-q="__report:SR006__"><code>unused classes</code><span class="help-hint">&rarr; SR006 — classes with no users (cleanup)</span></a>
+                <a class="help-query" data-q="__report:SR007__"><code>most populated classes</code><span class="help-hint">&rarr; SR007 — biggest attack surfaces</span></a>
+                <a class="help-query" data-q="__report:SR011__"><code>PII access</code><span class="help-hint">&rarr; SR011 — SSN/DOB access (FERPA)</span></a>
+                <a class="help-query" data-q="__report:SR005__"><code>violations last 30 days</code><span class="help-hint">&rarr; SR005 — GURALOG violation dashboard</span></a>
+                <a class="help-query" data-q="__report:SR009__"><code>recent access changes</code><span class="help-hint">&rarr; SR009 — 30-day audit trail</span></a>
+                <a class="help-query" data-q="__report:SR010__"><code>object concentration</code><span class="help-hint">&rarr; SR010 — most-exposed Banner objects</span></a>
                 <a class="help-query" data-q="access to SHAINST"><code>access to SHAINST</code><span class="help-hint">Ask Banner &rarr; who can access a specific form</span></a>
                 <a class="help-query" data-q="users in class SFAREGS"><code>users in class SFAREGS</code><span class="help-hint">Ask Banner &rarr; class membership</span></a>
                 <a class="help-query" data-q="GURACLS"><code>GURACLS</code><span class="help-hint">Modern user-class assignments</span></a>
@@ -1863,15 +2238,23 @@
         function h(tag, attrs, children) {
             var el = document.createElement(tag);
             if (attrs) for (var k in attrs) {
-                if (k === 'onclick' || k === 'oninput' || k === 'onchange') el[k] = attrs[k];
+                if (k.indexOf('on') === 0 && typeof attrs[k] === 'function') el[k] = attrs[k];
                 else if (k === 'className') el.className = attrs[k];
                 else if (k === 'innerHTML') el.innerHTML = attrs[k];
-                else el.setAttribute(k, attrs[k]);
+                else if (attrs[k] != null) el.setAttribute(k, attrs[k]);
             }
-            if (children) {
-                if (typeof children === 'string') el.textContent = children;
-                else if (Array.isArray(children)) children.forEach(function(c) { if (c) el.appendChild(c); });
-                else el.appendChild(children);
+            if (children != null) {
+                if (typeof children === 'string' || typeof children === 'number') {
+                    el.textContent = String(children);
+                } else if (Array.isArray(children)) {
+                    children.forEach(function(c) {
+                        if (c == null || c === false) return;
+                        if (typeof c === 'string' || typeof c === 'number') el.appendChild(document.createTextNode(String(c)));
+                        else el.appendChild(c);
+                    });
+                } else {
+                    el.appendChild(children);
+                }
             }
             return el;
         }
@@ -1926,7 +2309,7 @@
                 askCard.appendChild(h('div', {className: 'module-name'}, '💡 Ask Banner'));
                 askCard.appendChild(h('div', {className: 'module-desc'}, 'Type a question in English about security or access, and the tool generates the specific SQL that answers it — with line-by-line explanation and one-click validation.'));
                 var exRow = h('div', { style: 'display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;' });
-                ['Banner Student security classes','finance security classes','HR payroll classes','finance user access inventory','Student user access inventory','access to SHAINST','users in class SFAREGS','dormant accounts','terminated with access','violations last 30 days','most populated classes','super users','unused classes','recent access changes','PII access','object concentration']
+                ['banner lego','security posture scorecard','list banner modules','Banner Student security classes','finance security classes','HR payroll classes','finance user access inventory','Student user access inventory','access to SHAINST','users in class SFAREGS','dormant accounts','terminated with access','violations last 30 days','most populated classes','super users','unused classes','recent access changes','PII access','object concentration']
                     .forEach(function(ex) {
                         var chip = h('a', {
                             className: 'ask-chip',
@@ -1937,6 +2320,24 @@
                 askCard.appendChild(exRow);
                 toolsRow.appendChild(askCard);
 
+                toolsRow.appendChild(h('div', {
+                    className: 'module-card',
+                    style: 'border-left: 4px solid #16a34a; flex: 1; min-width: 240px; cursor: pointer;',
+                    onclick: function() { navigate('builder'); }
+                }, [
+                    h('div', {className: 'module-name', style: 'color: #16a34a;'}, '🧱 Banner Lego — Query Builder'),
+                    h('div', {className: 'module-desc'}, 'Snap visual blocks together to build Banner SQL. Learn the canonical joins (PIDM, TERM_CODE+CRN, SCBCRSE effective-term) while the SQL generates live. Think Scratch for Banner.'),
+                    h('div', {className: 'module-count'}, 'Starter recipe: Student + Courses + Term'),
+                ]));
+                toolsRow.appendChild(h('div', {
+                    className: 'module-card',
+                    style: 'border-left: 4px solid #dc2626; flex: 1; min-width: 240px; cursor: pointer;',
+                    onclick: function() { navigate('scorecard'); }
+                }, [
+                    h('div', {className: 'module-name', style: 'color: #dc2626;'}, '🛡️ Security Posture Scorecard'),
+                    h('div', {className: 'module-desc'}, 'Eight traffic-light gauges for your Banner access-risk footprint — dormant accounts, terminated with access, super users, PII breadth, violations, unused classes. Paste one SR014 row to light it up.'),
+                    h('div', {className: 'module-count'}, 'One-pager for audit meetings'),
+                ]));
                 toolsRow.appendChild(h('div', {
                     className: 'module-card',
                     style: 'border-left: 4px solid #7b2d7b; flex: 1; min-width: 240px; cursor: pointer;',
@@ -2106,6 +2507,18 @@
             if (/\buser access inventory\b|\bform access inventory\b|\buser.{0,10}form.{0,10}inventory|\bbanner form per user|\blist.{0,14}user.{0,14}form/i.test(lo) && !detectModule(q) && _hasReport('SR012'))
                 return { kind: 'report', id: 'SR012', original: q };
 
+            //  P6 — Banner module overview (discover every sysi_code on this site)
+            if (/\b(list|show|all|what|which)\s+(the\s+)?(banner\s+)?modules?\b|\bbanner\s+modules?\b|\bmodule\s+(overview|inventory|catalog|list|discovery)\b|\bsysi[_\s]?code\b|\bwhat\s+modules?\s+(do\s+i\s+have|exist|are\s+(there|available))/i.test(lo))
+                return { kind: 'module_overview', original: q };
+
+            //  P7 — Security posture scorecard shortcut
+            if (/\b(security\s+)?(posture|scorecard|dashboard|health\s+check|overall\s+(security|posture|status)|posture\s+scorecard)\b/i.test(lo))
+                return { kind: 'scorecard_redirect', original: q };
+
+            //  P8 — Banner Lego query builder shortcut
+            if (/\b(banner\s+lego|query\s+builder|visual\s+query|build\s+(a\s+)?query|lego)\b/i.test(lo))
+                return { kind: 'builder_redirect', original: q };
+
             //  P1 — {module} security classes
             var mentionsClasses = /\bclass(es)?\b/i.test(lo);
             var mentionsSecurity = /\bsecurity\b|\baccess\b|\bbansecr\b|\bpermission/i.test(lo);
@@ -2140,6 +2553,80 @@
                 var rep = null;
                 for (var i = 0; i < REPORTS.length; i++) if (REPORTS[i].id === intent.id) { rep = REPORTS[i]; break; }
                 return rep ? { kind: 'report_shortcut', report: rep, original: intent.original } : null;
+            }
+
+            if (intent.kind === 'scorecard_redirect') {
+                setTimeout(function() { navigate('scorecard'); }, 10);
+                return null;
+            }
+
+            if (intent.kind === 'builder_redirect') {
+                setTimeout(function() { navigate('builder'); }, 10);
+                return null;
+            }
+
+            if (intent.kind === 'module_overview') {
+                var overviewSql =
+                    'SELECT\n' +
+                    '    NVL(ao.guraobj_sysi_code, \'(unassigned)\')             AS module_code,\n' +
+                    '    sy.gtvsysi_desc                                       AS module_name,\n' +
+                    '    COUNT(DISTINCT ao.guraobj_object)                     AS form_count,\n' +
+                    '    COUNT(DISTINCT gu.guvuacc_user)                       AS distinct_users,\n' +
+                    '    COUNT(gu.guvuacc_user)                                AS total_grants,\n' +
+                    '    COUNT(CASE WHEN gu.guvuacc_role LIKE \'%\\_M\' ESCAPE \'\\\' THEN 1 END) AS maintenance_grants,\n' +
+                    '    COUNT(CASE WHEN gu.guvuacc_role LIKE \'%\\_Q\' ESCAPE \'\\\' THEN 1 END) AS query_grants,\n' +
+                    '    COUNT(CASE WHEN gu.guvuacc_type = \'Class\'  THEN 1 END) AS via_class_grants,\n' +
+                    '    COUNT(CASE WHEN gu.guvuacc_type = \'Direct\' THEN 1 END) AS via_direct_grants,\n' +
+                    '    COUNT(CASE WHEN gu.guvuacc_type LIKE \'Group%\' THEN 1 END) AS via_group_grants\n' +
+                    'FROM        bansecr.guraobj ao\n' +
+                    'LEFT JOIN   general.gtvsysi sy ON sy.gtvsysi_code = ao.guraobj_sysi_code\n' +
+                    'LEFT JOIN   bansecr.guvuacc gu ON gu.guvuacc_object = ao.guraobj_object\n' +
+                    'GROUP BY    ao.guraobj_sysi_code, sy.gtvsysi_desc\n' +
+                    'ORDER BY    distinct_users DESC NULLS LAST, form_count DESC;';
+
+                //  Build the pretty module grid — reference catalog of known Ellucian sysi_codes
+                var moduleCatalog = [
+                    { code: 'F', icon: '💰', name: 'Finance',               sub: 'Budget, GL, AP, Purchasing, Assets' },
+                    { code: 'S', icon: '🎓', name: 'Student',               sub: 'Admissions, Registration, Academic records' },
+                    { code: 'P', icon: '👥', name: 'HR / Payroll',          sub: 'Employees, Benefits, Compensation' },
+                    { code: 'A', icon: '🎁', name: 'Advancement / Alumni',  sub: 'Donors, Gifts, Campaigns' },
+                    { code: 'R', icon: '💵', name: 'Financial Aid',         sub: 'Awards, Loans, FAFSA, Scholarships' },
+                    { code: 'T', icon: '🧾', name: 'Accounts Receivable',   sub: 'Student billing, Cashiering, Payments' },
+                    { code: 'G', icon: '⚙️',  name: 'General',               sub: 'Cross-module base tables' },
+                    { code: 'N', icon: '📋', name: 'Position Control',      sub: 'Positions, FTE, Budgets by position' },
+                ];
+                var gridHtml = '<div class="module-grid">';
+                moduleCatalog.forEach(function(mc) {
+                    gridHtml +=
+                        '<div class="module-card" data-module-code="' + mc.code + '">' +
+                          '<div class="module-card-top">' +
+                            '<span class="module-card-icon">' + mc.icon + '</span>' +
+                            '<span class="module-card-code">' + mc.code + '</span>' +
+                          '</div>' +
+                          '<div class="module-card-name">' + mc.name + '</div>' +
+                          '<div class="module-card-sub">' + mc.sub + '</div>' +
+                          '<div class="module-card-hint">try: <i>“' + mc.name.toLowerCase().replace(/ \/ .*/,'') + ' user access inventory”</i></div>' +
+                        '</div>';
+                });
+                gridHtml += '</div>';
+                gridHtml += '<div class="module-grid-note">These are the canonical Ellucian module codes — the SQL above will show you exactly which of them exist at your site and how widely each is used. Custom sites may have extras (e.g. <code>L</code> for Location Management).</div>';
+
+                return {
+                    kind: 'generated',
+                    title: 'Banner Module Access Overview',
+                    description: 'Every distinct <code>GURAOBJ_SYSI_CODE</code> at your site, with Ellucian\'s plain-English name (from <code>GTVSYSI</code>), the number of forms per module, the number of distinct users who have access somewhere in the module, and a breakdown of how they got that access. Use this as the menu of modules you can hand to <b>SR012</b> for a user-level deep dive.',
+                    extraHtml: gridHtml,
+                    sql: overviewSql,
+                    tables: ['GURAOBJ','GTVSYSI','GUVUACC'],
+                    explain: [
+                        'The left-side <code>GURAOBJ</code> lists every registered Banner object; the LEFT JOIN to <code>GUVUACC</code> counts how many effective grants each module has.',
+                        '<code>GTVSYSI</code> holds the human name per module code (e.g. F → "Finance"). It lives in the <b>GENERAL</b> schema, not BANSECR.',
+                        'Modules with NULL <code>sysi_code</code> bucket into <code>(unassigned)</code> — typically custom forms or pre-registered objects without a system classification. Worth a quick look.',
+                        'Sort order puts the widest-reach modules first, so you can triage which module deserves a SR012 drilldown next.',
+                    ],
+                    caveats: 'The chip grid above is the <i>canonical</i> Ellucian catalog — your actual list can contain fewer modules (if you haven\'t licensed Advancement, for example) or extras (sites sometimes add custom sysi codes). Trust the SQL output over the reference card. To drill into a module, run the corresponding "user access inventory" query (SR012 / P5 intent).',
+                    original: intent.original,
+                };
             }
 
             if (intent.kind === 'module_classes') {
@@ -2194,18 +2681,23 @@
                     '    si.spriden_first_name || \' \' || si.spriden_last_name AS full_name,\n' +
                     '    pe.pebempl_term_date                                 AS employee_term_date,\n' +
                     '    gu.guvuacc_object                                    AS banner_form,\n' +
+                    '    fo.gubobjs_desc                                      AS form_description,\n' +
                     '    gu.guvuacc_role                                      AS role_name,\n' +
+                    '    ro.gubrole_comments                                  AS role_description,\n' +
                     '    CASE\n' +
-                    '        WHEN gu.guvuacc_role LIKE \'%\\_Q\' ESCAPE \'\\\' THEN \'Query\'\n' +
-                    '        WHEN gu.guvuacc_role LIKE \'%\\_M\' ESCAPE \'\\\' THEN \'Maintenance\'\n' +
-                    '        WHEN gu.guvuacc_role LIKE \'%\\_B\' ESCAPE \'\\\' THEN \'Both\'\n' +
-                    '        WHEN gu.guvuacc_role LIKE \'%\\_U\' ESCAPE \'\\\' THEN \'Update\'\n' +
-                    '        ELSE \'Other/Custom\'\n' +
-                    '    END                                                  AS access_level,\n' +
+                    '        WHEN gu.guvuacc_role LIKE \'%\\_Q\' ESCAPE \'\\\' THEN \'Query (read-only)\'\n' +
+                    '        WHEN gu.guvuacc_role LIKE \'%\\_M\' ESCAPE \'\\\' THEN \'Maintenance (read + write)\'\n' +
+                    '        WHEN gu.guvuacc_role LIKE \'%\\_B\' ESCAPE \'\\\' THEN \'Both (query + maintenance)\'\n' +
+                    '        WHEN gu.guvuacc_role LIKE \'%\\_U\' ESCAPE \'\\\' THEN \'Update (write)\'\n' +
+                    '        ELSE \'Other / custom role — review\'\n' +
+                    '    END                                                  AS access_description,\n' +
+                    '    NVL(ro.gubrole_mod_access_ind, \'N\')                  AS can_write_flag,\n' +
                     '    gu.guvuacc_type                                      AS access_via,\n' +
                     '    gu.guvuacc_class                                     AS via_class\n' +
                     'FROM        bansecr.guvuacc gu\n' +
                     'INNER JOIN  bansecr.guraobj ao ON ao.guraobj_object     = gu.guvuacc_object\n' +
+                    'LEFT JOIN   general.gubobjs fo ON fo.gubobjs_name       = gu.guvuacc_object\n' +
+                    'LEFT JOIN   bansecr.gubrole ro ON ro.gubrole_role       = gu.guvuacc_role\n' +
                     'LEFT JOIN   general.gobeacc ga ON ga.gobeacc_username  = gu.guvuacc_user\n' +
                     'LEFT JOIN   spriden si         ON si.spriden_pidm      = ga.gobeacc_pidm\n' +
                     '                              AND si.spriden_change_ind IS NULL\n' +
@@ -2214,18 +2706,24 @@
                     'WHERE       ao.guraobj_sysi_code = \'' + intent.module + '\'\n' +
                     'ORDER BY    gu.guvuacc_user, gu.guvuacc_object;\n' +
                     '\n' +
-                    '-- PART 2 — Summary: one row per user with aggregated form list\n' +
+                    '-- PART 2 — Summary: one row per user with aggregated form list (with descriptions)\n' +
                     'SELECT\n' +
                     '    gu.guvuacc_user                                      AS username,\n' +
                     '    si.spriden_first_name || \' \' || si.spriden_last_name AS full_name,\n' +
                     '    COUNT(DISTINCT gu.guvuacc_object)                    AS form_count,\n' +
                     '    COUNT(CASE WHEN gu.guvuacc_role LIKE \'%\\_M\' ESCAPE \'\\\' THEN 1 END) AS maintenance_count,\n' +
                     '    COUNT(CASE WHEN gu.guvuacc_role LIKE \'%\\_Q\' ESCAPE \'\\\' THEN 1 END) AS query_count,\n' +
-                    '    LISTAGG(DISTINCT gu.guvuacc_object, \', \')\n' +
+                    '    COUNT(CASE WHEN NVL(ro.gubrole_mod_access_ind,\'N\')=\'Y\' THEN 1 END) AS write_capable_count,\n' +
+                    '    LISTAGG(DISTINCT gu.guvuacc_object, \', \' ON OVERFLOW TRUNCATE \'...\' WITH COUNT)\n' +
                     '        WITHIN GROUP (ORDER BY gu.guvuacc_object)        AS forms,\n' +
+                    '    LISTAGG(DISTINCT gu.guvuacc_object || \' — \' || NVL(fo.gubobjs_desc,\'(no description)\'),\n' +
+                    '            \' | \' ON OVERFLOW TRUNCATE \'...\' WITH COUNT)\n' +
+                    '        WITHIN GROUP (ORDER BY gu.guvuacc_object)        AS forms_with_descriptions,\n' +
                     '    MAX(pe.pebempl_term_date)                            AS employee_term_date\n' +
                     'FROM        bansecr.guvuacc gu\n' +
                     'INNER JOIN  bansecr.guraobj ao ON ao.guraobj_object     = gu.guvuacc_object\n' +
+                    'LEFT JOIN   general.gubobjs fo ON fo.gubobjs_name       = gu.guvuacc_object\n' +
+                    'LEFT JOIN   bansecr.gubrole ro ON ro.gubrole_role       = gu.guvuacc_role\n' +
                     'LEFT JOIN   general.gobeacc ga ON ga.gobeacc_username  = gu.guvuacc_user\n' +
                     'LEFT JOIN   spriden si         ON si.spriden_pidm      = ga.gobeacc_pidm\n' +
                     '                              AND si.spriden_change_ind IS NULL\n' +
@@ -2239,14 +2737,15 @@
                     title: 'Banner ' + mUA.name + ' Users — Form Access Inventory',
                     description: 'Every Banner user who can reach a <b>' + mUA.name + '</b>-module form, joined with their identity (GOBEACC + SPRIDEN) and termination status (PEBEMPL). Two-part output ready to paste into Argos: (1) detail with one row per user-form-role, (2) summary with a LISTAGG of all ' + mUA.name + ' forms per user.',
                     sql: sqlUA,
-                    tables: ['GUVUACC','GURAOBJ','GOBEACC','SPRIDEN','PEBEMPL'],
+                    tables: ['GUVUACC','GURAOBJ','GUBOBJS','GUBROLE','GOBEACC','SPRIDEN','PEBEMPL'],
                     explain: [
                         '<code>GUVUACC</code> is Banner\'s pre-joined effective-access view — it already unions class-based, direct (<code>GURUOBJ</code>), and group-based grants. No need to reassemble.',
+                        '<code>GUBOBJS</code> adds the human description of every form (e.g. SPRIDEN → "General Person Identification") via <code>gubobjs_desc</code>. <code>GUBROLE</code> adds role comments and the authoritative write flag <code>gubrole_mod_access_ind</code>.',
                         '<code>ao.guraobj_sysi_code = \'' + intent.module + '\'</code> scopes to ' + mUA.name + ' forms only. Change to <code>\'S\'</code> for Student, <code>\'P\'</code> for HR/Payroll, etc.',
-                        'The <code>CASE</code> on role suffix translates Banner\'s <code>_Q</code>/<code>_M</code>/<code>_B</code>/<code>_U</code> conventions into human terms (Query / Maintenance / Both / Update). Custom roles fall into Other/Custom — review them separately.',
+                        'The <code>CASE</code> on role suffix translates Banner\'s <code>_Q</code>/<code>_M</code>/<code>_B</code>/<code>_U</code> conventions into plain-English phrases. Trust <code>can_write_flag</code> over the suffix when they disagree — <code>GUBROLE_MOD_ACCESS_IND</code> is authoritative.',
                         '<code>pebempl_term_date</code> is carried through so you can instantly spot terminated employees still holding ' + mUA.name + ' access (the #1 audit finding).',
                     ],
-                    caveats: 'Uses <code>GURAOBJ_SYSI_CODE</code> to scope by module — if your site has objects missing this code, add a fallback like <code>OR gu.guvuacc_object LIKE \'' + intent.module + '%\'</code>. LISTAGG in the summary is 4000-byte capped; a user with 600+ forms may truncate. The detail part never truncates. This is SR012 packaged for a single module.',
+                    caveats: 'Uses <code>GURAOBJ_SYSI_CODE</code> to scope by module — if your site has objects missing this code, add a fallback like <code>OR gu.guvuacc_object LIKE \'' + intent.module + '%\'</code>. <code>GUBOBJS</code> lives in the <b>GENERAL</b> schema, not BANSECR. <code>GUBOBJS_DESC</code> is populated for baseline Banner forms; custom forms may have NULL descriptions. <code>GUBROLE_COMMENTS</code> is often sparse — that\'s why we also derive <code>access_description</code> from the role suffix. Summary LISTAGGs use <code>ON OVERFLOW TRUNCATE</code> (Oracle 12.2+) to clip long lists with <code>...(NNN)</code> instead of throwing ORA-01489. The detail part never aggregates. This is SR012 packaged for a single module.',
                     original: intent.original,
                 };
             }
@@ -2367,6 +2866,23 @@
             var desc = h('div', { className: 'intent-desc' });
             desc.innerHTML = answer.description;
             card.appendChild(desc);
+
+            //  Optional extra HTML block (e.g. the module discovery grid for SR013)
+            if (answer.extraHtml) {
+                var extra = h('div', { className: 'intent-extra' });
+                extra.innerHTML = answer.extraHtml;
+                //  When chips carry data-module-code, wire click → fire the P5 user-access intent
+                extra.querySelectorAll('[data-module-code]').forEach(function(el) {
+                    el.onclick = (function(code) { return function() {
+                        var moduleName = (ASK_MODULES[code] && ASK_MODULES[code].name) || code;
+                        var q = moduleName.replace(/ \/ .*/,'') + ' user access inventory';
+                        var si = document.getElementById('searchInput');
+                        if (si) si.value = q;
+                        navigate('search/' + encodeURIComponent(q));
+                    }; })(el.getAttribute('data-module-code'));
+                });
+                card.appendChild(extra);
+            }
 
             //  Tables referenced
             if (answer.tables && answer.tables.length) {
@@ -2984,6 +3500,1101 @@
 
         // ==================== REPORTS ====================
 
+        // ==================== BANNER LEGO — Visual Query Builder ====================
+        //  Each block knows its canonical join, what it depends on, what it produces,
+        //  and default columns to project. The generator assembles SELECT / FROM / JOIN / WHERE.
+        var BLOCK_CATALOG = {
+            //  === SOURCE BLOCKS (green) ===
+            'src_student': {
+                kind: 'source', category: 'Start with', icon: '🎓', name: 'Student',
+                desc: 'SPRIDEN — General Person base table. Filtered to entity_ind=P (person, not company) and change_ind IS NULL (current name row).',
+                table: 'SPRIDEN', alias: 'si',
+                sqlFrom: 'spriden si',
+                sqlWhere: ["si.spriden_change_ind IS NULL", "si.spriden_entity_ind = 'P'"],
+                produces: ['student','person_pidm'],
+                projections: [
+                    "si.spriden_id                                        AS student_id",
+                    "si.spriden_first_name || ' ' || si.spriden_last_name AS student_name"
+                ],
+                teach: 'Everything about a person in Banner keys off PIDM (Personal ID Master). SPRIDEN is where you translate between the 8-digit Banner ID the user sees and the internal PIDM that joins everything else.'
+            },
+            'src_term': {
+                kind: 'source', category: 'Start with', icon: '📅', name: 'Term',
+                desc: 'STVTERM — validation table for academic terms (Fall, Spring, etc.).',
+                table: 'STVTERM', alias: 'tm',
+                sqlFrom: 'stvterm tm', sqlWhere: [], produces: ['term_info'],
+                projections: ["tm.stvterm_code AS term_code", "tm.stvterm_desc AS term_description"],
+                teach: 'STVTERM code is the primary key every academic table joins on (format YYYYxx — e.g. 202510 = Spring 2026 at most sites).'
+            },
+            //  === JOIN BLOCKS (blue) ===
+            'join_registrations': {
+                kind: 'join', category: 'Add related', icon: '📚',
+                name: "Student's Registered Courses",
+                desc: 'SFRSTCR — one row per (student, term, course) registration. Canonical join: PIDM.',
+                table: 'SFRSTCR', alias: 'sr',
+                requires: ['student'], produces: ['registration'],
+                sqlJoin: 'INNER JOIN sfrstcr sr ON sr.sfrstcr_pidm = si.spriden_pidm',
+                projections: [
+                    "sr.sfrstcr_term_code                                 AS term_code",
+                    "sr.sfrstcr_crn                                      AS crn",
+                    "sr.sfrstcr_rsts_code                                 AS reg_status",
+                    "sr.sfrstcr_credit_hr                                 AS credit_hours"
+                ],
+                teach: 'SFRSTCR is the enrollment fact table — the ledger of every student registration event. Compound key is (pidm, term, crn). Status codes: RE=Registered, RW=Web Registered, DD=Dropped, W=Withdrawn.'
+            },
+            'join_section': {
+                kind: 'join', category: 'Add related', icon: '🏫',
+                name: 'Section Details',
+                desc: 'SSBSECT — the offered section (CRN + term). Canonical join: (term_code, crn).',
+                table: 'SSBSECT', alias: 'ss',
+                requires: ['registration'], produces: ['section'],
+                sqlJoin: 'INNER JOIN ssbsect ss ON ss.ssbsect_term_code = sr.sfrstcr_term_code\n                              AND ss.ssbsect_crn       = sr.sfrstcr_crn',
+                projections: [
+                    "ss.ssbsect_subj_code                                 AS subject",
+                    "ss.ssbsect_crse_numb                                 AS course_number",
+                    "ss.ssbsect_seq_numb                                  AS section_number"
+                ],
+                teach: 'SSBSECT is scheduled offerings — what was actually taught when. CRN (Course Reference Number) is unique within a term but reused across terms, which is why the canonical join is always (term_code, crn) together.'
+            },
+            'join_course_catalog': {
+                kind: 'join', category: 'Add related', icon: '📖',
+                name: 'Course Catalog (title, description)',
+                desc: 'SCBCRSE — course master. Multiple eff-term rows; use MAX(eff_term) <= our term to get the version that was in effect.',
+                table: 'SCBCRSE', alias: 'sc',
+                requires: ['section'], produces: ['catalog'],
+                sqlJoin: 'LEFT JOIN scbcrse sc ON sc.scbcrse_subj_code  = ss.ssbsect_subj_code\n                              AND sc.scbcrse_crse_numb  = ss.ssbsect_crse_numb\n                              AND sc.scbcrse_eff_term   = (\n                                  SELECT MAX(sc2.scbcrse_eff_term)\n                                    FROM scbcrse sc2\n                                   WHERE sc2.scbcrse_subj_code = sc.scbcrse_subj_code\n                                     AND sc2.scbcrse_crse_numb = sc.scbcrse_crse_numb\n                                     AND sc2.scbcrse_eff_term  <= sr.sfrstcr_term_code)',
+                projections: ["sc.scbcrse_title                                     AS course_title"],
+                teach: 'SCBCRSE stores course definitions that change over time — a course title in 2020 may differ from 2026. The scbcrse_eff_term is a version marker. The MAX(eff_term) <= our term subquery is the canonical Banner pattern for "get the catalog row that was current when this student registered".'
+            },
+            'join_term': {
+                kind: 'join', category: 'Add related', icon: '📅',
+                name: 'Term Description',
+                desc: 'STVTERM — decodes term code to human-readable (e.g. 202510 → "Spring 2026").',
+                table: 'STVTERM', alias: 'tm',
+                requires: ['registration'], produces: ['term_info'],
+                sqlJoin: 'LEFT JOIN stvterm tm ON tm.stvterm_code = sr.sfrstcr_term_code',
+                projections: ["tm.stvterm_desc                                      AS term_description"],
+                teach: 'STVTERM is a validation/lookup table — "what does 202510 mean?". LEFT JOIN is safe (every term code that appears in SFRSTCR should exist here, but defensive).'
+            },
+            //  === FILTER BLOCKS (yellow) ===
+            'filter_term': {
+                kind: 'filter', category: 'Filter', icon: '🎯',
+                name: 'Filter by Term',
+                desc: 'Restrict results to one specific academic term.',
+                requires: ['registration'],
+                param: { key: 'term_code', label: 'Term code', placeholder: '202510', default: '202510', width: 110 },
+                sqlWhere: function(p) { return "sr.sfrstcr_term_code = '" + (p.term_code || '202510').replace(/'/g,"''") + "'"; },
+                teach: 'Term code format is site-specific but usually YYYYxx (year + season). Common seasons: 10=Spring, 20=Summer, 30=Fall. Waubonsee\'s canonical values live in STVTERM.'
+            },
+            'filter_active_reg': {
+                kind: 'filter', category: 'Filter', icon: '✅',
+                name: 'Only Active Registrations',
+                desc: 'Keep only actively-enrolled registration statuses (RE, RW).',
+                requires: ['registration'], param: null,
+                sqlWhere: function() { return "sr.sfrstcr_rsts_code IN ('RE','RW')"; },
+                teach: 'SFRSTCR retains the entire history of every registration — including drops (DD), withdrawals (W), and cancellations. Filtering to RE/RW gives you "who is actually in the class right now".'
+            },
+            'filter_subject': {
+                kind: 'filter', category: 'Filter', icon: '🔖',
+                name: 'Filter by Subject',
+                desc: 'Show only courses in one subject area.',
+                requires: ['section'],
+                param: { key: 'subject', label: 'Subject code', placeholder: 'MATH', default: 'MATH', width: 90 },
+                sqlWhere: function(p) { return "ss.ssbsect_subj_code = '" + (p.subject || 'MATH').toUpperCase().replace(/'/g,"''") + "'"; },
+                teach: 'Subject codes are short identifiers like MATH, ENGL, CIS, BIOL. Live in STVSUBJ — browse that table to see all options at your site.'
+            },
+
+            //  ======  NEW SOURCES  ======
+            'src_employee': {
+                kind: 'source', category: 'Start with', icon: '👥', name: 'Employee',
+                desc: 'PEBEMPL — HR employee master. One row per employee PIDM.',
+                table: 'PEBEMPL', alias: 'pe',
+                sqlFrom: 'pebempl pe', sqlWhere: [],
+                produces: ['employee'],
+                projections: [
+                    "pe.pebempl_pidm                                      AS pidm",
+                    "pe.pebempl_empl_status                               AS employment_status",
+                    "pe.pebempl_ecls_code                                 AS employee_class",
+                    "pe.pebempl_term_date                                 AS termination_date"
+                ],
+                teach: 'PEBEMPL is the HR master — one row per person employed. PEBEMPL_EMPL_STATUS (A=Active, L=Leave, T=Terminated) is the fastest filter to tell who is still employed. Names live in SPRIDEN, join on PIDM.'
+            },
+            'src_vendor': {
+                kind: 'source', category: 'Start with', icon: '🏪', name: 'Vendor',
+                desc: 'FTVVEND — Finance vendor master (keyed on PIDM, like people).',
+                table: 'FTVVEND', alias: 'fv',
+                sqlFrom: 'ftvvend fv', sqlWhere: [],
+                produces: ['vendor'],
+                projections: [
+                    "fv.ftvvend_pidm                                      AS vendor_pidm",
+                    "fv.ftvvend_eff_date                                  AS effective_date",
+                    "fv.ftvvend_term_date                                 AS termination_date",
+                    "fv.ftvvend_entity_ind                                AS entity_type"
+                ],
+                teach: 'FTVVEND is keyed on PIDM just like students and employees — the same person/entity can play multiple roles. Join to SPRIDEN on PIDM to get the vendor name (entity_ind=C for companies, P for individuals). There is no "start date" column; FTVVEND_EFF_DATE is the closest equivalent.'
+            },
+            'src_security_user': {
+                kind: 'source', category: 'Start with', icon: '👤', name: 'Security User',
+                desc: 'GOBEACC — every Banner account with a PIDM link. Lives in the GENERAL schema.',
+                table: 'GOBEACC', alias: 'ga',
+                sqlFrom: 'general.gobeacc ga', sqlWhere: [],
+                produces: ['security_user'],
+                projections: [
+                    "ga.gobeacc_username                                  AS username",
+                    "ga.gobeacc_pidm                                      AS pidm"
+                ],
+                teach: 'GOBEACC is the bridge between an Oracle/Banner account (username) and a person record (PIDM). Accounts without a PIDM (service/system accounts) appear here with pidm NULL. GOBEACC lives in the GENERAL schema, not BANSECR.'
+            },
+
+            //  ======  NEW STUDENT-MODULE JOINS  ======
+            'join_academic_program': {
+                kind: 'join', category: 'Add related', icon: '🎯',
+                name: 'Academic Program (major)',
+                desc: 'SGBSTDN — effective-dated student record. Latest row wins.',
+                table: 'SGBSTDN', alias: 'sg',
+                requires: ['student'], produces: ['academic_program'],
+                sqlJoin: 'LEFT JOIN sgbstdn sg ON sg.sgbstdn_pidm = si.spriden_pidm\n                              AND sg.sgbstdn_term_code_eff = (\n                                  SELECT MAX(sg2.sgbstdn_term_code_eff)\n                                    FROM sgbstdn sg2\n                                   WHERE sg2.sgbstdn_pidm = sg.sgbstdn_pidm)',
+                projections: [
+                    "sg.sgbstdn_majr_code_1                               AS major_code",
+                    "sg.sgbstdn_coll_code_1                               AS college_code",
+                    "sg.sgbstdn_degc_code_1                               AS degree_code",
+                    "sg.sgbstdn_levl_code                                 AS level_code",
+                    "sg.sgbstdn_styp_code                                 AS student_type",
+                    "sg.sgbstdn_term_code_eff                             AS program_eff_term"
+                ],
+                teach: 'SGBSTDN is one of Banner\'s most-joined tables — it holds a student\'s curriculum (major, college, degree, level, student type) and it\'s effective-dated. A student can have multiple rows, one per term change; the canonical Banner pattern is MAX(term_code_eff) to get the current version.'
+            },
+            'join_student_holds': {
+                kind: 'join', category: 'Add related', icon: '⛔',
+                name: 'Active Holds',
+                desc: 'SPRHOLD — student holds. Active = to_date > SYSDATE.',
+                table: 'SPRHOLD', alias: 'sh',
+                requires: ['student'], produces: ['student_holds'],
+                sqlJoin: 'LEFT JOIN sprhold sh ON sh.sprhold_pidm = si.spriden_pidm\n                              AND sh.sprhold_to_date > SYSDATE',
+                projections: [
+                    "sh.sprhold_hldd_code                                 AS hold_type",
+                    "sh.sprhold_reason                                    AS hold_reason",
+                    "sh.sprhold_from_date                                 AS hold_from",
+                    "sh.sprhold_to_date                                   AS hold_to"
+                ],
+                teach: 'A hold is "active" when SYSDATE is between from_date and to_date. The LEFT JOIN pattern means students without holds still appear (hold columns NULL). Hold type codes live in STVHLDD.'
+            },
+            'join_advisor': {
+                kind: 'join', category: 'Add related', icon: '🧑‍🏫',
+                name: 'Primary Advisor',
+                desc: 'SGRADVR — primary-indicator flag with effective-term history.',
+                table: 'SGRADVR', alias: 'sv',
+                requires: ['student'], produces: ['advisor'],
+                sqlJoin: 'LEFT JOIN sgradvr sv ON sv.sgradvr_pidm = si.spriden_pidm\n                              AND sv.sgradvr_prim_ind = \'Y\'\n                              AND sv.sgradvr_term_code_eff = (\n                                  SELECT MAX(sv2.sgradvr_term_code_eff)\n                                    FROM sgradvr sv2\n                                   WHERE sv2.sgradvr_pidm = sv.sgradvr_pidm\n                                     AND sv2.sgradvr_prim_ind = \'Y\')',
+                projections: [
+                    "sv.sgradvr_advr_pidm                                 AS advisor_pidm",
+                    "sv.sgradvr_advr_code                                 AS advisor_type_code",
+                    "sv.sgradvr_term_code_eff                             AS advisor_eff_term"
+                ],
+                teach: 'Students can have multiple advisors simultaneously. SGRADVR_PRIM_IND = Y identifies the single primary advisor. Same effective-dated pattern as SGBSTDN — MAX(term_code_eff) for "current".'
+            },
+            'join_advisor_name': {
+                kind: 'join', category: 'Add related', icon: '🪪',
+                name: 'Advisor Name',
+                desc: 'SPRIDEN (second instance) — resolves advisor PIDM to a name.',
+                table: 'SPRIDEN', alias: 'ai',
+                requires: ['advisor'], produces: ['advisor_name'],
+                sqlJoin: 'LEFT JOIN spriden ai ON ai.spriden_pidm = sv.sgradvr_advr_pidm\n                             AND ai.spriden_change_ind IS NULL',
+                projections: [
+                    "ai.spriden_first_name || ' ' || ai.spriden_last_name AS advisor_name"
+                ],
+                teach: 'The advisor is also a person — joining SPRIDEN a second time (with a different alias) resolves their name. This double-SPRIDEN pattern appears in any query that needs "person + another person".'
+            },
+            'join_preferred_email': {
+                kind: 'join', category: 'Add related', icon: '📧',
+                name: 'Preferred Email',
+                desc: 'GOREMAL — email repeating table. Filter to preferred + active.',
+                table: 'GOREMAL', alias: 'ge',
+                requires: ['student'], produces: ['email'],
+                sqlJoin: 'LEFT JOIN goremal ge ON ge.goremal_pidm = si.spriden_pidm\n                              AND ge.goremal_preferred_ind = \'Y\'\n                              AND ge.goremal_status_ind = \'A\'',
+                projections: [
+                    "ge.goremal_email_address                             AS preferred_email",
+                    "ge.goremal_emal_code                                 AS email_type"
+                ],
+                teach: 'Students can have multiple emails (personal, school, etc.). preferred_ind=Y + status_ind=A gives the canonical "where to email them". Email types live in GTVEMAL (PERSONAL, SCHOOL, etc.).'
+            },
+            'join_primary_phone': {
+                kind: 'join', category: 'Add related', icon: '📱',
+                name: 'Primary Phone',
+                desc: 'SPRTELE — phone numbers. Filter to primary + active (status NULL).',
+                table: 'SPRTELE', alias: 'spt',
+                requires: ['student'], produces: ['phone'],
+                sqlJoin: 'LEFT JOIN sprtele spt ON spt.sprtele_pidm = si.spriden_pidm\n                               AND spt.sprtele_primary_ind = \'Y\'\n                               AND spt.sprtele_status_ind IS NULL',
+                projections: [
+                    "spt.sprtele_phone_area || spt.sprtele_phone_number   AS primary_phone",
+                    "spt.sprtele_tele_code                                AS phone_type"
+                ],
+                teach: 'SPRTELE uses NULL status_ind for "active" — Banner is inconsistent about this (GOREMAL uses A=Active). Phone numbers split across area/number columns; concatenate for a usable value.'
+            },
+            'join_mailing_address': {
+                kind: 'join', category: 'Add related', icon: '🏠',
+                name: 'Mailing Address',
+                desc: 'SPRADDR — address with type filter (MA=Mailing). Effective-dated.',
+                table: 'SPRADDR', alias: 'sa',
+                requires: ['student'], produces: ['address'],
+                sqlJoin: 'LEFT JOIN spraddr sa ON sa.spraddr_pidm = si.spriden_pidm\n                              AND sa.spraddr_atyp_code = \'MA\'\n                              AND sa.spraddr_status_ind IS NULL\n                              AND sa.spraddr_from_date <= SYSDATE\n                              AND (sa.spraddr_to_date IS NULL OR sa.spraddr_to_date >= SYSDATE)',
+                projections: [
+                    "sa.spraddr_street_line1                              AS street1",
+                    "sa.spraddr_city                                      AS city",
+                    "sa.spraddr_stat_code                                 AS state",
+                    "sa.spraddr_zip                                       AS zip"
+                ],
+                teach: 'Address types (atyp_code) live in STVATYP: MA=Mailing, PR=Permanent, BI=Billing, etc. Always filter by type AND the effective-date window, or you\'ll get historical addresses mixed with current ones.'
+            },
+            'join_test_scores': {
+                kind: 'join', category: 'Add related', icon: '📝',
+                name: 'Test Scores',
+                desc: 'SORTEST — ACT/SAT/TOEFL/placement test scores per student.',
+                table: 'SORTEST', alias: 'st',
+                requires: ['student'], produces: ['test_scores'],
+                sqlJoin: 'LEFT JOIN sortest st ON st.sortest_pidm = si.spriden_pidm',
+                projections: [
+                    "st.sortest_tesc_code                                 AS test_code",
+                    "st.sortest_test_score                                AS test_score",
+                    "st.sortest_test_date                                 AS test_date"
+                ],
+                teach: 'SORTEST is one-to-many — a single student can have dozens of rows (ACT composite, ACT math, SAT verbal, TOEFL, placement tests, etc.). Test-type codes live in STVTESC.'
+            },
+            'join_grades': {
+                kind: 'join', category: 'Add related', icon: '🎖️',
+                name: 'Course Grades',
+                desc: 'SHRTCKN + SHRTCKG — SHRTCKN holds per-course term record (subj, numb, title); SHRTCKG holds the grade itself.',
+                table: 'SHRTCKN', alias: 'shn',
+                requires: ['student'], produces: ['grades'],
+                sqlJoin: 'LEFT JOIN shrtckn shn ON shn.shrtckn_pidm = si.spriden_pidm\nLEFT JOIN shrtckg shg ON shg.shrtckg_pidm     = shn.shrtckn_pidm\n                              AND shg.shrtckg_term_code = shn.shrtckn_term_code\n                              AND shg.shrtckg_tckn_seq_no = shn.shrtckn_seq_no',
+                projections: [
+                    "shn.shrtckn_term_code                                AS grade_term",
+                    "shn.shrtckn_subj_code                                AS grade_subject",
+                    "shn.shrtckn_crse_numb                                AS grade_course",
+                    "shn.shrtckn_crse_title                               AS grade_title",
+                    "shg.shrtckg_grde_code_final                          AS final_grade",
+                    "shg.shrtckg_credit_hours                             AS grade_credit_hours"
+                ],
+                teach: 'Banner splits grades across two tables: SHRTCKN (per-course term record, has subject/number/title) and SHRTCKG (per-course grade, links to SHRTCKN via tckn_seq_no). This join fetches both in one go. shrtckg_grde_code_final = official grade; shrtckg_grde_code_mid = mid-term.'
+            },
+            'join_term_gpa': {
+                kind: 'join', category: 'Add related', icon: '📊',
+                name: 'Term GPA Summary',
+                desc: 'SHRGPAC — per-campus-and-level-per-term GPA summary.',
+                table: 'SHRGPAC', alias: 'shc',
+                requires: ['student'], produces: ['term_gpa'],
+                sqlJoin: 'LEFT JOIN shrgpac shc ON shc.shrgpac_pidm = si.spriden_pidm',
+                projections: [
+                    "shc.shrgpac_term_code                                AS gpa_term",
+                    "shc.shrgpac_levl_code                                AS level_code",
+                    "shc.shrgpac_gpa                                      AS term_gpa",
+                    "shc.shrgpac_hours_attempted                          AS hours_attempted",
+                    "shc.shrgpac_hours_earned                             AS hours_earned"
+                ],
+                teach: 'SHRGPAC stores the per-term GPA calculation — one row per (pidm, campus, level, term). The gpa_hours column divided into quality_points gives you the actual GPA (already stored in shrgpac_gpa). Banner\'s alternative SHRLGPA is similar but level-only (no term).'
+            },
+            'join_degrees': {
+                kind: 'join', category: 'Add related', icon: '🏆',
+                name: 'Degrees Awarded',
+                desc: 'SHRDGMR — degree history. Filter to AW = awarded/completed.',
+                table: 'SHRDGMR', alias: 'sd',
+                requires: ['student'], produces: ['degrees'],
+                sqlJoin: 'LEFT JOIN shrdgmr sd ON sd.shrdgmr_pidm = si.spriden_pidm\n                              AND sd.shrdgmr_degs_code = \'AW\'',
+                projections: [
+                    "sd.shrdgmr_degc_code                                 AS degree_code",
+                    "sd.shrdgmr_grad_date                                 AS graduation_date",
+                    "sd.shrdgmr_term_code_grad                            AS graduation_term",
+                    "sd.shrdgmr_acyr_code                                 AS academic_year"
+                ],
+                teach: 'SHRDGMR_DEGS_CODE is the status — AW=Awarded, SO=Sought, PN=Pending. Filter to AW for "graduated students". One student can have multiple degrees (AA then BA).'
+            },
+
+            //  ======  HR JOINS  ======
+            'join_employee_name': {
+                kind: 'join', category: 'Add related', icon: '🪪',
+                name: 'Employee Name',
+                desc: 'SPRIDEN — resolves employee PIDM to name (entity_ind=P).',
+                table: 'SPRIDEN', alias: 'ei',
+                requires: ['employee'], produces: ['employee_name'],
+                sqlJoin: 'LEFT JOIN spriden ei ON ei.spriden_pidm = pe.pebempl_pidm\n                             AND ei.spriden_change_ind IS NULL\n                             AND ei.spriden_entity_ind = \'P\'',
+                projections: [
+                    "ei.spriden_id                                        AS banner_id",
+                    "ei.spriden_first_name || ' ' || ei.spriden_last_name AS employee_name"
+                ],
+                teach: 'Employee names live in SPRIDEN — same table as students. Both employees AND students key off PIDM; a person can be both. Join SPRIDEN + filter entity_ind=P (vs C for companies).'
+            },
+            'join_employee_jobs': {
+                kind: 'join', category: 'Add related', icon: '💼',
+                name: 'Current Jobs',
+                desc: 'NBRJOBS — job assignments. Use MAX(effective_date) <= SYSDATE.',
+                table: 'NBRJOBS', alias: 'nj',
+                requires: ['employee'], produces: ['jobs'],
+                sqlJoin: 'LEFT JOIN nbrjobs nj ON nj.nbrjobs_pidm = pe.pebempl_pidm\n                              AND nj.nbrjobs_effective_date = (\n                                  SELECT MAX(nj2.nbrjobs_effective_date)\n                                    FROM nbrjobs nj2\n                                   WHERE nj2.nbrjobs_pidm = nj.nbrjobs_pidm\n                                     AND nj2.nbrjobs_posn = nj.nbrjobs_posn\n                                     AND nj2.nbrjobs_suff = nj.nbrjobs_suff\n                                     AND nj2.nbrjobs_effective_date <= SYSDATE)',
+                projections: [
+                    "nj.nbrjobs_posn                                      AS position_number",
+                    "nj.nbrjobs_suff                                      AS position_suffix",
+                    "nj.nbrjobs_status                                    AS job_status",
+                    "nj.nbrjobs_ecls_code                                 AS job_employee_class",
+                    "nj.nbrjobs_ann_salary                                AS annual_salary",
+                    "nj.nbrjobs_fte                                       AS fte"
+                ],
+                teach: 'NBRJOBS is effective-dated AND multi-row per person — one employee can hold multiple positions (primary faculty + chair stipend, for example). The MAX(effective_date) <= SYSDATE pattern gets the current record per (pidm, posn, suff).'
+            },
+            'join_position_info': {
+                kind: 'join', category: 'Add related', icon: '📋',
+                name: 'Position Title',
+                desc: 'NBBPOSN — position master with title, salary range.',
+                table: 'NBBPOSN', alias: 'np',
+                requires: ['jobs'], produces: ['position_info'],
+                sqlJoin: 'LEFT JOIN nbbposn np ON np.nbbposn_posn = nj.nbrjobs_posn',
+                projections: [
+                    "np.nbbposn_title                                     AS position_title",
+                    "np.nbbposn_ecls_code                                 AS position_class"
+                ],
+                teach: 'NBBPOSN holds the master definition of each position (title, classification, salary range). Multiple employees can share one position if it has capacity > 1.'
+            },
+
+            //  ======  FINANCE JOINS  ======
+            'join_vendor_name': {
+                kind: 'join', category: 'Add related', icon: '🪪',
+                name: 'Vendor Name (via SPRIDEN)',
+                desc: 'SPRIDEN — resolves vendor PIDM to legal name.',
+                table: 'SPRIDEN', alias: 'vi',
+                requires: ['vendor'], produces: ['vendor_name'],
+                sqlJoin: 'LEFT JOIN spriden vi ON vi.spriden_pidm = fv.ftvvend_pidm\n                             AND vi.spriden_change_ind IS NULL',
+                projections: [
+                    "vi.spriden_last_name                                 AS vendor_name",
+                    "vi.spriden_entity_ind                                AS entity_type"
+                ],
+                teach: 'Vendor names live in SPRIDEN — not in FTVVEND. For companies (entity_ind=C), the full name goes in spriden_last_name; first/middle are usually null. Individual vendors (entity_ind=P) populate all three.'
+            },
+            'join_vendor_invoices': {
+                kind: 'join', category: 'Add related', icon: '🧾',
+                name: 'Vendor Invoices',
+                desc: 'FABINVH — invoice headers keyed to vendor PIDM.',
+                table: 'FABINVH', alias: 'fi',
+                requires: ['vendor'], produces: ['invoices'],
+                sqlJoin: 'LEFT JOIN fabinvh fi ON fi.fabinvh_vend_pidm = fv.ftvvend_pidm',
+                projections: [
+                    "fi.fabinvh_code                                      AS invoice_code",
+                    "fi.fabinvh_appr_ind                                  AS approved",
+                    "fi.fabinvh_trans_date                                AS transaction_date",
+                    "fi.fabinvh_vend_inv_code                             AS vendor_invoice_number"
+                ],
+                teach: 'FABINVH is the invoice header, keyed on invoice code. vend_pidm links to FTVVEND.ftvvend_pidm. Approval states: Y=Approved, Q=Incomplete, NULL=In Progress.'
+            },
+
+            //  ======  SECURITY JOINS  ======
+            'join_user_classes': {
+                kind: 'join', category: 'Add related', icon: '🛡️',
+                name: "User's Security Classes",
+                desc: 'GURACLS — user/class memberships. Uses the canonical MAX(audit_time) + audit_action <> D pattern.',
+                table: 'GURACLS', alias: 'gc',
+                requires: ['security_user'], produces: ['user_classes'],
+                sqlJoin: 'INNER JOIN bansecr.guracls gc ON gc.guracls_userid = ga.gobeacc_username\n                                      AND gc.guracls_audit_action <> \'D\'\n                                      AND gc.guracls_audit_time = (\n                                          SELECT MAX(gc2.guracls_audit_time)\n                                            FROM bansecr.guracls gc2\n                                           WHERE gc2.guracls_userid = gc.guracls_userid\n                                             AND gc2.guracls_class_code = gc.guracls_class_code)',
+                projections: [
+                    "gc.guracls_class_code                                AS class_code",
+                    "gc.guracls_audit_time                                AS granted_on"
+                ],
+                teach: 'GURACLS is audit-history — every change logs a row. To get "current" memberships, use MAX(audit_time) per (userid, class_code) AND filter out DELETE actions. This is the canonical pattern every security query in Banner uses.'
+            },
+            'join_class_description': {
+                kind: 'join', category: 'Add related', icon: '📋',
+                name: 'Class Description',
+                desc: 'GTVCLAS — name and module of a security class.',
+                table: 'GTVCLAS', alias: 'tc',
+                requires: ['user_classes'], produces: ['class_description'],
+                sqlJoin: 'LEFT JOIN bansecr.gtvclas tc ON tc.gtvclas_class_code = gc.guracls_class_code',
+                projections: [
+                    "tc.gtvclas_comments                                  AS class_description",
+                    "tc.gtvclas_sysi_code                                 AS class_module"
+                ],
+                teach: 'GTVCLAS is the validation/description table for security classes — the comments column holds the description; sysi_code tells which module the class belongs to (F=Finance, S=Student, P=HR, etc.). Always LEFT JOIN — classes without a validation row still work.'
+            },
+
+            //  ======  NEW FILTERS  ======
+            'filter_active_employees': {
+                kind: 'filter', category: 'Filter', icon: '🧑‍💼',
+                name: 'Active Employees Only',
+                desc: 'PEBEMPL_EMPL_STATUS = A (not on leave or terminated).',
+                requires: ['employee'], param: null,
+                sqlWhere: function() { return "pe.pebempl_empl_status = 'A'"; },
+                teach: 'Employment status codes: A=Active, L=Leave, T=Terminated. Most queries default to A-only for "who is currently working". Include L for "on our books even if on leave".'
+            },
+            'filter_approved_invoices': {
+                kind: 'filter', category: 'Filter', icon: '✅',
+                name: 'Approved Invoices Only',
+                desc: 'FABINVH_APPR_IND = Y — invoices that passed approval.',
+                requires: ['invoices'], param: null,
+                sqlWhere: function() { return "fi.fabinvh_appr_ind = 'Y'"; },
+                teach: 'Approval status: Y=Approved, Q=Incomplete, NULL=In Progress. For payment/AP reports, usually only Y. For pipeline tracking, include all.'
+            },
+            'filter_active_vendors': {
+                kind: 'filter', category: 'Filter', icon: '🟢',
+                name: 'Active Vendors Only',
+                desc: 'FTVVEND_TERM_DATE IS NULL — vendor record not terminated.',
+                requires: ['vendor'], param: null,
+                sqlWhere: function() { return "fv.ftvvend_term_date IS NULL"; },
+                teach: 'NULL ftvvend_term_date means the vendor is still active. A non-null date means they were terminated on that date (compliance issues, inactivity, etc.).'
+            },
+            'filter_graduated_term': {
+                kind: 'filter', category: 'Filter', icon: '🎓',
+                name: 'Filter by Graduation Term',
+                desc: 'Restrict SHRDGMR rows to one graduation term.',
+                requires: ['degrees'],
+                param: { key: 'grad_term', label: 'Grad term', placeholder: '202410', default: '202410', width: 110 },
+                sqlWhere: function(p) { return "sd.shrdgmr_term_code_grad = '" + (p.grad_term || '202410').replace(/'/g,"''") + "'"; },
+                teach: 'Graduation term uses the same YYYYxx format as academic terms. Useful for "how many graduated in Fall 2024" queries.'
+            },
+        };
+
+        //  Pre-built recipes — the "curriculum" of learning Banner joins
+        var BUILDER_RECIPES = {
+            'student_courses_term': {
+                name: '📚 Student + Courses + Term',
+                description: 'The classic registrar query: every student\'s registrations for a given term, with section and course-catalog details joined in.',
+                blocks: [
+                    { id: 'src_student', params: {} },
+                    { id: 'join_registrations', params: {} },
+                    { id: 'join_section', params: {} },
+                    { id: 'join_course_catalog', params: {} },
+                    { id: 'join_term', params: {} },
+                    { id: 'filter_term', params: { term_code: '202510' } },
+                    { id: 'filter_active_reg', params: {} },
+                ]
+            },
+            'student_program': {
+                name: '🎯 Student + Academic Program',
+                description: 'Current major / college / degree / level / student type for every student — the "what are they studying" snapshot via SGBSTDN + MAX(term_code_eff).',
+                blocks: [
+                    { id: 'src_student', params: {} },
+                    { id: 'join_academic_program', params: {} },
+                ]
+            },
+            'student_holds': {
+                name: '⛔ Student + Active Holds',
+                description: 'Students with at least one currently-active hold (to_date > SYSDATE) and the hold type, reason, date window.',
+                blocks: [
+                    { id: 'src_student', params: {} },
+                    { id: 'join_student_holds', params: {} },
+                ]
+            },
+            'student_contact': {
+                name: '📧 Student + Contact Info',
+                description: 'Preferred email, primary phone, and mailing address per student — a full contact sheet in one query.',
+                blocks: [
+                    { id: 'src_student', params: {} },
+                    { id: 'join_preferred_email', params: {} },
+                    { id: 'join_primary_phone', params: {} },
+                    { id: 'join_mailing_address', params: {} },
+                ]
+            },
+            'student_advisor': {
+                name: '🧑‍🏫 Student + Primary Advisor',
+                description: 'Each student with their current primary advisor — name resolved via a second SPRIDEN join on the advisor\'s PIDM.',
+                blocks: [
+                    { id: 'src_student', params: {} },
+                    { id: 'join_advisor', params: {} },
+                    { id: 'join_advisor_name', params: {} },
+                ]
+            },
+            'student_test_scores': {
+                name: '📝 Student + Test Scores',
+                description: 'Every admission/placement test score per student (SORTEST). ACT, SAT, TOEFL, etc.',
+                blocks: [
+                    { id: 'src_student', params: {} },
+                    { id: 'join_test_scores', params: {} },
+                ]
+            },
+            'student_grades': {
+                name: '🎖️ Student + Course Grades',
+                description: 'Complete grade history (SHRTCKG) — term, subject, course, final grade, credit hours. Great for unofficial transcripts.',
+                blocks: [
+                    { id: 'src_student', params: {} },
+                    { id: 'join_grades', params: {} },
+                ]
+            },
+            'student_gpa': {
+                name: '📊 Student + Term GPAs',
+                description: 'Per-term academic summary (SHRTCKN) — GPA, hours attempted, hours earned for each term.',
+                blocks: [
+                    { id: 'src_student', params: {} },
+                    { id: 'join_term_gpa', params: {} },
+                ]
+            },
+            'student_degrees': {
+                name: '🏆 Student + Degrees Awarded',
+                description: 'Degrees formally awarded (SHRDGMR_DEGS_CODE = AW) — a clean graduation report. Add the term filter for "Fall 2024 grads".',
+                blocks: [
+                    { id: 'src_student', params: {} },
+                    { id: 'join_degrees', params: {} },
+                ]
+            },
+            'employee_jobs': {
+                name: '💼 Employee + Current Jobs',
+                description: 'Active employees with current job assignments (position, salary, FTE) using the MAX(effective_date) pattern.',
+                blocks: [
+                    { id: 'src_employee', params: {} },
+                    { id: 'join_employee_name', params: {} },
+                    { id: 'join_employee_jobs', params: {} },
+                    { id: 'join_position_info', params: {} },
+                    { id: 'filter_active_employees', params: {} },
+                ]
+            },
+            'vendor_invoices': {
+                name: '🏪 Vendor + Invoices',
+                description: 'Active vendors with their approved invoice headers — vendor names resolved via SPRIDEN.',
+                blocks: [
+                    { id: 'src_vendor', params: {} },
+                    { id: 'join_vendor_name', params: {} },
+                    { id: 'join_vendor_invoices', params: {} },
+                    { id: 'filter_active_vendors', params: {} },
+                    { id: 'filter_approved_invoices', params: {} },
+                ]
+            },
+            'security_user_classes': {
+                name: '🛡️ Security User + Classes',
+                description: 'Every Banner user with their active security class memberships (canonical audit pattern) and class descriptions from GTVCLAS.',
+                blocks: [
+                    { id: 'src_security_user', params: {} },
+                    { id: 'join_user_classes', params: {} },
+                    { id: 'join_class_description', params: {} },
+                ]
+            },
+        };
+
+        //  Builder state (ephemeral — lives only while the tab is open)
+        if (!state.builder) state.builder = { blocks: [], recipe: null };
+
+        function builderProducedSet(upToIndex) {
+            //  What "capabilities" are satisfied by blocks up to (but not including) upToIndex.
+            //  Used to decide if a candidate palette block is compatible.
+            var set = {};
+            var limit = (upToIndex == null) ? state.builder.blocks.length : upToIndex;
+            for (var i = 0; i < limit; i++) {
+                var cat = BLOCK_CATALOG[state.builder.blocks[i].id];
+                if (cat && cat.produces) cat.produces.forEach(function(p) { set[p] = true; });
+            }
+            return set;
+        }
+
+        function builderBlockCompatible(catalogEntry) {
+            if (!catalogEntry.requires || !catalogEntry.requires.length) return true;
+            var avail = builderProducedSet();
+            for (var i = 0; i < catalogEntry.requires.length; i++) {
+                if (!avail[catalogEntry.requires[i]]) return false;
+            }
+            return true;
+        }
+
+        function generateBuilderSql() {
+            if (!state.builder.blocks.length) {
+                return '-- 🧱  Banner Lego — click a START block on the left to begin.\n' +
+                       '-- Every block adds a piece of the query; the SQL rebuilds live as you go.';
+            }
+            var selects = [], from = null, joins = [], wheres = [], hasRegistration = false;
+            state.builder.blocks.forEach(function(b) {
+                var cat = BLOCK_CATALOG[b.id];
+                if (!cat) return;
+                if (cat.kind === 'source') {
+                    if (!from) {
+                        from = 'FROM        ' + cat.sqlFrom;
+                        if (cat.sqlWhere) cat.sqlWhere.forEach(function(w) { wheres.push(w); });
+                    }
+                    if (cat.projections) cat.projections.forEach(function(p) { selects.push(p); });
+                } else if (cat.kind === 'join') {
+                    joins.push(cat.sqlJoin);
+                    if (cat.projections) cat.projections.forEach(function(p) { selects.push(p); });
+                    if ((cat.produces || []).indexOf('registration') !== -1) hasRegistration = true;
+                } else if (cat.kind === 'filter') {
+                    wheres.push(cat.sqlWhere(b.params || {}));
+                }
+            });
+            if (!from) return '-- Add a START block (green) first.';
+            var sql = 'SELECT\n    ' + selects.join(',\n    ') + '\n' + from;
+            if (joins.length) sql += '\n' + joins.join('\n');
+            if (wheres.length) {
+                var ws = wheres.map(function(w, i) {
+                    return (i === 0 ? 'WHERE       ' : '  AND       ') + w;
+                });
+                sql += '\n' + ws.join('\n');
+            }
+            //  Sensible ORDER BY based on what's available
+            var order = [];
+            var prod = {};
+            state.builder.blocks.forEach(function(b) { var c = BLOCK_CATALOG[b.id]; if (c && c.produces) c.produces.forEach(function(p) { prod[p] = true; }); });
+            if (prod.student) order.push('student_id');
+            if (prod.registration) order.push('term_code', 'crn');
+            if (order.length) sql += '\nORDER BY    ' + order.join(', ');
+            sql += ';';
+            return sql;
+        }
+
+        function generateBuilderExplanation() {
+            if (!state.builder.blocks.length) return [];
+            var steps = [];
+            state.builder.blocks.forEach(function(b, i) {
+                var cat = BLOCK_CATALOG[b.id];
+                if (!cat) return;
+                var step = { n: i + 1, icon: cat.icon, name: cat.name, body: cat.teach || cat.desc };
+                if (cat.kind === 'filter' && b.params) {
+                    step.body += ' Current value: <code>' + JSON.stringify(b.params).replace(/[<>]/g,'') + '</code>.';
+                }
+                steps.push(step);
+            });
+            return steps;
+        }
+
+        function builderLoadRecipe(key) {
+            var r = BUILDER_RECIPES[key];
+            if (!r) return;
+            state.builder.blocks = r.blocks.map(function(b) { return { id: b.id, params: Object.assign({}, b.params) }; });
+            state.builder.recipe = key;
+            render();
+        }
+
+        function builderAddBlock(id) {
+            var cat = BLOCK_CATALOG[id];
+            if (!cat) return;
+            //  For filter blocks, initialize params with defaults
+            var params = {};
+            if (cat.param && cat.param.default != null) params[cat.param.key] = cat.param.default;
+            state.builder.blocks.push({ id: id, params: params });
+            render();
+        }
+        function builderRemoveBlock(idx) {
+            state.builder.blocks.splice(idx, 1);
+            render();
+        }
+        function builderClear() {
+            state.builder.blocks = [];
+            state.builder.recipe = null;
+            render();
+        }
+
+        function renderBuilder() {
+            var container = h('div', { className: 'container builder-container' });
+            var nav = h('div', { style: 'margin-bottom: 14px;' });
+            nav.appendChild(h('a', { className: 'back-link', onclick: function() { navigate(''); } }, '← Home'));
+            container.appendChild(nav);
+
+            //  Header
+            container.appendChild(h('h2', { style: 'margin-bottom: 6px;' }, '🧱  Banner Lego — Visual Query Builder'));
+            container.appendChild(h('p', { className: 'muted', style: 'margin-bottom: 14px;' },
+                'Snap blocks together to build a Banner SQL query. Each block knows the canonical join pattern and teaches you the "why" as you add it — think Scratch, for Banner schema. MVP: one working recipe (Student + Courses + Term); more coming.'));
+
+            //  Recipe buttons
+            var recipeRow = h('div', { className: 'builder-recipes' });
+            recipeRow.appendChild(h('span', { className: 'builder-recipes-label' }, 'Quick start:'));
+            Object.keys(BUILDER_RECIPES).forEach(function(k) {
+                var r = BUILDER_RECIPES[k];
+                var btn = h('button', {
+                    className: 'builder-recipe-btn' + (state.builder.recipe === k ? ' active' : ''),
+                    title: r.description,
+                    onclick: (function(kk){ return function(){ builderLoadRecipe(kk); }; })(k)
+                }, r.name);
+                recipeRow.appendChild(btn);
+            });
+            recipeRow.appendChild(h('button', { className: 'builder-clear-btn', onclick: builderClear }, 'Clear all'));
+            container.appendChild(recipeRow);
+            //  Description of currently loaded recipe
+            if (state.builder.recipe && BUILDER_RECIPES[state.builder.recipe]) {
+                var rDesc = h('div', { className: 'builder-recipe-desc' }, BUILDER_RECIPES[state.builder.recipe].description);
+                container.appendChild(rDesc);
+            }
+
+            //  Main 3-column layout
+            var grid = h('div', { className: 'builder-grid' });
+
+            //  ===== Left column: palette =====
+            var palette = h('div', { className: 'builder-palette' });
+            palette.appendChild(h('div', { className: 'builder-col-title' }, 'BLOCK PALETTE'));
+            var categories = ['Start with', 'Add related', 'Filter'];
+            categories.forEach(function(catName) {
+                var catWrap = h('div', { className: 'builder-palette-cat' });
+                catWrap.appendChild(h('div', { className: 'builder-palette-cat-title' }, catName.toUpperCase()));
+                Object.keys(BLOCK_CATALOG).forEach(function(id) {
+                    var cat = BLOCK_CATALOG[id];
+                    if (cat.category !== catName) return;
+                    var compatible = builderBlockCompatible(cat);
+                    var chip = h('div', { className: 'builder-pblock kind-' + cat.kind + (compatible ? '' : ' disabled'),
+                                          onclick: (function(bid, ok){ return function(){ if (ok) builderAddBlock(bid); }; })(id, compatible) });
+                    chip.appendChild(h('span', { className: 'builder-pblock-icon' }, cat.icon));
+                    var txt = h('div', { className: 'builder-pblock-txt' });
+                    txt.appendChild(h('div', { className: 'builder-pblock-name' }, cat.name));
+                    txt.appendChild(h('div', { className: 'builder-pblock-table' }, cat.table || ''));
+                    chip.appendChild(txt);
+                    if (!compatible) {
+                        chip.appendChild(h('span', { className: 'builder-pblock-lock', title: 'Requires: ' + (cat.requires || []).join(', ') }, '🔒'));
+                    }
+                    catWrap.appendChild(chip);
+                });
+                palette.appendChild(catWrap);
+            });
+            grid.appendChild(palette);
+
+            //  ===== Center column: canvas =====
+            var canvas = h('div', { className: 'builder-canvas' });
+            canvas.appendChild(h('div', { className: 'builder-col-title' }, 'YOUR QUERY'));
+            if (!state.builder.blocks.length) {
+                var empty = h('div', { className: 'builder-canvas-empty' });
+                empty.appendChild(h('div', { style: 'font-size: 42px; margin-bottom: 8px;' }, '🧱'));
+                empty.appendChild(h('div', { style: 'font-weight: 600; margin-bottom: 4px;' }, 'Empty canvas'));
+                empty.appendChild(h('div', { className: 'muted', style: 'font-size: 13px; max-width: 280px; margin: 0 auto; line-height: 1.5;' },
+                    'Pick a START block from the palette on the left, or click "Student + Courses + Term" above to load a ready-made example.'));
+                canvas.appendChild(empty);
+            } else {
+                state.builder.blocks.forEach(function(b, idx) {
+                    var cat = BLOCK_CATALOG[b.id];
+                    if (!cat) return;
+                    if (idx > 0) canvas.appendChild(h('div', { className: 'builder-connector' }, '↓'));
+                    var block = h('div', { className: 'builder-cblock kind-' + cat.kind });
+                    var head = h('div', { className: 'builder-cblock-head' });
+                    head.appendChild(h('span', { className: 'builder-cblock-icon' }, cat.icon));
+                    var heading = h('div', { className: 'builder-cblock-heading' });
+                    heading.appendChild(h('div', { className: 'builder-cblock-name' }, cat.name));
+                    if (cat.table) heading.appendChild(h('div', { className: 'builder-cblock-table' }, cat.table + (cat.alias ? ' ' + cat.alias : '')));
+                    head.appendChild(heading);
+                    var remove = h('button', { className: 'builder-cblock-remove', title: 'Remove', onclick: (function(i){ return function(e){ e.stopPropagation(); builderRemoveBlock(i); }; })(idx) }, '×');
+                    head.appendChild(remove);
+                    block.appendChild(head);
+                    block.appendChild(h('div', { className: 'builder-cblock-desc' }, cat.desc));
+                    //  Filter param input
+                    if (cat.kind === 'filter' && cat.param) {
+                        var pWrap = h('div', { className: 'builder-cblock-param' });
+                        pWrap.appendChild(h('label', {}, cat.param.label + ':'));
+                        var input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'builder-cblock-input';
+                        input.style.width = (cat.param.width || 120) + 'px';
+                        input.placeholder = cat.param.placeholder || '';
+                        input.value = (b.params && b.params[cat.param.key] != null) ? b.params[cat.param.key] : (cat.param.default || '');
+                        input.oninput = (function(i, key) { return function(e) {
+                            state.builder.blocks[i].params = state.builder.blocks[i].params || {};
+                            state.builder.blocks[i].params[key] = e.target.value;
+                            var pre = document.getElementById('builderSqlPre');
+                            if (pre) pre.innerHTML = highlightSql(generateBuilderSql());
+                        }; })(idx, cat.param.key);
+                        pWrap.appendChild(input);
+                        block.appendChild(pWrap);
+                    }
+                    canvas.appendChild(block);
+                });
+                //  Hint line
+                var hint = h('div', { className: 'builder-canvas-hint' }, 'Add more blocks from the palette on the left — only compatible ones are enabled.');
+                canvas.appendChild(hint);
+            }
+            grid.appendChild(canvas);
+
+            //  ===== Right column: SQL + explanation =====
+            var right = h('div', { className: 'builder-output' });
+            right.appendChild(h('div', { className: 'builder-col-title' }, 'GENERATED SQL'));
+            var sqlText = generateBuilderSql();
+            var sqlBox = h('div', { className: 'builder-sql-box' });
+            var pre = document.createElement('pre');
+            pre.id = 'builderSqlPre';
+            pre.className = 'intent-sql';
+            pre.innerHTML = highlightSql(sqlText);
+            sqlBox.appendChild(pre);
+            right.appendChild(sqlBox);
+
+            //  Actions
+            var actions = h('div', { className: 'builder-actions' });
+            var validateBtn = h('button', { className: 'intent-btn-primary' }, 'Open in SQL Explainer →');
+            validateBtn.onclick = function() {
+                state.sqlText = generateBuilderSql();
+                state.sqlResults = '';
+                navigate('sql');
+                setTimeout(function() { var b = document.getElementById('sqlExplainBtn'); if (b) b.click(); }, 80);
+            };
+            var copyBtn = h('button', { className: 'intent-btn-secondary' }, 'Copy SQL');
+            copyBtn.onclick = function() {
+                var sql = generateBuilderSql();
+                if (navigator.clipboard) navigator.clipboard.writeText(sql).then(function() {
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(function(){ copyBtn.textContent = 'Copy SQL'; }, 2000);
+                });
+            };
+            actions.appendChild(validateBtn);
+            actions.appendChild(copyBtn);
+            right.appendChild(actions);
+
+            //  Step-by-step explanation
+            var steps = generateBuilderExplanation();
+            if (steps.length) {
+                var expl = h('div', { className: 'builder-explain' });
+                expl.appendChild(h('div', { className: 'builder-explain-head' }, '📚  What this query does (block-by-block)'));
+                var list = document.createElement('ol');
+                list.className = 'builder-explain-list';
+                steps.forEach(function(s) {
+                    var li = document.createElement('li');
+                    var body = '<b>' + s.icon + ' ' + s.name + '</b> — ' + s.body;
+                    li.innerHTML = body;
+                    list.appendChild(li);
+                });
+                expl.appendChild(list);
+                right.appendChild(expl);
+            }
+
+            grid.appendChild(right);
+            container.appendChild(grid);
+            return container;
+        }
+
+        // ==================== SECURITY POSTURE SCORECARD ====================
+        var SCORECARD_METRICS = [
+            { key: 'dormant_accounts',         label: 'Dormant Accounts',      icon: '💤', sub: 'No logon in 180+ days',              report: 'SR001',
+              thresholds: [0, 20] },
+            { key: 'terminated_with_access',   label: 'Terminated w/ Access',  icon: '🚨', sub: 'Post-term employees still granted',   report: 'SR002',
+              thresholds: [0, 5] },
+            { key: 'super_users',              label: 'Super Users',           icon: '⚡', sub: 'Users with 5+ direct maintenance grants', report: 'SR008',
+              thresholds: [5, 15] },
+            { key: 'users_bypassing_classes',  label: 'Direct-Grant Bypass',   icon: '🛡️', sub: 'Users with 10+ direct object grants', report: 'SR004',
+              thresholds: [10, 30] },
+            { key: 'pii_broad_users',          label: 'PII Broad Access',      icon: '🔒', sub: '5+ sensitive-data objects reachable', report: 'SR011',
+              thresholds: [10, 30] },
+            { key: 'violations_30d',           label: 'Violations (30d)',      icon: '📛', sub: 'GURALOG entries last 30 days',        report: 'SR005',
+              thresholds: [50, 200] },
+            { key: 'unused_classes',           label: 'Unused Classes',        icon: '🗑️', sub: 'Classes with 0 active members',       report: 'SR006',
+              thresholds: [10, 30] },
+            { key: 'legacy_gurucls_rows',      label: 'Legacy GURUCLS',        icon: '🏚️', sub: 'Rows in the legacy user-class table', report: 'SR003',
+              thresholds: [0, 5000] },
+        ];
+        var SCORECARD_BASELINES = [
+            { key: 'total_accounts',         label: 'Total Accounts',       icon: '👤' },
+            { key: 'users_with_access',      label: 'Users With Access',    icon: '🔑' },
+            { key: 'total_effective_grants', label: 'Effective Grants',     icon: '🎟️' },
+            { key: 'access_changes_30d',     label: 'Changes Last 30d',     icon: '📝' },
+        ];
+        var SCORECARD_COL_ORDER = ['total_accounts','users_with_access','total_effective_grants',
+                                   'dormant_accounts','terminated_with_access','users_bypassing_classes',
+                                   'super_users','pii_broad_users','violations_30d','unused_classes',
+                                   'legacy_gurucls_rows','access_changes_30d','snapshot_taken_at'];
+
+        function scoreStatus(value, thresholds) {
+            if (value == null || isNaN(value)) return 'unknown';
+            if (value <= thresholds[0]) return 'green';
+            if (value <= thresholds[1]) return 'yellow';
+            return 'red';
+        }
+        function scoreLabel(status) {
+            return status === 'green' ? 'Healthy' :
+                   status === 'yellow' ? 'Watch' :
+                   status === 'red' ? 'Action needed' : '—';
+        }
+
+        function parseScorecardPaste(text) {
+            text = (text || '').trim();
+            if (!text) return null;
+            if (text.charAt(0) === '{') {
+                try { return JSON.parse(text); } catch(e) {}
+            }
+            var lines = text.split(/\r?\n/).filter(function(l){ return l.trim().length; });
+            if (!lines.length) return null;
+            var splitLine;
+            if (lines[0].indexOf('\t') !== -1) splitLine = function(l){ return l.split('\t').map(function(s){ return s.trim(); }); };
+            else if (lines[0].indexOf('|')  !== -1) splitLine = function(l){ return l.split('|').map(function(s){ return s.trim(); }); };
+            else if (lines[0].indexOf(',')  !== -1) splitLine = function(l){ return l.split(',').map(function(s){ return s.trim(); }); };
+            else splitLine = function(l){ return l.trim().split(/\s+/); };
+
+            //  Header + values layout
+            if (lines.length >= 2) {
+                var headers = splitLine(lines[0]).map(function(h){
+                    return h.toLowerCase().replace(/"/g,'').replace(/[^a-z0-9_]/g,'_').replace(/^_+|_+$/g,'');
+                });
+                //  Detect header row (non-numeric)
+                var isHeader = headers.some(function(x){ return x && isNaN(parseFloat(x)); });
+                if (isHeader) {
+                    var values = splitLine(lines[1]);
+                    var obj = {};
+                    headers.forEach(function(hh,i){ if (hh) obj[hh] = values[i]; });
+                    return obj;
+                }
+            }
+            //  Positional
+            var vals = splitLine(lines[0]);
+            var obj2 = {};
+            SCORECARD_COL_ORDER.forEach(function(k,i){ obj2[k] = vals[i]; });
+            return obj2;
+        }
+
+        function loadScorecardData() {
+            try { return JSON.parse(localStorage.getItem('scorecard_data') || 'null'); } catch(e) { return null; }
+        }
+        function saveScorecardData(data) {
+            try { localStorage.setItem('scorecard_data', JSON.stringify({ data: data, savedAt: new Date().toISOString() })); } catch(e) {}
+        }
+        function clearScorecardData() {
+            try { localStorage.removeItem('scorecard_data'); } catch(e) {}
+        }
+        function formatNumber(n) {
+            if (n == null || n === '' || isNaN(parseFloat(n))) return '—';
+            var num = parseFloat(n);
+            return num.toLocaleString('en-US');
+        }
+
+        function renderScorecard() {
+            var container = h('div', { className: 'container' });
+            var nav = h('div', { style: 'margin-bottom: 16px;' });
+            nav.appendChild(h('a', { className: 'back-link', onclick: function() { navigate(''); } }, '← Home'));
+            container.appendChild(nav);
+
+            //  Header
+            container.appendChild(h('h2', { style: 'margin-bottom: 6px;' }, '🛡️  Banner Security Posture Scorecard'));
+            container.appendChild(h('p', { className: 'muted', style: 'margin-bottom: 20px;' },
+                'Run SR014 in your database, paste the one-row result below, and this dashboard paints itself with traffic-light gauges calibrated to Banner audit norms. Everything is computed client-side and stored locally — nothing leaves your browser.'));
+
+            //  Load current data
+            var saved = loadScorecardData();
+            var data = saved ? saved.data : null;
+            var savedAt = saved ? saved.savedAt : null;
+
+            //  "How to" + SQL block
+            var sr014 = null;
+            for (var i = 0; i < REPORTS.length; i++) if (REPORTS[i].id === 'SR014') { sr014 = REPORTS[i]; break; }
+
+            var instr = h('div', { className: 'scorecard-instr' });
+            var instrHead = h('div', { className: 'scorecard-instr-head', style: 'cursor: pointer;', onclick: function() {
+                var body = document.getElementById('scorecard-instr-body');
+                if (body) body.classList.toggle('collapsed');
+            } }, '▸ How to populate this scorecard (click to expand)');
+            instr.appendChild(instrHead);
+            var instrBody = h('div', { className: 'scorecard-instr-body collapsed' });
+            instrBody.id = 'scorecard-instr-body';
+            instrBody.appendChild(h('ol', {}, [
+                h('li', {}, '1. Run the SR014 query below in Oracle SQL Developer, Argos, or any Banner-connected SQL tool.'),
+                h('li', {}, '2. Copy the entire result row (with or without the header row — the tool auto-detects).'),
+                h('li', {}, '3. Paste into the box below. Tab, pipe, or comma-separated all work. JSON output from API tools also works.'),
+                h('li', {}, '4. Gauges light up instantly. Data is persisted locally in your browser; click "Clear" to reset.'),
+            ]));
+            if (sr014) {
+                var sqlWrap = h('div', { className: 'intent-sql-wrap', style: 'margin-top: 12px;' });
+                var pre = document.createElement('pre');
+                pre.className = 'intent-sql';
+                pre.innerHTML = highlightSql(sr014.sql);
+                var copy = h('button', { className: 'intent-copy-btn' }, 'Copy');
+                copy.onclick = (function(sql, btn) {
+                    return function(e) { e.stopPropagation();
+                        if (navigator.clipboard) navigator.clipboard.writeText(sql).then(function() {
+                            btn.classList.add('copied'); btn.textContent = 'Copied!';
+                            setTimeout(function(){ btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 2000);
+                        });
+                    };
+                })(sr014.sql, copy);
+                sqlWrap.appendChild(pre);
+                sqlWrap.appendChild(copy);
+                instrBody.appendChild(sqlWrap);
+            }
+            instr.appendChild(instrBody);
+            container.appendChild(instr);
+
+            //  Paste zone
+            var paste = h('div', { className: 'scorecard-paste' });
+            var pasteLabel = h('div', { className: 'scorecard-paste-label' }, 'Paste your SR014 result row here:');
+            paste.appendChild(pasteLabel);
+            var ta = document.createElement('textarea');
+            ta.className = 'scorecard-paste-area';
+            ta.placeholder = 'e.g.  5234\t842\t418562\t127\t3\t42\t12\t18\t89\t34\t7582\t145\t2026-04-22 11:30\n\nOR with headers:\ntotal_accounts\tusers_with_access\tdormant_accounts\t...\n5234\t842\t127\t...\n\nOR as JSON:\n{"dormant_accounts": 127, "terminated_with_access": 3, ...}';
+            ta.rows = 4;
+            paste.appendChild(ta);
+            var pasteBtns = h('div', { className: 'scorecard-paste-btns' });
+            var applyBtn = h('button', { className: 'intent-btn-primary' }, 'Update dashboard');
+            var clearBtn = h('button', { className: 'intent-btn-secondary' }, 'Clear data');
+            pasteBtns.appendChild(applyBtn);
+            pasteBtns.appendChild(clearBtn);
+            paste.appendChild(pasteBtns);
+            var pasteError = h('div', { className: 'scorecard-paste-error', style: 'display: none;' });
+            paste.appendChild(pasteError);
+            container.appendChild(paste);
+
+            //  Gauges grid
+            var summary = h('div', { className: 'scorecard-summary' });
+            if (data) {
+                var reds = 0, yellows = 0, greens = 0;
+                SCORECARD_METRICS.forEach(function(m) {
+                    var v = parseFloat(data[m.key]);
+                    var s = scoreStatus(v, m.thresholds);
+                    if (s === 'red') reds++; else if (s === 'yellow') yellows++; else if (s === 'green') greens++;
+                });
+                var overall = reds > 0 ? 'red' : (yellows > 0 ? 'yellow' : 'green');
+                var overallLabel = reds > 0 ? 'Action needed on ' + reds + ' metric' + (reds>1?'s':'') :
+                                   yellows > 0 ? 'Watch ' + yellows + ' metric' + (yellows>1?'s':'') :
+                                   'All healthy';
+                summary.className = 'scorecard-summary status-' + overall;
+                summary.appendChild(h('div', { className: 'scorecard-summary-label' }, 'Overall posture'));
+                summary.appendChild(h('div', { className: 'scorecard-summary-value' }, overallLabel));
+                var metaLine = 'Snapshot: ' + (data.snapshot_taken_at || '—');
+                if (savedAt) metaLine += '  ·  Pasted: ' + savedAt.slice(0,16).replace('T',' ');
+                summary.appendChild(h('div', { className: 'scorecard-summary-meta' }, metaLine));
+                var dotRow = h('div', { className: 'scorecard-summary-dots' });
+                dotRow.appendChild(h('span', { className: 'scorecard-dot green' },  greens  + ' green'));
+                dotRow.appendChild(h('span', { className: 'scorecard-dot yellow' }, yellows + ' yellow'));
+                dotRow.appendChild(h('span', { className: 'scorecard-dot red' },    reds    + ' red'));
+                summary.appendChild(dotRow);
+                container.appendChild(summary);
+            } else {
+                summary.className = 'scorecard-summary status-empty';
+                summary.appendChild(h('div', { className: 'scorecard-summary-label' }, 'No data yet'));
+                summary.appendChild(h('div', { className: 'scorecard-summary-value' }, 'Paste SR014 output above to populate'));
+                container.appendChild(summary);
+            }
+
+            var grid = h('div', { className: 'scorecard-grid' });
+            SCORECARD_METRICS.forEach(function(m) {
+                var v = data ? parseFloat(data[m.key]) : NaN;
+                var s = scoreStatus(v, m.thresholds);
+                var card = h('div', { className: 'scorecard-gauge status-' + s, onclick: (function(rid) { return function() { navigate('report/' + rid); }; })(m.report) });
+                var top = h('div', { className: 'scorecard-gauge-top' });
+                top.appendChild(h('span', { className: 'scorecard-gauge-icon' }, m.icon));
+                top.appendChild(h('span', { className: 'scorecard-gauge-status' }, scoreLabel(s)));
+                card.appendChild(top);
+                card.appendChild(h('div', { className: 'scorecard-gauge-value' }, formatNumber(data ? data[m.key] : null)));
+                card.appendChild(h('div', { className: 'scorecard-gauge-label' }, m.label));
+                card.appendChild(h('div', { className: 'scorecard-gauge-sub' }, m.sub));
+                var foot = h('div', { className: 'scorecard-gauge-foot' });
+                foot.appendChild(h('span', { className: 'scorecard-gauge-threshold' },
+                    'green ≤ ' + m.thresholds[0] + '  ·  watch ≤ ' + m.thresholds[1]));
+                foot.appendChild(h('span', { className: 'scorecard-gauge-report' }, m.report + ' →'));
+                card.appendChild(foot);
+                grid.appendChild(card);
+            });
+            container.appendChild(grid);
+
+            //  Baseline strip
+            var base = h('div', { className: 'scorecard-baseline' });
+            base.appendChild(h('div', { className: 'scorecard-baseline-label' }, 'Baselines'));
+            var baseRow = h('div', { className: 'scorecard-baseline-row' });
+            SCORECARD_BASELINES.forEach(function(b) {
+                var cell = h('div', { className: 'scorecard-baseline-cell' });
+                cell.appendChild(h('span', { className: 'scorecard-baseline-icon' }, b.icon));
+                cell.appendChild(h('span', { className: 'scorecard-baseline-value' }, formatNumber(data ? data[b.key] : null)));
+                cell.appendChild(h('span', { className: 'scorecard-baseline-name' }, b.label));
+                baseRow.appendChild(cell);
+            });
+            base.appendChild(baseRow);
+            container.appendChild(base);
+
+            //  Wire up buttons
+            applyBtn.onclick = function() {
+                pasteError.style.display = 'none';
+                var parsed = parseScorecardPaste(ta.value);
+                if (!parsed) { pasteError.textContent = 'Could not parse that input. Try tab-delimited, pipe-delimited, CSV, or a JSON object.'; pasteError.style.display = 'block'; return; }
+                //  Sanity-check at least one expected key parsed as a number
+                var expected = ['dormant_accounts','terminated_with_access','super_users','users_bypassing_classes','pii_broad_users','violations_30d','unused_classes','legacy_gurucls_rows'];
+                var hits = 0;
+                expected.forEach(function(k){ if (parsed[k] != null && !isNaN(parseFloat(parsed[k]))) hits++; });
+                if (hits < 3) {
+                    pasteError.textContent = 'Parsed, but only ' + hits + ' expected metric(s) matched. Check column order or include headers. Expected column order is above in the SQL.';
+                    pasteError.style.display = 'block'; return;
+                }
+                saveScorecardData(parsed);
+                render();
+            };
+            clearBtn.onclick = function() { if (confirm('Clear the scorecard data? This only wipes your browser storage — no database changes.')) { clearScorecardData(); ta.value = ''; render(); } };
+
+            return container;
+        }
+
         function renderReportsList() {
             var container = h('div', { className: 'container' });
             var nav = h('div', { style: 'margin-bottom: 16px;' });
@@ -3131,6 +4742,7 @@
 
         // ==================== ROUTER ====================
         function navigate(path) { window.location.hash = '#/' + path; }
+        window.navigate = navigate;  //  expose for inline onclick handlers (e.g. logo in the HTML template)
 
         function parseRoute() {
             var hash = window.location.hash.slice(2) || '';
@@ -3146,6 +4758,10 @@
             } else if (parts[0] === 'report' && parts[1]) {
                 state.view = 'report';
                 state.reportId = decodeURIComponent(parts[1]);
+            } else if (parts[0] === 'scorecard') {
+                state.view = 'scorecard';
+            } else if (parts[0] === 'builder') {
+                state.view = 'builder';
             } else if (parts[0] === 'search' && parts[1]) {
                 var newQuery = decodeURIComponent(parts[1]);
                 var queryChanged = newQuery !== state.query;
@@ -3156,7 +4772,10 @@
                     state.activeTerms = []; state.disabledTerms = new Set();
                     state.customTerms = []; state.refineQuery = '';
                 }
-                document.getElementById('searchInput').value = state.query;
+                var si = document.getElementById('searchInput');
+                si.value = state.query;
+                var sc = document.getElementById('searchClear');
+                if (sc) sc.classList.toggle('visible', state.query.length > 0);
             } else {
                 state.view = 'dashboard'; state.page = 1;
             }
@@ -3172,6 +4791,8 @@
                 case 'sql': content = renderSqlExplainer(); break;
                 case 'reports': content = renderReportsList(); break;
                 case 'report': content = renderReportDetail(); break;
+                case 'scorecard': content = renderScorecard(); break;
+                case 'builder': content = renderBuilder(); break;
                 default: content = renderDashboard();
             }
             if (content) app.appendChild(content);
@@ -3182,6 +4803,51 @@
                 hint.textContent = 'Press / to search \u00b7 Understands Banner abbreviations';
             }
         }
+
+        // ==================== THEME TOGGLE ====================
+        (function() {
+            var root = document.documentElement;
+            var btn = document.getElementById('themeToggle');
+            if (!btn) return;
+            var mm = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+
+            function applyTheme(pref) {
+                root.setAttribute('data-theme', pref);
+                var systemDark = mm && mm.matches;
+                var shouldDark = (pref === 'dark') || (pref === 'auto' && systemDark);
+                root.classList.toggle('dark', shouldDark);
+                btn.setAttribute('data-label',
+                    pref === 'auto'  ? 'Auto (system)' :
+                    pref === 'light' ? 'Light'         : 'Dark');
+                btn.classList.add('show-label');
+                clearTimeout(btn._labelT);
+                btn._labelT = setTimeout(function() { btn.classList.remove('show-label'); }, 1500);
+            }
+
+            btn.addEventListener('click', function() {
+                var cur = root.getAttribute('data-theme') || 'auto';
+                var next = cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto';
+                try { localStorage.setItem('theme', next); } catch(e) {}
+                applyTheme(next);
+            });
+
+            //  React to system changes — only when in auto mode
+            if (mm && mm.addEventListener) {
+                mm.addEventListener('change', function() {
+                    if ((root.getAttribute('data-theme') || 'auto') === 'auto') {
+                        root.classList.toggle('dark', mm.matches);
+                    }
+                });
+            }
+
+            //  Keyboard shortcut: Ctrl/Cmd + Shift + L cycles the theme
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+                    e.preventDefault();
+                    btn.click();
+                }
+            });
+        })();
 
         // ==================== EVENTS ====================
         var debounceTimer;
@@ -4115,6 +5781,8 @@
 
             if (!ql) {
                 //  Default suggestions when palette is empty — tool discovery
+                results.push({ group: 'Start here', type: 'a', title: 'Banner Lego — Query Builder', sub: 'Snap blocks to build Banner SQL (Scratch-style)', hint: '#', action: function() { navigate('builder'); } });
+                results.push({ group: 'Start here', type: 'a', title: 'Security Posture Scorecard', sub: '8 traffic-light gauges — paste SR014 row to populate', hint: '!', action: function() { navigate('scorecard'); } });
                 results.push({ group: 'Start here', type: 'a', title: 'Ready-to-run Reports', sub: REPORTS.length + ' security & access reports', hint: '~', action: function() { navigate('reports'); } });
                 results.push({ group: 'Start here', type: 'a', title: 'SQL Explainer', sub: 'Paste any Banner SQL to validate', hint: '`', action: function() { navigate('sql'); } });
                 results.push({ group: 'Start here', type: 'q', title: 'Try: "Banner Student security classes"', sub: 'Ask Banner — auto-generates SQL', hint: '', action: function() { document.getElementById('searchInput').value = 'Banner Student security classes'; navigate('search/' + encodeURIComponent('Banner Student security classes')); } });
@@ -4362,11 +6030,19 @@
             el.addEventListener('click', function(e) {
                 e.preventDefault();
                 var q = el.getAttribute('data-q');
-                searchInput.value = q;
-                updateClearBtn();
-                searchInput.focus();
-                state.page = 1;
-                navigate('search/' + encodeURIComponent(q));
+                //  Sentinel values route to specific views instead of search
+                if (q === '__scorecard__') { navigate('scorecard'); }
+                else if (q === '__builder__') { navigate('builder'); }
+                else if (/^__report:([A-Z0-9]+)__$/.test(q)) {
+                    navigate('report/' + q.replace(/^__report:([A-Z0-9]+)__$/, '$1'));
+                }
+                else {
+                    searchInput.value = q;
+                    updateClearBtn();
+                    searchInput.focus();
+                    state.page = 1;
+                    navigate('search/' + encodeURIComponent(q));
+                }
                 if (window.innerWidth <= 768) {
                     var panel = document.getElementById('helpPanel');
                     if (panel.classList.contains('open')) toggleHelpPanel();

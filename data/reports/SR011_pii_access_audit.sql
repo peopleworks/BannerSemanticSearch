@@ -13,7 +13,7 @@ SELECT
     si.spriden_first_name || ' ' || si.spriden_last_name AS full_name,
     pe.pebempl_term_date                                 AS employee_term_date,
     COUNT(DISTINCT gu.guvuacc_object)                    AS pii_object_count,
-    LISTAGG(DISTINCT gu.guvuacc_object, ', ')
+    LISTAGG(DISTINCT gu.guvuacc_object, ', ' ON OVERFLOW TRUNCATE '...' WITH COUNT)
         WITHIN GROUP (ORDER BY gu.guvuacc_object)        AS pii_objects,
     MAX(CASE WHEN gu.guvuacc_role LIKE '%\_M' ESCAPE '\' THEN 'Y' ELSE 'N' END) AS can_modify_pii
 FROM        bansecr.guvuacc gu
