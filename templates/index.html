@@ -565,6 +565,77 @@
         }
         @keyframes aiBlink { 50% { opacity: 0.25; } }
 
+        /* AI Suggest-fix button (lives in the Explainer button row) */
+        .ai-suggest-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            color: white; border: none;
+            padding: 10px 20px; border-radius: var(--radius);
+            font-weight: 700; font-size: 14px; cursor: pointer;
+            font-family: inherit;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .ai-suggest-btn:hover { opacity: 0.92; }
+        .ai-suggest-btn:disabled { opacity: 0.55; cursor: wait; }
+
+        /* Suggest-fix output panel (sits between editor and validation) */
+        .ai-suggest-panel {
+            margin: 14px 0; padding: 14px 16px;
+            background: var(--card-bg); border: 1px solid rgba(124,58,237,0.30);
+            border-left: 4px solid #7c3aed;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+        .ai-suggest-head {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; margin-bottom: 10px;
+        }
+        .ai-suggest-title { font-weight: 700; font-size: 14px; color: var(--navy-light); }
+        .ai-suggest-model { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+        .ai-suggest-streaming { font-size: 11px; color: #6d28d9; font-weight: 700; }
+        html.dark .ai-suggest-streaming { color: #c4b5fd; }
+        .ai-suggest-explanation {
+            margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--text);
+            background: rgba(124,58,237,0.04);
+            border-radius: 6px; padding: 8px 12px;
+            white-space: pre-wrap;
+        }
+        .ai-suggest-actions {
+            display: flex; gap: 8px; margin-top: 10px;
+        }
+        .ai-suggest-actions .primary {
+            background: #10b981; color: white; border: none;
+            padding: 6px 14px; border-radius: 6px;
+            font-weight: 700; font-size: 12px; cursor: pointer;
+            font-family: inherit;
+        }
+        .ai-suggest-actions .primary:hover { background: #059669; }
+        .ai-suggest-actions .secondary {
+            background: transparent; color: var(--text-muted);
+            border: 1px solid var(--border);
+            padding: 6px 14px; border-radius: 6px;
+            font-weight: 600; font-size: 12px; cursor: pointer;
+            font-family: inherit;
+        }
+        .ai-suggest-actions .secondary:hover { background: var(--hover); color: var(--text); }
+
+        /* Unified diff view */
+        .ai-diff {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px; line-height: 1.5;
+            background: #1e293b; color: #e2e8f0;
+            border-radius: 6px; padding: 10px 0;
+            max-height: 420px; overflow: auto;
+            margin: 0;
+        }
+        html.dark .ai-diff { background: #0f172a; }
+        .ai-diff-line { padding: 0 12px; white-space: pre-wrap; word-break: break-all; }
+        .ai-diff-line.same   { color: #94a3b8; }
+        .ai-diff-line.add    { background: rgba(16,185,129,0.20); color: #d1fae5; }
+        .ai-diff-line.add::before    { content: '+ '; color: #6ee7b7; }
+        .ai-diff-line.remove { background: rgba(239,68,68,0.20); color: #fecaca; }
+        .ai-diff-line.remove::before { content: '- '; color: #fca5a5; }
+        .ai-diff-line.same::before   { content: '  '; }
+
         /* Editor-pulse animation when "jump to" fires */
         @keyframes editorPulse {
             0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
@@ -6905,6 +6976,74 @@
         window.redactSql = redactSql;
         window.aiTestConnection = aiTestConnection;
 
+        //  ============== Line-level diff (LCS-based) ==============
+        //  Produces an array of {type, text} entries where type is 'same' /
+        //  'add' / 'remove'. Used by the Suggest-fix panel to render a
+        //  unified diff between the editor's SQL and the AI's rewrite.
+        function _lcs(a, b) {
+            var m = a.length, n = b.length;
+            //  dp[i][j] = length of LCS of a[0..i] and b[0..j]
+            var dp = [];
+            for (var i = 0; i <= m; i++) {
+                var row = new Array(n + 1);
+                row[0] = 0;
+                if (i === 0) for (var j = 0; j <= n; j++) row[j] = 0;
+                dp.push(row);
+            }
+            for (var i2 = 1; i2 <= m; i2++) {
+                for (var j2 = 1; j2 <= n; j2++) {
+                    if (a[i2 - 1] === b[j2 - 1]) dp[i2][j2] = dp[i2 - 1][j2 - 1] + 1;
+                    else dp[i2][j2] = Math.max(dp[i2 - 1][j2], dp[i2][j2 - 1]);
+                }
+            }
+            //  Walk back to reconstruct the alignment
+            var diff = [];
+            var i3 = m, j3 = n;
+            while (i3 > 0 && j3 > 0) {
+                if (a[i3 - 1] === b[j3 - 1]) {
+                    diff.unshift({ type: 'same', text: a[i3 - 1] });
+                    i3--; j3--;
+                } else if (dp[i3 - 1][j3] >= dp[i3][j3 - 1]) {
+                    diff.unshift({ type: 'remove', text: a[i3 - 1] });
+                    i3--;
+                } else {
+                    diff.unshift({ type: 'add', text: b[j3 - 1] });
+                    j3--;
+                }
+            }
+            while (i3 > 0) { diff.unshift({ type: 'remove', text: a[i3 - 1] }); i3--; }
+            while (j3 > 0) { diff.unshift({ type: 'add',    text: b[j3 - 1] }); j3--; }
+            return diff;
+        }
+        function diffLines(oldText, newText) {
+            return _lcs(oldText.split('\n'), newText.split('\n'));
+        }
+        window.diffLines = diffLines;   // for smoke tests
+
+        //  Extract a fenced SQL block from a model response. The system prompt
+        //  in aiSuggestFix() tells the model to wrap the rewritten SQL in a
+        //  ```sql ... ``` fence; this parser is defensive about variations.
+        function extractFencedSql(text) {
+            //  Prefer ```sql fence, fall back to bare ``` fence, then to first
+            //  contiguous block of SQL-looking lines if no fence at all.
+            var m = text.match(/```sql\s*([\s\S]*?)```/i);
+            if (m) return m[1].trim();
+            m = text.match(/```\s*([\s\S]*?)```/);
+            if (m) return m[1].trim();
+            //  Heuristic: take everything up to the first blank line if it
+            //  starts with SELECT / WITH / INSERT / UPDATE / DELETE / MERGE
+            var lines = text.split('\n');
+            for (var i = 0; i < lines.length; i++) {
+                if (/^\s*(?:SELECT|WITH|INSERT|UPDATE|DELETE|MERGE)\b/i.test(lines[i])) {
+                    var end = i;
+                    while (end < lines.length && lines[end].trim() !== '') end++;
+                    return lines.slice(i, end).join('\n').trim();
+                }
+            }
+            return '';
+        }
+        window.extractFencedSql = extractFencedSql;
+
         function renderSettingsPage() {
             var container = h('div', { className: 'settings-container' });
 
@@ -7492,14 +7631,31 @@
             container.appendChild(editor);
 
             // Button row
-            var btnRow = h('div', { style: 'margin-top: 12px; display: flex; gap: 12px; align-items: center;' });
+            var btnRow = h('div', { style: 'margin-top: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;' });
             var explainBtn = h('button', { className: 'sql-explain-btn', id: 'sqlExplainBtn' }, 'Explain & Validate');
             var clearBtn = h('button', {
                 style: 'background: transparent; border: 1px solid var(--border); padding: 10px 20px; border-radius: var(--radius); cursor: pointer; color: var(--text-muted);'
             }, 'Clear');
             btnRow.appendChild(explainBtn);
             btnRow.appendChild(clearBtn);
+            //  AI: "💡 Suggest fix" — only rendered when AI is enabled in Settings.
+            //  Click sends the full SQL + all current validation findings to the
+            //  provider, parses the rewritten SQL from a code fence in the reply,
+            //  and shows an LCS-based unified diff with Apply / Discard buttons.
+            if (getAiEnabled()) {
+                var suggestBtn = h('button', { className: 'ai-suggest-btn', id: 'aiSuggestBtn' }, '💡 Suggest fix');
+                suggestBtn.onclick = function() {
+                    var sqlNow = document.getElementById('sqlInput').value.trim();
+                    if (!sqlNow) return;
+                    _aiSuggestFix(sqlNow, suggestBtn);
+                };
+                btnRow.appendChild(suggestBtn);
+            }
             container.appendChild(btnRow);
+
+            //  Slot for the Suggest-fix panel (sits above history + results)
+            var suggestSlot = h('div', { id: 'aiSuggestSlot' });
+            container.appendChild(suggestSlot);
 
             //  Recent SQL history (collapsible — only renders if there are entries)
             container.appendChild(renderSqlHistoryPanel());
@@ -7556,8 +7712,145 @@
                 textarea.value = '';
                 renderSqlHighlight();
                 document.getElementById('sqlResults').innerHTML = '';
+                var slot = document.getElementById('aiSuggestSlot');
+                if (slot) slot.innerHTML = '';
                 state.sqlText = ''; state.sqlResults = '';
             });
+
+            //  Orchestrates the Suggest-fix flow: builds the prompt from current
+            //  SQL + validation findings, streams the AI response, parses the
+            //  rewritten SQL from the fenced code block, renders an LCS diff, and
+            //  offers Apply / Discard. Defined inside renderSqlExplainer so it
+            //  closes over textarea + renderSqlHighlight.
+            function _aiSuggestFix(originalSql, btn) {
+                var slot = document.getElementById('aiSuggestSlot');
+                if (!slot) return;
+                slot.innerHTML = '';
+
+                btn.disabled = true;
+                var origLabel = btn.textContent;
+                btn.textContent = '⏳ Suggesting…';
+
+                //  Re-run validation so the model has the same context the user sees
+                var parsedNow = parseSql(originalSql);
+                var validationNow = validateSql(parsedNow, originalSql);
+                var s = loadAiSettings();
+
+                //  Build the prompt: SYSTEM tells the model what to output, USER
+                //  carries the SQL (redacted) + each finding + table descriptions.
+                var redactedSql = redactSql(originalSql, s.redaction);
+                var findings = [];
+                validationNow.errors.forEach(function(e)   { findings.push('[ERROR] '   + e.msg + (e.suggestion ? ' — ' + e.suggestion : '')); });
+                validationNow.warnings.forEach(function(w) { findings.push('[WARN]  '   + w.msg + (w.suggestion ? ' — ' + w.suggestion : '')); });
+                (validationNow.dialectHints || []).forEach(function(d) {
+                    findings.push('[DIALECT] ' + d.msg + (d.suggestion ? ' — ' + d.suggestion : ''));
+                });
+
+                var tableLines = [];
+                var seen = {};
+                (parsedNow.tables || []).slice(0, 8).forEach(function(t) {
+                    if (seen[t]) return;
+                    seen[t] = true;
+                    var info = SCHEMA.tables[t];
+                    if (info) tableLines.push('- ' + t + ': ' + (info.d || '').slice(0, 120));
+                });
+
+                var systemPrompt =
+                    "You are an Oracle DBA specializing in Ellucian Banner. The user pasted SQL " +
+                    "into a validator and got findings. Rewrite the SQL to address ALL findings, " +
+                    "preserving the original intent and column projection order. Output format " +
+                    "(strict, no preamble):\n\n" +
+                    "```sql\n<rewritten SQL>\n```\n\n" +
+                    "<one line per change you made, starting with '•'>";
+
+                var userMessage =
+                    "Original SQL:\n```sql\n" + redactedSql + "\n```\n\n" +
+                    "Validator findings (" + findings.length + "):\n" +
+                    (findings.length ? findings.join('\n') : '(none — the SQL looks clean; if there is no improvement to make, return the original SQL unchanged with one line: "• No changes needed.")') +
+                    (tableLines.length ? "\n\nTables in this query:\n" + tableLines.join('\n') : '') +
+                    "\n\nRewrite the SQL and list the changes.";
+
+                //  Render the panel skeleton
+                var panel = h('div', { className: 'ai-suggest-panel' });
+                var head = h('div', { className: 'ai-suggest-head' });
+                head.appendChild(h('div', { className: 'ai-suggest-title' }, '💡 Suggested fix'));
+                var modelEl = h('div', { className: 'ai-suggest-model' });
+                modelEl.appendChild(document.createTextNode(
+                    (AI_CATALOG[s.provider] ? AI_CATALOG[s.provider].label.split(' ')[0] : s.provider) +
+                    ' · ' + s.providers[s.provider].model
+                ));
+                modelEl.appendChild(h('span', { className: 'ai-suggest-streaming' }, ' · streaming…'));
+                head.appendChild(modelEl);
+                panel.appendChild(head);
+                var explainEl = h('div', { className: 'ai-suggest-explanation' }, 'Waiting for the model…');
+                panel.appendChild(explainEl);
+                var diffSlot = h('div', {});
+                panel.appendChild(diffSlot);
+                slot.appendChild(panel);
+
+                var fullText = '';
+                aiCall({
+                    system: systemPrompt,
+                    messages: [{ role: 'user', content: userMessage }],
+                    onChunk: function(delta) {
+                        fullText += delta;
+                        explainEl.textContent = fullText;
+                    },
+                    onDone: function() {
+                        var suggested = extractFencedSql(fullText);
+                        if (!suggested) {
+                            //  Could not parse a fenced block — show the raw reply and stop
+                            explainEl.textContent = fullText;
+                            btn.disabled = false;
+                            btn.textContent = origLabel;
+                            return;
+                        }
+
+                        //  Replace the streamed text with the explanation portion only
+                        //  (everything after the closing ```)
+                        var afterFence = fullText.split('```');
+                        var explanation = '';
+                        if (afterFence.length >= 3) {
+                            explanation = afterFence.slice(2).join('```').trim();
+                        }
+                        explainEl.textContent = explanation || '(no explanation supplied)';
+
+                        //  Render diff
+                        var dl = diffLines(originalSql, suggested);
+                        var diffPre = h('pre', { className: 'ai-diff' });
+                        dl.forEach(function(d) {
+                            var line = h('div', { className: 'ai-diff-line ' + d.type }, d.text || ' ');
+                            diffPre.appendChild(line);
+                        });
+                        diffSlot.appendChild(diffPre);
+
+                        //  Apply / Discard
+                        var actions = h('div', { className: 'ai-suggest-actions' });
+                        var apply = h('button', { className: 'primary' }, '✓ Replace editor with suggestion');
+                        apply.onclick = function() {
+                            textarea.value = suggested;
+                            renderSqlHighlight();
+                            //  Auto re-validate so the user sees the impact immediately
+                            document.getElementById('sqlExplainBtn').click();
+                            slot.innerHTML = '';
+                        };
+                        var discard = h('button', { className: 'secondary' }, 'Discard');
+                        discard.onclick = function() { slot.innerHTML = ''; };
+                        actions.appendChild(apply);
+                        actions.appendChild(discard);
+                        diffSlot.appendChild(actions);
+
+                        btn.disabled = false;
+                        btn.textContent = origLabel;
+                    },
+                    onError: function(err) {
+                        explainEl.textContent = '⚠ ' + (err.message || String(err));
+                        panel.style.borderLeftColor = '#ef4444';
+                        btn.disabled = false;
+                        btn.textContent = origLabel;
+                    }
+                });
+            }
 
             return container;
         }
