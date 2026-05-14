@@ -7745,6 +7745,108 @@
         //  where `type` drives the colored badge (Webinar / Recording / Hub /
         //  Conference / Doc / Product / Community).
 
+        var RESOURCES_BANNER = [
+            {
+                title: 'Get to Know Banner — Webinar Series',
+                host: 'Ellucian',
+                type: 'webinar',
+                url: 'https://www.ellucian.com/register-webinar-banner-series',
+                desc: 'Ongoing webinar series with Ellucian Services consultants, Customer Support, and Product teams. Each session demos functionality + Q&A. Great onboarding for new Banner admins.',
+                tags: ['onboarding', 'official', 'series']
+            },
+            {
+                title: 'Ellucian Customer Center',
+                host: 'Ellucian',
+                type: 'hub',
+                url: 'https://www.ellucian.com/customer-center',
+                desc: 'The hub for documentation, knowledge articles, support cases, downloads, and the community. Login required (institutional account). The primary destination for any Banner DBA / functional analyst.',
+                tags: ['hub', 'documentation', 'support']
+            },
+            {
+                title: 'Ellucian Training Portal',
+                host: 'Ellucian Training',
+                type: 'hub',
+                url: 'https://training.ellucian.com/learn',
+                desc: 'Self-paced courses + instructor-led workshops covering Banner Student, Finance, HR, Financial Aid, security, and integrations. Some content is free, some is part of paid services.',
+                tags: ['training', 'self-paced', 'courses']
+            },
+            {
+                title: 'Ellucian Success Services — Training',
+                host: 'Ellucian',
+                type: 'doc',
+                url: 'https://www.ellucian.com/services/success-services/training',
+                desc: 'Overview of Ellucian\'s formal training tracks (Banner functional, technical, security). Useful for budgeting + requesting institutional training cohorts.',
+                tags: ['training', 'services', 'enterprise']
+            },
+            {
+                title: 'Ellucian Live 2026 — April 19–22, Denver',
+                host: 'Ellucian',
+                type: 'conference',
+                url: 'https://elive.ellucian.com/flow/ellucian/elive26/home/page/ellucianlive',
+                desc: 'The flagship Ellucian conference. 375+ sessions, 225+ customer speakers, 150+ institutions. Banner SaaS migration tracks, security tracks, integration tracks. Recordings available to attendees post-event.',
+                tags: ['conference', 'annual', 'in-person', 'recordings']
+            },
+            {
+                title: 'Ellucian Europe Regional Conference 2026',
+                host: 'Ellucian',
+                type: 'conference',
+                url: 'https://www.ellucian.com/erc-26',
+                desc: 'European counterpart to Ellucian Live — sessions and networking for institutions on the non-US side of the SaaS migration path (typically Oracle-target rather than PostgreSQL).',
+                tags: ['conference', 'europe', 'oracle']
+            }
+        ];
+
+        var RESOURCES_COMMUNITY = [
+            {
+                title: 'Alabama Banner Users Group (ALBUG)',
+                host: 'ALBUG',
+                type: 'community',
+                url: 'https://albug.org/',
+                desc: 'Regional Banner user group covering Alabama. Annual conference each November at Renaissance Shoals Resort. Sessions span functional, technical, and security tracks.',
+                tags: ['regional', 'alabama', 'annual']
+            },
+            {
+                title: 'ALBUG 2026 Fall Conference — Nov 11–13',
+                host: 'ALBUG',
+                type: 'conference',
+                url: 'https://albug.org/2026-fall-conference/',
+                desc: 'Three-day annual gathering at Florence, AL. Customer-led sessions on Banner functional, technical, and security topics. Open to non-Alabama institutions.',
+                tags: ['conference', '2026', 'november']
+            },
+            {
+                title: 'Florida Banner User Group (FLBUG)',
+                host: 'FLBUG',
+                type: 'community',
+                url: 'https://flbug.org/',
+                desc: 'One of the most active US regional Banner user groups. Annual conference + monthly sessions. Strong functional + reporting focus.',
+                tags: ['regional', 'florida', 'monthly-sessions']
+            },
+            {
+                title: 'Pennsylvania Banner Users Group (PABUG)',
+                host: 'PABUG',
+                type: 'community',
+                url: 'https://pabug.org/',
+                desc: 'PABUG runs an annual conference in November (next: Nov 15–17, 2026). Strong technical-track presence — Argos, BANSECR, integrations, performance.',
+                tags: ['regional', 'pennsylvania', 'technical']
+            },
+            {
+                title: 'Michigan Banner Users Group (BUGMI)',
+                host: 'BUGMI',
+                type: 'community',
+                url: 'https://www.bugmi.org/',
+                desc: 'Michigan-area Banner community. Workshops, networking, and shared SQL libraries among member institutions.',
+                tags: ['regional', 'michigan']
+            },
+            {
+                title: 'Upper Midwest Banner Users\' Group (UMBUG)',
+                host: 'UMBUG',
+                type: 'community',
+                url: 'https://www.umbug.org/',
+                desc: 'Multi-state regional group (Minnesota, Iowa, Wisconsin, Dakotas). Annual conference + virtual SIGs (Special Interest Groups) on Argos, security, integrations.',
+                tags: ['regional', 'midwest', 'SIGs']
+            }
+        ];
+
         var RESOURCES_ARGOS = [
             {
                 title: 'Argos On-Demand Webinar Library',
@@ -7901,6 +8003,40 @@
             });
             argosSec.appendChild(argosGrid);
             container.appendChild(argosSec);
+
+            //  Banner section — official Ellucian resources
+            var bannerSec = h('div', { className: 'resources-section' });
+            var bannerHead = h('h3', {});
+            bannerHead.appendChild(h('span', {}, '🏛 Ellucian Banner'));
+            bannerHead.appendChild(h('span', { className: 'count' }, RESOURCES_BANNER.length + ' resources'));
+            bannerSec.appendChild(bannerHead);
+            bannerSec.appendChild(h('div', { className: 'lead' },
+                'Official Ellucian training, webinars, and conferences. Most resources here are free; ' +
+                'Customer Center + Training Portal need institutional credentials. Ellucian Live is the ' +
+                'annual flagship — biggest concentration of Banner sessions in one place.'));
+            var bannerGrid = h('div', { className: 'resource-grid' });
+            RESOURCES_BANNER.forEach(function(r) {
+                bannerGrid.appendChild(_resourceCard(r, 'banner'));
+            });
+            bannerSec.appendChild(bannerGrid);
+            container.appendChild(bannerSec);
+
+            //  Community section — regional Banner User Groups
+            var commSec = h('div', { className: 'resources-section' });
+            var commHead = h('h3', {});
+            commHead.appendChild(h('span', {}, '🤝 Community — Regional Banner User Groups'));
+            commHead.appendChild(h('span', { className: 'count' }, RESOURCES_COMMUNITY.length + ' resources'));
+            commSec.appendChild(commHead);
+            commSec.appendChild(h('div', { className: 'lead' },
+                'Banner User Groups (BUGs) are the heart of the community. Most run annual conferences ' +
+                'with customer-led sessions on real-world implementations. Often more practical than ' +
+                'vendor-led training because peers share the actual gotchas they hit in production.'));
+            var commGrid = h('div', { className: 'resource-grid' });
+            RESOURCES_COMMUNITY.forEach(function(r) {
+                commGrid.appendChild(_resourceCard(r, 'community'));
+            });
+            commSec.appendChild(commGrid);
+            container.appendChild(commSec);
 
             //  Footer
             container.appendChild(h('p', { style: 'color: var(--text-muted); font-size: 13px; margin-top: 8px;' }, [

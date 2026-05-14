@@ -40,16 +40,23 @@ def run():
         page.wait_for_selector('.resources-intro', timeout=8000)
 
         argos_cards = page.locator('.resource-card.argos').count()
+        banner_cards = page.locator('.resource-card.banner').count()
+        comm_cards = page.locator('.resource-card.community').count()
         all_cards = page.locator('.resource-card').count()
         sections = page.locator('.resources-section').count()
         intro_visible = page.locator('.resources-intro').count() > 0
 
-        print(f"Argos cards:   {argos_cards}")
-        print(f"Total cards:   {all_cards}")
-        print(f"Sections:      {sections}")
-        print(f"Intro visible: {intro_visible}")
+        print(f"Argos cards:     {argos_cards}")
+        print(f"Banner cards:    {banner_cards}")
+        print(f"Community cards: {comm_cards}")
+        print(f"Total cards:     {all_cards}")
+        print(f"Sections:        {sections}")
+        print(f"Intro visible:   {intro_visible}")
 
         assert argos_cards >= 8, f"Expected ≥8 Argos resource cards, got {argos_cards}"
+        assert banner_cards >= 5, f"Expected ≥5 Banner resource cards, got {banner_cards}"
+        assert comm_cards >= 5, f"Expected ≥5 Community (BUG) resource cards, got {comm_cards}"
+        assert sections >= 3, f"Expected 3 sections (Argos/Banner/Community), got {sections}"
         assert intro_visible, "Resources page should show the philosophy intro callout"
 
         #  Inspect each card — must have title, host, type badge, real URL
