@@ -636,6 +636,45 @@
         .ai-diff-line.remove::before { content: '- '; color: #fca5a5; }
         .ai-diff-line.same::before   { content: '  '; }
 
+        /* AI status chip in the header (shows current AI state, click → settings) */
+        .ai-chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 5px 12px; border-radius: 14px;
+            font-size: 12px; font-weight: 700; cursor: pointer;
+            border: 1px solid transparent; user-select: none;
+            margin-right: 8px;
+            transition: opacity 0.15s, transform 0.08s;
+        }
+        .ai-chip:hover { opacity: 0.88; transform: translateY(-1px); }
+        .ai-chip.off {
+            background: rgba(148,163,184,0.15); color: #94a3b8;
+            border-color: rgba(148,163,184,0.30);
+        }
+        .ai-chip.on {
+            background: linear-gradient(135deg, rgba(124,58,237,0.30) 0%, rgba(6,182,212,0.20) 100%);
+            color: white;
+            border-color: rgba(196,181,253,0.45);
+            box-shadow: 0 0 0 0 rgba(124,58,237,0.45);
+            animation: aiChipPulse 2.4s infinite;
+        }
+        @keyframes aiChipPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(124,58,237,0.40); }
+            70%  { box-shadow: 0 0 0 6px rgba(124,58,237,0); }
+            100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+        }
+
+        /* AI "Translate" button — same purple family as Suggest fix, slightly lighter */
+        .ai-translate-btn {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white; border: none;
+            padding: 10px 18px; border-radius: var(--radius);
+            font-weight: 700; font-size: 14px; cursor: pointer;
+            font-family: inherit;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .ai-translate-btn:hover { opacity: 0.92; }
+        .ai-translate-btn:disabled { opacity: 0.55; cursor: wait; }
+
         /* Editor-pulse animation when "jump to" fires */
         @keyframes editorPulse {
             0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
@@ -1926,6 +1965,10 @@
                 {{ stats.totalColumns }} columns &middot;
                 {{ stats.totalRelationships }} relationships
             </div>
+            <button id="aiChip" class="ai-chip off" title="AI is OFF — click to configure" type="button">
+                <span id="aiChipIcon">✨</span>
+                <span id="aiChipLabel">AI off</span>
+            </button>
             <button id="themeToggle" class="theme-toggle" title="Toggle theme (click to cycle: Auto → Light → Dark)" aria-label="Toggle theme">
                 <span class="theme-icon theme-icon-auto">🌓</span>
                 <span class="theme-icon theme-icon-light">☀️</span>
@@ -7233,6 +7276,7 @@
                 tog.classList.toggle('on');
                 document.getElementById('aiToggleState').textContent = cur.enabled ? '(ON)' : '(OFF)';
                 document.getElementById('aiCfgPanel').classList.toggle('open', cur.enabled);
+                if (window.refreshAiChip) window.refreshAiChip();
             });
 
             provSel.addEventListener('change', function() {
@@ -7264,6 +7308,7 @@
                 saveAiSettings(cur);
                 saveBtn.textContent = '✓ Saved';
                 setTimeout(function() { saveBtn.textContent = 'Save settings'; }, 1400);
+                if (window.refreshAiChip) window.refreshAiChip();
             });
 
             testBtn.addEventListener('click', async function() {
@@ -7650,6 +7695,16 @@
                     _aiSuggestFix(sqlNow, suggestBtn);
                 };
                 btnRow.appendChild(suggestBtn);
+
+                //  Translate from SQL Server — purpose-built variant that uses
+                //  a translation-focused system prompt. Same panel + diff UI.
+                var translateBtn = h('button', { className: 'ai-translate-btn', id: 'aiTranslateBtn' }, '🔍 Translate from SQL Server');
+                translateBtn.onclick = function() {
+                    var sqlNow = document.getElementById('sqlInput').value.trim();
+                    if (!sqlNow) return;
+                    _aiTranslateFromSqlServer(sqlNow, translateBtn);
+                };
+                btnRow.appendChild(translateBtn);
             }
             container.appendChild(btnRow);
 
@@ -7852,6 +7907,108 @@
                 });
             }
 
+            //  Translate from SQL Server — purpose-built sibling of _aiSuggestFix
+            //  with a translation-focused prompt. Reuses the same panel + diff
+            //  rendering, so the UX is consistent across both AI actions.
+            function _aiTranslateFromSqlServer(originalSql, btn) {
+                var slot = document.getElementById('aiSuggestSlot');
+                if (!slot) return;
+                slot.innerHTML = '';
+
+                btn.disabled = true;
+                var origLabel = btn.textContent;
+                btn.textContent = '⏳ Translating…';
+
+                var s = loadAiSettings();
+                var redactedSql = redactSql(originalSql, s.redaction);
+
+                var systemPrompt =
+                    "You are an Oracle DBA helping someone migrate a SQL Server query to " +
+                    "Oracle 19c / Ellucian Banner. Output format (strict):\n\n" +
+                    "```sql\n<Oracle-equivalent SQL>\n```\n\n" +
+                    "Then list each translation you made, one per line starting with '•' " +
+                    "(e.g. '• Replaced ISNULL(x,y) with NVL(x,y)'). Be faithful to the " +
+                    "original intent and column projection order. Don't add features the " +
+                    "original SQL didn't have.";
+
+                var userMessage =
+                    "SQL Server source:\n```sql\n" + redactedSql + "\n```\n\n" +
+                    "Translate to Oracle 19c.";
+
+                //  Render the panel skeleton (same shape as Suggest fix so the
+                //  visual is consistent — only the title differs)
+                var panel = h('div', { className: 'ai-suggest-panel' });
+                panel.style.borderLeftColor = '#06b6d4';   // cyan to match Translate button
+                var head = h('div', { className: 'ai-suggest-head' });
+                head.appendChild(h('div', { className: 'ai-suggest-title' }, '🔍 SQL Server → Oracle translation'));
+                var modelEl = h('div', { className: 'ai-suggest-model' });
+                modelEl.appendChild(document.createTextNode(
+                    (AI_CATALOG[s.provider] ? AI_CATALOG[s.provider].label.split(' ')[0] : s.provider) +
+                    ' · ' + s.providers[s.provider].model
+                ));
+                modelEl.appendChild(h('span', { className: 'ai-suggest-streaming' }, ' · streaming…'));
+                head.appendChild(modelEl);
+                panel.appendChild(head);
+                var explainEl = h('div', { className: 'ai-suggest-explanation' }, 'Waiting for the model…');
+                panel.appendChild(explainEl);
+                var diffSlot = h('div', {});
+                panel.appendChild(diffSlot);
+                slot.appendChild(panel);
+
+                var fullText = '';
+                aiCall({
+                    system: systemPrompt,
+                    messages: [{ role: 'user', content: userMessage }],
+                    onChunk: function(delta) {
+                        fullText += delta;
+                        explainEl.textContent = fullText;
+                    },
+                    onDone: function() {
+                        var translated = extractFencedSql(fullText);
+                        if (!translated) {
+                            explainEl.textContent = fullText;
+                            btn.disabled = false;
+                            btn.textContent = origLabel;
+                            return;
+                        }
+                        var afterFence = fullText.split('```');
+                        var explanation = afterFence.length >= 3 ? afterFence.slice(2).join('```').trim() : '';
+                        explainEl.textContent = explanation || '(translation complete — see diff below)';
+
+                        var dl = diffLines(originalSql, translated);
+                        var diffPre = h('pre', { className: 'ai-diff' });
+                        dl.forEach(function(d) {
+                            var line = h('div', { className: 'ai-diff-line ' + d.type }, d.text || ' ');
+                            diffPre.appendChild(line);
+                        });
+                        diffSlot.appendChild(diffPre);
+
+                        var actions = h('div', { className: 'ai-suggest-actions' });
+                        var apply = h('button', { className: 'primary' }, '✓ Replace editor with Oracle SQL');
+                        apply.onclick = function() {
+                            textarea.value = translated;
+                            renderSqlHighlight();
+                            document.getElementById('sqlExplainBtn').click();
+                            slot.innerHTML = '';
+                        };
+                        var discard = h('button', { className: 'secondary' }, 'Discard');
+                        discard.onclick = function() { slot.innerHTML = ''; };
+                        actions.appendChild(apply);
+                        actions.appendChild(discard);
+                        diffSlot.appendChild(actions);
+
+                        btn.disabled = false;
+                        btn.textContent = origLabel;
+                    },
+                    onError: function(err) {
+                        explainEl.textContent = '⚠ ' + (err.message || String(err));
+                        panel.style.borderLeftColor = '#ef4444';
+                        btn.disabled = false;
+                        btn.textContent = origLabel;
+                    }
+                });
+            }
+
             return container;
         }
 
@@ -8003,10 +8160,35 @@
             return frag;
         }
 
-        window.addEventListener('hashchange', function() { parseRoute(); render(); });
+        window.addEventListener('hashchange', function() { parseRoute(); render(); refreshAiChip(); });
+
+        //  ============== AI status chip — header indicator + shortcut to settings ==============
+        function refreshAiChip() {
+            var chip = document.getElementById('aiChip');
+            if (!chip) return;
+            var label = document.getElementById('aiChipLabel');
+            var s = loadAiSettings();
+            if (s.enabled) {
+                chip.classList.remove('off'); chip.classList.add('on');
+                var prov = AI_CATALOG[s.provider] ? AI_CATALOG[s.provider].label.split(' ')[0] : s.provider;
+                label.textContent = 'AI: ' + prov;
+                chip.title = 'AI ON · ' + prov + ' / ' + s.providers[s.provider].model + ' — click to configure';
+            } else {
+                chip.classList.remove('on'); chip.classList.add('off');
+                label.textContent = 'AI off';
+                chip.title = 'AI is OFF — click to enable in Settings';
+            }
+        }
+        var _chipEl = document.getElementById('aiChip');
+        if (_chipEl) _chipEl.addEventListener('click', function() { navigate('settings'); });
+        window.refreshAiChip = refreshAiChip;
+        //  Listen for settings changes from other tabs / pages so the chip stays in sync
+        window.addEventListener('storage', function(ev) {
+            if (ev.key === AI_SETTINGS_KEY) refreshAiChip();
+        });
 
         // Init
-        parseRoute(); render();
+        parseRoute(); render(); refreshAiChip();
 
         document.addEventListener('keydown', function(e) {
             //  Ctrl+Shift+F (or Cmd+Shift+F) — command palette. Works from anywhere.

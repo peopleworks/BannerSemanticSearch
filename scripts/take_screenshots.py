@@ -165,6 +165,32 @@ def shot_sql_explainer(page):
     return 'sql-explainer.png'
 
 
+def shot_ai_settings(page):
+    """AI Settings page — BYOK panel with toggle ON, provider dropdown,
+    privacy disclaimer, model + cost hint, redaction slider."""
+    page.goto(URL + '#/settings', wait_until='domcontentloaded')
+    page.wait_for_selector('.settings-disclaimer', timeout=8000)
+    #  Seed an enabled state with a dummy key so the panel is fully expanded
+    page.evaluate("""
+        localStorage.setItem('ai_settings_v1', JSON.stringify({
+            enabled: true,
+            provider: 'anthropic',
+            providers: {
+                anthropic: { apiKey: 'sk-ant-XXXXXXXXXXXXXXXXXXXXXXX', model: 'claude-haiku-4-5-20251001' },
+                openai:    { apiKey: '', model: 'gpt-4o-mini' },
+                ollama:    { baseUrl: 'http://localhost:11434', model: 'llama3.1' }
+            },
+            redaction: 'standard',
+            stream: true,
+            stats: { lastTest: null, lastTestStatus: null, callsToday: 0, lastCallDate: null }
+        }));
+    """)
+    page.reload()
+    page.wait_for_selector('#aiCfgPanel.open', timeout=4000)
+    time.sleep(0.3)
+    return 'ai-settings.png'
+
+
 def shot_argos(page):
     """Argos parameter cheatsheet page — the 3-card prefix grid, accessor +
     widget reference tables, and the copy-ready SQL pattern library."""
@@ -234,6 +260,7 @@ SHOTS = {
     'sql-explain': (shot_sql_explainer,   {'width': 1600, 'height': 1000}),
     'sql-dialect': (shot_sql_dialect,     {'width': 1600, 'height': 1100}),
     'argos':       (shot_argos,           {'width': 1600, 'height': 1200}),
+    'ai-settings': (shot_ai_settings,     {'width': 1600, 'height': 1200}),
     'search':      (shot_search_synonyms, {'width': 1600, 'height': 1000}),
     'reports':     (shot_reports_index,   {'width': 1600, 'height': 1100}),
 }
