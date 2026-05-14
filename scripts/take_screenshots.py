@@ -110,15 +110,33 @@ def shot_module_grid(page):
 
 
 def shot_sql_explainer(page):
-    """SQL Explainer catching a deliberately broken query."""
+    """SQL Explainer showing: phantom column error + best-practice warnings with
+    Copy-fix buttons + the recent-SQL history panel. Demonstrates all three
+    interactive features added on 2026-05-14."""
     page.goto(URL + '#/sql', wait_until='domcontentloaded')
     page.wait_for_selector('#sqlInput, textarea', timeout=5000)
-    #  The SQL textarea — fill with a query that references a phantom column
+    #  Seed two prior history entries so the panel is visibly populated
+    page.evaluate("""
+        var arr = [
+            {ts: Date.now() - 8*60*1000, sql: "SELECT * FROM SPRIDEN WHERE SPRIDEN_CHANGE_IND IS NULL",
+             summary: {p: 3}},
+            {ts: Date.now() - 25*60*1000, sql: "SELECT PHRDEDN_BDCA_CODE FROM PHRDEDN WHERE PHRDEDN_YEAR = 2025",
+             summary: {w: 1, p: 2}},
+        ];
+        try { localStorage.setItem('sql_explainer_history', JSON.stringify(arr)); } catch(e){}
+    """)
+    #  A query that triggers: 1 phantom column error + 2 fixable warnings (PHRHIST
+    #  without DISP filter, SPRIDEN without CHANGE_IND IS NULL). Hits all the
+    #  new interactivity features in a single shot.
     bad_sql = (
-        "-- A query with a phantom column + missing WHERE guard\n"
-        "SELECT x.phantasm_col, x.ftvvend_start_date\n"
-        "FROM   ftvvend x\n"
-        "WHERE  x.fake_filter = 1;"
+        "-- Demo: phantom column + 2 fixable Banner best-practice warnings\n"
+        "SELECT h.PHRHIST_PIDM,\n"
+        "       h.PHRHIST_GROSS,\n"
+        "       s.SPRIDEN_LAST_NAME,\n"
+        "       h.PHRHIST_FANTASM        -- not a real column\n"
+        "FROM   PHRHIST h\n"
+        "JOIN   SPRIDEN s ON s.SPRIDEN_PIDM = h.PHRHIST_PIDM\n"
+        "WHERE  h.PHRHIST_YEAR = 2025"
     )
     #  Try common selectors for the SQL input
     for sel in ['#sqlInput', '#sqlText', 'textarea.sql-input', 'textarea']:

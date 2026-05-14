@@ -491,6 +491,97 @@
         html.dark .sql-val-item.error { background: #7f1d1d22; }
         html.dark .sql-val-item.warning { background: #78350f22; }
         html.dark .sql-val-item.pass { background: #14532d22; }
+
+        /* Clickable validation items (jump-to-editor + apply-fix UX) */
+        .sql-val-item.clickable { cursor: pointer; transition: transform 0.08s ease, box-shadow 0.08s ease; }
+        .sql-val-item.clickable:hover {
+            transform: translateX(2px);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .sql-val-item.clickable:hover .sql-val-msg span:first-child {
+            text-decoration: underline;
+            text-decoration-style: dotted;
+        }
+        .sql-val-actions { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+        .sql-fix-btn {
+            background: var(--gold); color: var(--navy-dark);
+            border: none; padding: 3px 10px; border-radius: 12px;
+            font-size: 11px; font-weight: 700; cursor: pointer;
+            font-family: inherit; line-height: 1.5;
+            transition: background 0.1s;
+        }
+        .sql-fix-btn:hover { background: var(--gold-light); }
+        .sql-fix-btn.copied { background: #10b981; color: white; }
+
+        /* Editor-pulse animation when "jump to" fires */
+        @keyframes editorPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+            70%  { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+        .sql-editor.pulse { animation: editorPulse 0.7s ease-out; }
+
+        /* SQL History panel */
+        .sql-history-panel {
+            margin: 16px 0 8px; padding: 12px 16px;
+            background: var(--card-bg); border-radius: var(--radius);
+            box-shadow: var(--shadow); border: 1px solid var(--border);
+        }
+        .sql-history-head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 8px; gap: 8px;
+        }
+        .sql-history-title {
+            font-size: 13px; font-weight: 700; color: var(--navy-light);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .sql-history-title-count {
+            background: var(--hover); color: var(--text-muted);
+            font-size: 11px; padding: 1px 8px; border-radius: 10px; font-weight: 600;
+        }
+        .sql-history-clear {
+            background: transparent; border: none; cursor: pointer;
+            font-size: 11px; color: var(--text-muted); font-family: inherit;
+            text-decoration: underline; padding: 2px 4px;
+        }
+        .sql-history-clear:hover { color: #ef4444; }
+        .sql-history-list { display: flex; flex-direction: column; gap: 4px; }
+        .sql-history-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 6px 10px; border-radius: 6px;
+            background: var(--hover); cursor: pointer;
+            border: 1px solid transparent;
+            transition: border-color 0.1s, background 0.1s;
+        }
+        .sql-history-item:hover {
+            border-color: var(--gold);
+            background: var(--card-bg);
+        }
+        .sql-history-time {
+            flex-shrink: 0; font-size: 11px; color: var(--text-muted);
+            font-variant-numeric: tabular-nums; min-width: 78px;
+        }
+        .sql-history-preview {
+            flex: 1; font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 12px; color: var(--text);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .sql-history-summary { display: flex; gap: 3px; flex-shrink: 0; }
+        .sql-history-summary .b {
+            padding: 1px 7px; border-radius: 9px; font-size: 10px; font-weight: 700;
+        }
+        .sql-history-summary .b.e { background: #fef2f2; color: #dc2626; }
+        .sql-history-summary .b.w { background: #fffbeb; color: #d97706; }
+        .sql-history-summary .b.p { background: #f0fdf4; color: #059669; }
+        html.dark .sql-history-summary .b.e { background: #7f1d1d44; }
+        html.dark .sql-history-summary .b.w { background: #78350f44; }
+        html.dark .sql-history-summary .b.p { background: #14532d44; }
+        .sql-history-delete {
+            background: transparent; border: none; cursor: pointer;
+            color: var(--text-muted); font-size: 14px; padding: 0 4px;
+            line-height: 1; flex-shrink: 0;
+        }
+        .sql-history-delete:hover { color: #ef4444; }
         .help-toggle {
             position: fixed; right: 0; top: calc(50% + 30px);
             background: var(--navy); color: var(--gold); border: none; padding: 12px 6px;
@@ -5183,14 +5274,16 @@
                     unknownTablesInFrom[tbl] = true;
                     warnings.push({
                         msg: "'" + tbl + "' looks like a Banner view, not a base table — not indexed in this schema.",
-                        suggestion: "Column references against " + tbl + " (e.g. " + tbl + "_*) are skipped — the SQL is fine, the validator just can't check them. Banner web views (PWV*) and AppNav views (PVQ_*) are documented in Ellucian's EDM, not in BANINST1 base tables."
+                        suggestion: "Column references against " + tbl + " (e.g. " + tbl + "_*) are skipped — the SQL is fine, the validator just can't check them. Banner web views (PWV*) and AppNav views (PVQ_*) are documented in Ellucian's EDM, not in BANINST1 base tables.",
+                        target: tbl
                     });
                 } else {
                     unknownTablesInFrom[tbl] = true;
                     var similar = findSimilarTables(tbl);
                     errors.push({
                         msg: "Table '" + tbl + "' not found in Banner schema.",
-                        suggestion: similar.length ? "Did you mean: " + similar.map(function(s) { return s.name; }).join(', ') + "?" : null
+                        suggestion: similar.length ? "Did you mean: " + similar.map(function(s) { return s.name; }).join(', ') + "?" : null,
+                        target: tbl
                     });
                 }
             });
@@ -5215,7 +5308,8 @@
                     var similar = findSimilarColumns(ref.col, ref.table);
                     errors.push({
                         msg: "Column '" + ref.col + "' not found on " + ref.table + ".",
-                        suggestion: similar.length ? "Did you mean: " + similar.map(function(s) { return s.name; }).join(', ') + "?" : null
+                        suggestion: similar.length ? "Did you mean: " + similar.map(function(s) { return s.name; }).join(', ') + "?" : null,
+                        target: ref.col
                     });
                 }
             });
@@ -5242,7 +5336,8 @@
                     });
                     errors.push({
                         msg: "Column '" + ref.col + "' not found on any table in FROM (" + uniqueFromList + ").",
-                        suggestion: best ? "Did you mean " + best.name + " on " + best.table + "?" : "Add a table alias (e.g. h.COLUMN) or check the column name."
+                        suggestion: best ? "Did you mean " + best.name + " on " + best.table + "?" : "Add a table alias (e.g. h.COLUMN) or check the column name.",
+                        target: ref.col
                     });
                 }
             });
@@ -5266,7 +5361,9 @@
                     passes.push({ msg: "PHRHIST_DISP filter present \u2014 only posted transactions." });
                 } else if (upper.indexOf('PHRHIST_DISP') < 0) {
                     warnings.push({ msg: "PHRHIST used without PHRHIST_DISP filter.",
-                        suggestion: "Add WHERE PHRHIST_DISP >= '60' to include only posted/completed transactions. Values < '60' are in-progress or voided." });
+                        suggestion: "Add WHERE PHRHIST_DISP >= '60' to include only posted/completed transactions. Values < '60' are in-progress or voided.",
+                        target: 'PHRHIST',
+                        fixSnippet: "AND PHRHIST_DISP >= '60'" });
                 }
             }
 
@@ -5275,7 +5372,9 @@
                     passes.push({ msg: "PICT_CODE payroll type filter present." });
                 } else {
                     warnings.push({ msg: "Payroll table used without PICT_CODE filter.",
-                        suggestion: "Filter by your institution's active PICT_CODEs (e.g., 'SP','SF'). Without this, you may include test or inactive payroll types." });
+                        suggestion: "Filter by your institution's active PICT_CODEs (e.g., 'SP','SF'). Without this, you may include test or inactive payroll types.",
+                        target: hasPHRHIST ? 'PHRHIST' : 'PHRDEDN',
+                        fixSnippet: "AND PICT_CODE IN ('SP','SF')   -- adjust to your institution's payroll types" });
                 }
             }
 
@@ -5284,7 +5383,9 @@
                     passes.push({ msg: "SPRIDEN_CHANGE_IND IS NULL \u2014 current name only." });
                 } else {
                     warnings.push({ msg: "SPRIDEN used without CHANGE_IND IS NULL.",
-                        suggestion: "Without this filter, results include historical name changes. Add SPRIDEN_CHANGE_IND IS NULL for current name only." });
+                        suggestion: "Without this filter, results include historical name changes. Add SPRIDEN_CHANGE_IND IS NULL for current name only.",
+                        target: 'SPRIDEN',
+                        fixSnippet: "AND SPRIDEN_CHANGE_IND IS NULL" });
                 }
             }
 
@@ -5292,13 +5393,16 @@
                 if (upper.indexOf('ATYP_CODE') >= 0) {
                     if (upper.indexOf("'MA'") >= 0 || upper.indexOf("'RE'") >= 0) {
                         warnings.push({ msg: "SPRADDR using MA or RE address type.",
-                            suggestion: "'MA' (Mailing) and 'RE' (Residential) are student address types. Use ATYP_CODE = 'HR' for employee addresses." });
+                            suggestion: "'MA' (Mailing) and 'RE' (Residential) are student address types. Use ATYP_CODE = 'HR' for employee addresses.",
+                            target: 'SPRADDR_ATYP_CODE' });
                     } else {
                         passes.push({ msg: "SPRADDR ATYP_CODE filter present." });
                     }
                 } else {
                     warnings.push({ msg: "SPRADDR used without ATYP_CODE filter.",
-                        suggestion: "Specify ATYP_CODE to get the correct address type. Use 'HR' for employees, 'MA' for students." });
+                        suggestion: "Specify ATYP_CODE to get the correct address type. Use 'HR' for employees, 'MA' for students.",
+                        target: 'SPRADDR',
+                        fixSnippet: "AND SPRADDR_ATYP_CODE = 'HR'   -- 'HR' for employees, 'MA' for students" });
                 }
             }
 
@@ -5343,13 +5447,17 @@
                 var filtersDelete = /GURACLS_AUDIT_ACTION\s*(?:<>|!=|NOT\s+IN|=|<)/i.test(upper);
                 if (!hasMaxAudit) {
                     warnings.push({ msg: "GURACLS used without MAX(GURACLS_AUDIT_TIME) per (userid, class_code).",
-                        suggestion: "GURACLS keeps full audit history (30,932 rows total at WCC for ~19K active assignments). Without MAX(audit_time) per (userid+class_code), every assignment change duplicates in results. Canonical pattern: WHERE guracls_audit_time = (SELECT MAX(audit_time) FROM guracls g2 WHERE g2.userid=g.userid AND g2.class_code=g.class_code)." });
+                        suggestion: "GURACLS keeps full audit history (30,932 rows total at WCC for ~19K active assignments). Without MAX(audit_time) per (userid+class_code), every assignment change duplicates in results. Canonical pattern: WHERE guracls_audit_time = (SELECT MAX(audit_time) FROM guracls g2 WHERE g2.userid=g.userid AND g2.class_code=g.class_code).",
+                        target: 'GURACLS',
+                        fixSnippet: "AND guracls_audit_time = (\n    SELECT MAX(audit_time) FROM guracls g2\n    WHERE g2.guracls_userid = g.guracls_userid\n      AND g2.guracls_class_code = g.guracls_class_code\n)" });
                 } else {
                     passes.push({ msg: "GURACLS_AUDIT_TIME MAX() pattern present." });
                 }
                 if (!filtersDelete) {
                     warnings.push({ msg: "GURACLS used without GURACLS_AUDIT_ACTION filter.",
-                        suggestion: "Add guracls_audit_action <> 'D' to exclude deleted assignments. Without it, ~38% of GURACLS rows at WCC are deletes and will show up as if access were still granted." });
+                        suggestion: "Add guracls_audit_action <> 'D' to exclude deleted assignments. Without it, ~38% of GURACLS rows at WCC are deletes and will show up as if access were still granted.",
+                        target: 'GURACLS',
+                        fixSnippet: "AND guracls_audit_action <> 'D'" });
                 } else {
                     passes.push({ msg: "GURACLS_AUDIT_ACTION filter present." });
                 }
@@ -5370,7 +5478,9 @@
                                    /\w*\.?GURALGN_\w*DATE\s*>=?\s*(SYSDATE|TRUNC|DATE|TO_DATE)/i.test(upper);
                 if (!hasDateBound) {
                     warnings.push({ msg: "GURALGN used without a date-range filter.",
-                        suggestion: "GURALGN has ~86 MILLION rows at WCC. Always bound by date: WHERE guralgn_login_date >= SYSDATE - N. Unfiltered queries will timeout or create contention on a hot table." });
+                        suggestion: "GURALGN has ~86 MILLION rows at WCC. Always bound by date: WHERE guralgn_login_date >= SYSDATE - N. Unfiltered queries will timeout or create contention on a hot table.",
+                        target: 'GURALGN',
+                        fixSnippet: "AND guralgn_login_date >= SYSDATE - 30" });
                 } else {
                     passes.push({ msg: "GURALGN date-range filter present." });
                 }
@@ -5381,14 +5491,18 @@
                     passes.push({ msg: "GURALOG date filter present — scoped to recent violations." });
                 } else {
                     warnings.push({ msg: "GURALOG (violation log) queried without date filter.",
-                        suggestion: "GURALOG has 233K rows at WCC growing ~26/day. Add WHERE guralog_activity_date >= SYSDATE-30 for monitoring dashboards; full-scan is rarely what you want." });
+                        suggestion: "GURALOG has 233K rows at WCC growing ~26/day. Add WHERE guralog_activity_date >= SYSDATE-30 for monitoring dashboards; full-scan is rarely what you want.",
+                        target: 'GURALOG',
+                        fixSnippet: "AND guralog_activity_date >= SYSDATE - 30" });
                 }
             }
 
             if (hasGOBEACC) {
                 if (/BANSECR\.GOBEACC/i.test(sql)) {
-                    warnings.push({ msg: "GOBEACC referenced with BANSECR schema prefix.",
-                        suggestion: "GOBEACC lives in the GENERAL schema at WCC, not BANSECR. Use GENERAL.GOBEACC or the unqualified synonym GOBEACC. BANSECR.GOBEACC will fail with ORA-00942." });
+                    errors.push({ msg: "GOBEACC referenced with BANSECR schema prefix.",
+                        suggestion: "GOBEACC lives in the GENERAL schema at WCC, not BANSECR. Use GENERAL.GOBEACC or the unqualified synonym GOBEACC. BANSECR.GOBEACC will fail with ORA-00942.",
+                        target: 'BANSECR.GOBEACC',
+                        fixSnippet: "GENERAL.GOBEACC" });
                 }
                 //  Only warn about missing active-account filter if the status columns actually exist.
                 //  WCC's GOBEACC is minimalist and has none of disable/expiration/last_login — see SC003/SC004.
@@ -5399,13 +5513,17 @@
                 if (hasAnyGobStatusCol) {
                     if (!/GOBEACC_DISABLE|GOBEACC_EXPIRATION_DATE|GOBEACC_LAST_LOGIN_DATE/i.test(upper)) {
                         warnings.push({ msg: "GOBEACC used without active-account filter.",
-                            suggestion: "Add gobeacc_disable <> 'Y' AND (gobeacc_expiration_date IS NULL OR gobeacc_expiration_date > SYSDATE) unless you're specifically auditing inactive/expired accounts." });
+                            suggestion: "Add gobeacc_disable <> 'Y' AND (gobeacc_expiration_date IS NULL OR gobeacc_expiration_date > SYSDATE) unless you're specifically auditing inactive/expired accounts.",
+                            target: 'GOBEACC',
+                            fixSnippet: "AND gobeacc_disable <> 'Y'\nAND (gobeacc_expiration_date IS NULL OR gobeacc_expiration_date > SYSDATE)" });
                     }
                 } else if (gobTbl) {
                     //  This site's GOBEACC has no status columns — steer the user to GURLOGN instead.
                     if (!/GURLOGN/i.test(upper)) {
                         warnings.push({ msg: "GOBEACC at this site has no disable/expiration/last-login columns.",
-                            suggestion: "Account status at WCC must come from GURLOGN. Join bansecr.gurlogn gl ON gl.gurlogn_user = ga.gobeacc_username, then use gurlogn_last_logon_date / inb_last_logon_date / hrzn_last_logon_date for dormancy. See report SR001." });
+                            suggestion: "Account status at WCC must come from GURLOGN. Join bansecr.gurlogn gl ON gl.gurlogn_user = ga.gobeacc_username, then use gurlogn_last_logon_date / inb_last_logon_date / hrzn_last_logon_date for dormancy. See report SR001.",
+                            target: 'GOBEACC',
+                            fixSnippet: "LEFT JOIN bansecr.gurlogn gl ON gl.gurlogn_user = ga.gobeacc_username" });
                     }
                 }
             }
@@ -5506,6 +5624,53 @@
             header.appendChild(badges);
             sec.appendChild(header);
 
+            //  Helper: attaches click-to-jump + Apply Fix button to any
+            //  validation item that has a .target or .fixSnippet field.
+            function _attachInteractivity(item, entry) {
+                if (entry.target) {
+                    item.classList.add('clickable');
+                    item.title = "Click to jump to '" + entry.target + "' in the editor";
+                    item.addEventListener('click', function(ev) {
+                        if (ev.target && ev.target.classList && ev.target.classList.contains('sql-fix-btn')) return;
+                        highlightInEditor(entry.target);
+                    });
+                }
+                if (entry.fixSnippet) {
+                    var actions = h('div', { className: 'sql-val-actions' });
+                    var btn = h('button', { className: 'sql-fix-btn', title: 'Copy this fix snippet to your clipboard' }, '\uD83D\uDCCB Copy fix');
+                    btn.onclick = function(ev) {
+                        ev.stopPropagation();
+                        var text = entry.fixSnippet;
+                        var done = function() {
+                            btn.classList.add('copied');
+                            btn.textContent = '\u2713 Copied';
+                            setTimeout(function() {
+                                btn.classList.remove('copied');
+                                btn.textContent = '\uD83D\uDCCB Copy fix';
+                            }, 1400);
+                        };
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(text).then(done, function() {
+                                //  Fallback for older browsers / file:// permissions
+                                var ta = document.createElement('textarea');
+                                ta.value = text; document.body.appendChild(ta);
+                                ta.select();
+                                try { document.execCommand('copy'); done(); } catch (_) {}
+                                document.body.removeChild(ta);
+                            });
+                        } else {
+                            var ta = document.createElement('textarea');
+                            ta.value = text; document.body.appendChild(ta);
+                            ta.select();
+                            try { document.execCommand('copy'); done(); } catch (_) {}
+                            document.body.removeChild(ta);
+                        }
+                    };
+                    actions.appendChild(btn);
+                    item.lastChild.appendChild(actions);    //  attach inside the msg div
+                }
+            }
+
             validation.errors.forEach(function(e) {
                 var item = h('div', { className: 'sql-val-item error' });
                 item.appendChild(h('span', { className: 'sql-val-icon' }, '\u2716'));
@@ -5513,6 +5678,7 @@
                 msg.appendChild(h('span', {}, e.msg));
                 if (e.suggestion) msg.appendChild(h('span', { className: 'sql-val-suggestion' }, e.suggestion));
                 item.appendChild(msg);
+                _attachInteractivity(item, e);
                 sec.appendChild(item);
             });
             validation.warnings.forEach(function(w) {
@@ -5522,6 +5688,7 @@
                 msg.appendChild(h('span', {}, w.msg));
                 if (w.suggestion) msg.appendChild(h('span', { className: 'sql-val-suggestion' }, w.suggestion));
                 item.appendChild(msg);
+                _attachInteractivity(item, w);
                 sec.appendChild(item);
             });
             validation.passes.forEach(function(p) {
@@ -5531,6 +5698,7 @@
                 msg.appendChild(h('span', {}, p.msg));
                 if (p.suggestion) msg.appendChild(h('span', { className: 'sql-val-suggestion' }, p.suggestion));
                 item.appendChild(msg);
+                _attachInteractivity(item, p);
                 sec.appendChild(item);
             });
 
@@ -5602,6 +5770,148 @@
             return hints;
         }
 
+        //  ============== SQL HISTORY (localStorage) ==============
+        var SQL_HISTORY_KEY = 'sql_explainer_history';
+        var SQL_HISTORY_MAX = 10;
+
+        function loadSqlHistory() {
+            try {
+                var raw = localStorage.getItem(SQL_HISTORY_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch (_) { return []; }
+        }
+        function saveSqlHistory(arr) {
+            try { localStorage.setItem(SQL_HISTORY_KEY, JSON.stringify(arr)); } catch (_) {}
+        }
+        function addToSqlHistory(sql, summary) {
+            var trimmed = (sql || '').trim();
+            if (!trimmed) return;
+            var arr = loadSqlHistory();
+            //  Dedupe — if the most recent entry is identical, just update its
+            //  timestamp+summary instead of pushing a copy.
+            if (arr.length && arr[0].sql === trimmed) {
+                arr[0].ts = Date.now();
+                arr[0].summary = summary;
+            } else {
+                arr.unshift({ ts: Date.now(), sql: trimmed, summary: summary });
+                if (arr.length > SQL_HISTORY_MAX) arr = arr.slice(0, SQL_HISTORY_MAX);
+            }
+            saveSqlHistory(arr);
+            //  Refresh the panel if visible
+            var holder = document.getElementById('sqlHistoryPanel');
+            if (holder) holder.replaceWith(renderSqlHistoryPanel());
+        }
+        function clearSqlHistory() { saveSqlHistory([]); }
+        function removeFromSqlHistory(idx) {
+            var arr = loadSqlHistory();
+            if (idx >= 0 && idx < arr.length) {
+                arr.splice(idx, 1);
+                saveSqlHistory(arr);
+            }
+        }
+        function formatHistoryTime(ts) {
+            var d = new Date(ts);
+            var now = new Date();
+            var sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+            var pad = function(n) { return n < 10 ? '0' + n : String(n); };
+            if (sameDay) return pad(d.getHours()) + ':' + pad(d.getMinutes());
+            return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+        function firstLineOf(sql) {
+            var lines = sql.split(/\n/);
+            for (var i = 0; i < lines.length; i++) {
+                var trimmed = lines[i].trim();
+                if (trimmed && !/^--/.test(trimmed)) return trimmed;
+            }
+            return sql.slice(0, 80);
+        }
+
+        function renderSqlHistoryPanel() {
+            var arr = loadSqlHistory();
+            var panel = h('div', { className: 'sql-history-panel', id: 'sqlHistoryPanel' });
+            if (!arr.length) {
+                panel.style.display = 'none';   //  Hide entirely when empty — first-use cleanliness
+                return panel;
+            }
+            var head = h('div', { className: 'sql-history-head' });
+            var title = h('div', { className: 'sql-history-title' });
+            title.appendChild(h('span', {}, '📜 Recent'));
+            title.appendChild(h('span', { className: 'sql-history-title-count' }, String(arr.length)));
+            head.appendChild(title);
+            var clearBtn = h('button', { className: 'sql-history-clear' }, 'Clear all');
+            clearBtn.onclick = function(ev) {
+                ev.stopPropagation();
+                if (!confirm('Clear all ' + arr.length + ' recent SQL entries?')) return;
+                clearSqlHistory();
+                panel.replaceWith(renderSqlHistoryPanel());
+            };
+            head.appendChild(clearBtn);
+            panel.appendChild(head);
+
+            var list = h('div', { className: 'sql-history-list' });
+            arr.forEach(function(entry, idx) {
+                var row = h('div', { className: 'sql-history-item' });
+                row.title = entry.sql;
+                row.onclick = function() {
+                    var ta = document.getElementById('sqlInput');
+                    if (!ta) return;
+                    ta.value = entry.sql;
+                    ta.dispatchEvent(new Event('input'));   // triggers re-highlight
+                    ta.focus();
+                    var btn = document.getElementById('sqlExplainBtn');
+                    if (btn) btn.click();                   // auto re-validate
+                };
+                row.appendChild(h('span', { className: 'sql-history-time' }, formatHistoryTime(entry.ts)));
+                row.appendChild(h('span', { className: 'sql-history-preview' }, firstLineOf(entry.sql)));
+                var summary = h('span', { className: 'sql-history-summary' });
+                var s = entry.summary || {};
+                if (s.e) summary.appendChild(h('span', { className: 'b e' }, String(s.e)));
+                if (s.w) summary.appendChild(h('span', { className: 'b w' }, String(s.w)));
+                if (s.p) summary.appendChild(h('span', { className: 'b p' }, String(s.p)));
+                row.appendChild(summary);
+                var del = h('button', { className: 'sql-history-delete', title: 'Remove this entry' }, '×');
+                del.onclick = function(ev) {
+                    ev.stopPropagation();
+                    removeFromSqlHistory(idx);
+                    panel.replaceWith(renderSqlHistoryPanel());
+                };
+                row.appendChild(del);
+                list.appendChild(row);
+            });
+            panel.appendChild(list);
+            return panel;
+        }
+
+        //  Jump-to-editor: find the first occurrence of `term` in the SQL textarea,
+        //  select it, scroll the textarea into view, and pulse the editor border.
+        //  Case-insensitive (Oracle identifiers aren't case-sensitive unquoted).
+        function highlightInEditor(term) {
+            if (!term) return;
+            var ta = document.getElementById('sqlInput');
+            if (!ta) return;
+            var hay = ta.value.toUpperCase();
+            var needle = term.toUpperCase();
+            var idx = hay.indexOf(needle);
+            if (idx < 0) return;
+            ta.focus();
+            ta.setSelectionRange(idx, idx + term.length);
+            //  Manually compute scrollTop — browsers don't reliably scroll the
+            //  textarea on setSelectionRange when focus is shifted programmatically.
+            var lineNum = (ta.value.substring(0, idx).match(/\n/g) || []).length;
+            var lineHeight = 13 * 1.5;                  // matches .sql-editor-ta css
+            var target = Math.max(0, lineNum * lineHeight - ta.clientHeight / 3);
+            ta.scrollTop = target;
+            var hl = document.getElementById('sqlHighlight');
+            if (hl) hl.scrollTop = target;
+            //  Pulse the editor border for visual feedback
+            var ed = ta.parentElement;
+            if (ed) {
+                ed.classList.remove('pulse');
+                void ed.offsetWidth;                    // force reflow to restart animation
+                ed.classList.add('pulse');
+            }
+        }
+
         function renderSqlExplainer() {
             var container = h('div', {});
 
@@ -5646,6 +5956,9 @@
             btnRow.appendChild(clearBtn);
             container.appendChild(btnRow);
 
+            //  Recent SQL history (collapsible — only renders if there are entries)
+            container.appendChild(renderSqlHistoryPanel());
+
             // Results area
             var resultsDiv = h('div', { id: 'sqlResults' });
             container.appendChild(resultsDiv);
@@ -5682,10 +5995,16 @@
                 if (!sql) return;
                 state.sqlText = sql;
                 var parsed = parseSql(sql);
+                //  Run validation once here to capture the summary for history.
+                //  buildExplanation will call validateSql again — that's fine since
+                //  it's cheap and keeps the two paths decoupled.
+                var v = validateSql(parsed, sql);
                 var out = document.getElementById('sqlResults');
                 out.innerHTML = '';
                 out.appendChild(buildExplanation(parsed, sql));
                 state.sqlResults = out.innerHTML;
+                //  Persist this SQL + result counts to the recent-history panel
+                addToSqlHistory(sql, { e: v.errors.length, w: v.warnings.length, p: v.passes.length });
             });
 
             clearBtn.addEventListener('click', function() {
