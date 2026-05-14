@@ -61,6 +61,15 @@ def run():
         assert pattern_copy_btns == pattern_cards, \
             f"Expected one Copy button per pattern card ({pattern_cards}), got {pattern_copy_btns}"
 
+        #  Section 5: Banner Cloud reality check — Oracle ↔ PostgreSQL table
+        cloud_rows = page.locator('.cloud-diff-table tbody tr').count()
+        cloud_callout = page.locator('.argos-cloud-callout').count()
+        section_count = page.locator('.argos-section').count()
+        print(f"Cloud-reality table rows: {cloud_rows}, callout visible: {bool(cloud_callout)}, total argos sections: {section_count}")
+        assert cloud_rows >= 16, f"Expected ≥16 Oracle↔PG mapping rows, got {cloud_rows}"
+        assert cloud_callout >= 1, "Expected the Banner Cloud heads-up callout"
+        assert section_count >= 5, f"Expected 5 sections on the Argos page (prefixes/accessors/widgets/patterns/cloud), got {section_count}"
+
         #  Click one Copy button and assert the label flips to '✓ Copied'
         first_copy = page.locator('.argos-pattern .sql-fix-btn').first
         first_copy.click()

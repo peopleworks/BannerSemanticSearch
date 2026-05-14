@@ -1432,6 +1432,56 @@
             display: flex; gap: 6px; margin-top: 2px;
         }
 
+        /* "Banner Cloud reality check" callout + Oracle↔PG side-by-side table */
+        .argos-cloud-callout {
+            background: linear-gradient(135deg, rgba(6,182,212,0.10) 0%, rgba(124,58,237,0.06) 100%);
+            border: 1px solid rgba(6,182,212,0.30);
+            border-left: 4px solid #06b6d4;
+            border-radius: 10px;
+            padding: 14px 18px; margin-bottom: 14px;
+        }
+        .argos-cloud-callout p { margin: 0 0 8px; font-size: 13px; line-height: 1.55; }
+        .argos-cloud-callout p:last-child { margin-bottom: 0; }
+        .argos-cloud-callout strong { color: #0e7490; }
+        html.dark .argos-cloud-callout strong { color: #67e8f9; }
+        .argos-cloud-callout code {
+            background: rgba(6,182,212,0.12); color: #0e7490;
+            padding: 1px 6px; border-radius: 3px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 11px;
+        }
+        html.dark .argos-cloud-callout code { background: rgba(103,232,249,0.12); color: #67e8f9; }
+
+        .cloud-diff-table {
+            width: 100%; border-collapse: collapse;
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; overflow: hidden;
+            box-shadow: var(--shadow);
+            font-size: 12.5px;
+        }
+        .cloud-diff-table th, .cloud-diff-table td {
+            padding: 8px 12px; vertical-align: top;
+            border-bottom: 1px solid var(--border); text-align: left;
+        }
+        .cloud-diff-table th {
+            background: var(--hover); color: var(--navy-light);
+            font-weight: 700; font-size: 11px;
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .cloud-diff-table tr:last-child td { border-bottom: none; }
+        .cloud-diff-table td.oracle, .cloud-diff-table td.pg {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 11.5px; white-space: nowrap;
+            max-width: 280px; overflow: hidden; text-overflow: ellipsis;
+        }
+        .cloud-diff-table td.oracle { color: #b45309; }
+        html.dark .cloud-diff-table td.oracle { color: #fbbf24; }
+        .cloud-diff-table td.pg { color: #0e7490; }
+        html.dark .cloud-diff-table td.pg { color: #67e8f9; }
+        .cloud-diff-table td.notes { font-size: 11.5px; color: var(--text-muted); line-height: 1.45; }
+        @media (max-width: 900px) {
+            .cloud-diff-table td.oracle, .cloud-diff-table td.pg { max-width: none; white-space: normal; }
+        }
+
         /* ======  AI Settings (BYOK)  ====== */
         .settings-container { max-width: 760px; }
         .settings-disclaimer {
@@ -7869,6 +7919,122 @@
             });
             sec4.appendChild(patternsGrid);
             container.appendChild(sec4);
+
+            //  ============== Section 5: Banner Cloud reality check ==============
+            //  This section documents the SaaS migration impact on Argos SQL. Per
+            //  Strata Information Group's published playbook, Banner SaaS migrates
+            //  US-based institutions from Oracle 19c to a PostgreSQL backend (via
+            //  AWS DMS). The Banner table names stay identical, but every Oracle-
+            //  specific construct breaks at the migration boundary. This table is
+            //  the 1-page reference for which idioms need remediation.
+            var sec5 = h('div', { className: 'argos-section' });
+            var sec5Head = h('h3', {});
+            sec5Head.appendChild(h('span', {}, 'Banner Cloud reality check'));
+            sec5Head.appendChild(h('span', { className: 'label' }, '☁️ Oracle → PostgreSQL'));
+            sec5.appendChild(sec5Head);
+            sec5.appendChild(h('div', { className: 'lead' }, [
+                'If you are planning or already running ',
+                h('strong', {}, 'Banner SaaS'),
+                ' (Ellucian\'s cloud offering), the database under your reports changes — ',
+                'US-based institutions migrate to PostgreSQL via AWS DMS, while non-US clients remain on Oracle. ',
+                'The Banner table names stay the same (', h('code', {}, 'SPRIDEN'), ', ',
+                h('code', {}, 'PHRHIST'), ', ', h('code', {}, 'GURACLS'), ', etc.) — ',
+                'but the SQL dialect doesn\'t.'
+            ]));
+
+            //  Callout linking back to the Explainer's target-dialect dropdown
+            var callout = h('div', { className: 'argos-cloud-callout' });
+            callout.appendChild(h('p', {}, [
+                h('strong', {}, '☁ Heads up: '),
+                'the ', h('a', { href: '#/sql', style: 'color: var(--gold);' }, 'SQL Explainer'),
+                ' has a ', h('code', {}, 'TARGET'),
+                ' dropdown in its button row. Switch to ',
+                h('code', {}, 'PostgreSQL (Banner SaaS / US)'),
+                ' and every Oracle-only construct in your pasted SQL lights up as a ',
+                h('code', {}, '🔄 dialect hint'),
+                ' with the PostgreSQL equivalent and a Copy-fix snippet where the translation is mechanical.'
+            ]));
+            callout.appendChild(h('p', {}, [
+                h('strong', {}, 'Why this matters for Argos: '),
+                'Argos reports written against on-prem Oracle Banner won\'t run unchanged after a SaaS migration. ',
+                'Plan for it: scan each ',
+                h('code', {}, 'NVL'), ', ',
+                h('code', {}, 'DECODE'), ', ',
+                h('code', {}, 'LISTAGG'), ', ',
+                h('code', {}, 'CONNECT BY'),
+                ', and the rest of the table below.'
+            ]));
+            sec5.appendChild(callout);
+
+            //  16-row reference table: Oracle | PostgreSQL | Notes
+            var tbl5 = h('table', { className: 'cloud-diff-table' });
+            var thead5 = h('thead', {});
+            var trh5 = h('tr', {});
+            trh5.appendChild(h('th', { style: 'width: 27%;' }, 'Oracle'));
+            trh5.appendChild(h('th', { style: 'width: 27%;' }, 'PostgreSQL'));
+            trh5.appendChild(h('th', {}, 'Why it matters'));
+            thead5.appendChild(trh5);
+            tbl5.appendChild(thead5);
+            var tbody5 = h('tbody', {});
+            [
+                ['SYSDATE',
+                 'CURRENT_TIMESTAMP / NOW()',
+                 'Oracle SYSDATE has no fractional seconds; CURRENT_TIMESTAMP does. Wrap with date_trunc if you need exact parity.'],
+                ['NVL(x, y)',
+                 'COALESCE(x, y)',
+                 'COALESCE is SQL-standard and accepts unlimited arguments. Drop-in for NVL\'s two-arg form.'],
+                ['NVL2(x, y, z)',
+                 "CASE WHEN x IS NOT NULL THEN y ELSE z END",
+                 'PostgreSQL has no NVL2. Counter-intuitive: NVL2 returns y when x IS NOT null, not when it IS.'],
+                ['DECODE(col, a, b, …)',
+                 "CASE col WHEN a THEN b … END",
+                 'DECODE treats two NULLs as equal; CASE doesn\'t. Add explicit IS NULL checks if your data uses NULLs.'],
+                ["LISTAGG(col, ',') WITHIN GROUP (ORDER BY col)",
+                 "STRING_AGG(col, ',' ORDER BY col)",
+                 'No WITHIN GROUP needed. STRING_AGG returns unbounded TEXT — no ORA-01489 at 4000 bytes.'],
+                ['CONNECT BY LEVEL <= N FROM dual',
+                 'generate_series(1, N) AS n',
+                 'Far cleaner. The CONNECT BY trick was a workaround for Oracle\'s lack of a sequence function.'],
+                ['CONNECT BY PRIOR (hierarchical)',
+                 'WITH RECURSIVE … UNION ALL …',
+                 'More verbose, more flexible. LEVEL becomes a counter you maintain in the recursive part.'],
+                ['FROM dual',
+                 '(omit)',
+                 'PostgreSQL allows a bare SELECT with no FROM. dual is a no-op holdover from Oracle\'s requirement.'],
+                ['WHERE ROWNUM <= N',
+                 'LIMIT N (with ORDER BY)',
+                 'ROWNUM is assigned BEFORE ORDER BY in Oracle — famous gotcha. LIMIT applies after ORDER BY cleanly.'],
+                ['col1 = col2(+)',
+                 'LEFT JOIN … ON col1 = col2',
+                 '(+) is legacy Oracle outer-join syntax. ANSI joins are clearer about which side is preserved.'],
+                ['MONTHS_BETWEEN(a, b)',
+                 'EXTRACT(YEAR FROM age(a,b))*12 + EXTRACT(MONTH FROM age(a,b))',
+                 'Oracle returns fractional months; PG age()-based formula returns whole. Compute days if you need fractions.'],
+                ['ADD_MONTHS(date, n)',
+                 "date + INTERVAL 'n months'",
+                 'Both handle end-of-month adjustment (Jan 31 + 1 month → Feb 28).'],
+                ['seq_name.NEXTVAL',
+                 "nextval('seq_name')",
+                 'Function call syntax instead of attribute access. Same for CURRVAL → currval.'],
+                ['MINUS',
+                 'EXCEPT',
+                 'Pure renaming. Same set-difference semantics. EXCEPT ALL preserves duplicates.'],
+                ['INSTR(str, sub)',
+                 'POSITION(sub IN str) or STRPOS(str, sub)',
+                 'POSITION is SQL standard; STRPOS is shorter PG-specific. Both return 0 when not found.'],
+                ['/*+ optimizer hints */',
+                 '(no built-in equivalent)',
+                 'PostgreSQL planner has no hint syntax. pg_hint_plan extension exists but isn\'t installed in Banner SaaS.']
+            ].forEach(function(row) {
+                var tr = h('tr', {});
+                tr.appendChild(h('td', { className: 'oracle', title: row[0] }, row[0]));
+                tr.appendChild(h('td', { className: 'pg',     title: row[1] }, row[1]));
+                tr.appendChild(h('td', { className: 'notes' }, row[2]));
+                tbody5.appendChild(tr);
+            });
+            tbl5.appendChild(tbody5);
+            sec5.appendChild(tbl5);
+            container.appendChild(sec5);
 
             //  Footer pointer to the Explainer
             container.appendChild(h('p', { style: 'color: var(--text-muted); font-size: 13px; margin-top: 8px;' },
