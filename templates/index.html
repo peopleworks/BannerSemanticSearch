@@ -1130,7 +1130,92 @@
         html.dark .builder-explain-list code { background: rgba(147,197,253,0.18); color: #93c5fd; }
         html.dark .builder-recipe-btn.active { background: linear-gradient(135deg, #FFB81C 0%, #d97706 100%); color: #1a1a1a; }
 
-        /* ======  Security Posture Scorecard  ====== */
+        /* ======  Argos Parameter Cheatsheet  ====== */
+        .argos-intro {
+            background: linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(124,58,237,0.05) 100%);
+            border: 1px solid rgba(6,182,212,0.25);
+            border-radius: 10px;
+            padding: 16px 20px; margin-bottom: 22px;
+        }
+        .argos-intro p { margin: 0 0 6px; color: var(--text); line-height: 1.55; font-size: 14px; }
+        .argos-intro p:last-child { margin-bottom: 0; }
+        .argos-section { margin: 0 0 28px; }
+        .argos-section h3 {
+            margin: 0 0 10px; font-size: 16px; color: var(--navy-light);
+            display: flex; align-items: baseline; gap: 10px;
+        }
+        .argos-section h3 .label {
+            background: var(--gold); color: var(--navy-dark);
+            font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .argos-section .lead {
+            color: var(--text-muted); font-size: 13px;
+            margin: 0 0 14px; line-height: 1.55;
+        }
+
+        .argos-prefix-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 14px; margin-bottom: 8px;
+        }
+        @media (max-width: 900px) {
+            .argos-prefix-grid { grid-template-columns: 1fr; }
+        }
+        .argos-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px;
+            box-shadow: var(--shadow);
+            display: flex; flex-direction: column; gap: 8px;
+            border-left: 4px solid #06b6d4;
+        }
+        .argos-card.lcl  { border-left-color: #7c3aed; }
+        .argos-card.dbn  { border-left-color: #d97706; }
+        .argos-card-prefix {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 18px; font-weight: 700; color: #0e7490;
+        }
+        html.dark .argos-card-prefix { color: #67e8f9; }
+        .argos-card.lcl .argos-card-prefix { color: #6d28d9; }
+        html.dark .argos-card.lcl .argos-card-prefix { color: #c4b5fd; }
+        .argos-card.dbn .argos-card-prefix { color: #b45309; }
+        html.dark .argos-card.dbn .argos-card-prefix { color: #fbbf24; }
+        .argos-card-title { font-size: 13px; font-weight: 700; color: var(--text); }
+        .argos-card-body { font-size: 12.5px; color: var(--text); line-height: 1.55; }
+        .argos-card-example {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: rgba(6,182,212,0.10);
+            color: #0e7490;
+            padding: 6px 10px; border-radius: 6px; font-size: 12px;
+            margin-top: 4px; word-break: break-all;
+        }
+        html.dark .argos-card-example { background: rgba(103,232,249,0.10); color: #67e8f9; }
+        .argos-card.lcl .argos-card-example { background: rgba(124,58,237,0.10); color: #6d28d9; }
+        html.dark .argos-card.lcl .argos-card-example { background: rgba(196,181,253,0.10); color: #c4b5fd; }
+        .argos-card.dbn .argos-card-example { background: rgba(217,119,6,0.10); color: #b45309; }
+        html.dark .argos-card.dbn .argos-card-example { background: rgba(251,191,36,0.10); color: #fbbf24; }
+
+        .argos-ref-table {
+            width: 100%; border-collapse: collapse;
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 8px; overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .argos-ref-table th, .argos-ref-table td {
+            padding: 9px 14px; text-align: left;
+            border-bottom: 1px solid var(--border); font-size: 13px;
+        }
+        .argos-ref-table th {
+            background: var(--hover); font-weight: 700;
+            color: var(--navy-light); font-size: 12px;
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .argos-ref-table tr:last-child td { border-bottom: none; }
+        .argos-ref-table td.mono {
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: #0e7490; font-weight: 600;
+            white-space: nowrap;
+        }
+        html.dark .argos-ref-table td.mono { color: #67e8f9; }
         .scorecard-instr {
             background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
             padding: 12px 16px; margin-bottom: 14px;
@@ -4863,6 +4948,8 @@
                 state.view = 'scorecard';
             } else if (parts[0] === 'builder') {
                 state.view = 'builder';
+            } else if (parts[0] === 'argos') {
+                state.view = 'argos';
             } else if (parts[0] === 'search' && parts[1]) {
                 var newQuery = decodeURIComponent(parts[1]);
                 var queryChanged = newQuery !== state.query;
@@ -4894,6 +4981,7 @@
                 case 'report': content = renderReportDetail(); break;
                 case 'scorecard': content = renderScorecard(); break;
                 case 'builder': content = renderBuilder(); break;
+                case 'argos': content = renderArgosPage(); break;
                 default: content = renderDashboard();
             }
             if (content) app.appendChild(content);
@@ -6127,6 +6215,185 @@
                 void ed.offsetWidth;                    // force reflow to restart animation
                 ed.classList.add('pulse');
             }
+        }
+
+        //  ===================== ARGOS PARAMETER CHEATSHEET =====================
+        //  Reference page for SQL devs writing Argos reports against Banner.
+        //  Covers parameter prefix conventions (:main_*, :lcl_*, :dbn_*), property
+        //  accessors (.Code, .Value, .Description, .Caption, .Count), and the widget
+        //  naming convention (EB, CB, DD, MC, DA, DR).
+        //
+        //  This is the cheatsheet section. The pattern library (commit B) extends
+        //  this page with copy-pasteable Argos SQL templates.
+
+        function renderArgosPage() {
+            var container = h('div', {});
+
+            //  Top bar with Home + shortcuts hint (matches other inner pages)
+            var topBar = h('div', { style: 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;' });
+            var homeBtn = h('button', {
+                style: 'background: var(--navy); color: var(--gold); border: none; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600;'
+            }, 'Home');
+            homeBtn.onclick = function() { navigate(''); };
+            topBar.appendChild(homeBtn);
+            topBar.appendChild(h('span', { style: 'color: var(--text-muted); font-size: 12px;' },
+                'Shortcuts: ` = SQL Explainer | ~ = Reports | / = search | ? = help | Esc = back to home'));
+            container.appendChild(topBar);
+
+            //  Title
+            container.appendChild(h('h2', { style: 'margin-bottom: 4px;' }, 'Argos Parameter Cheatsheet'));
+            container.appendChild(h('p', { style: 'color: var(--text-muted); margin-bottom: 16px; font-size: 14px;' },
+                "Quick reference for the parameter conventions Argos uses in Banner report SQL. " +
+                "If you've ever stared at ':main_MC_ecls.Code' and wondered what each piece means, this page is for you."));
+
+            //  Intro callout
+            var intro = h('div', { className: 'argos-intro' });
+            intro.appendChild(h('p', {}, [
+                'Argos is a widely-used reporting tool in the Banner ecosystem (Evisions). ',
+                'Its SQL looks almost like plain Oracle SQL, except for bind variables with ',
+                h('code', {}, ':main_*'), ', ', h('code', {}, ':lcl_*'), ' and ',
+                h('code', {}, ':dbn_*'), ' prefixes plus property accessors like ',
+                h('code', {}, '.Code'), '.'
+            ]));
+            intro.appendChild(h('p', {}, [
+                'The ', h('strong', {}, 'SQL Explainer'),
+                ' on this site already understands these conventions — paste any Argos report SQL ',
+                'and the parameters are recognized, colored, and classified. This page documents the ',
+                'convention itself, so you can write Argos SQL with confidence.'
+            ]));
+            container.appendChild(intro);
+
+            //  ============== Section 1: Parameter prefixes ==============
+            var sec1 = h('div', { className: 'argos-section' });
+            var sec1Head = h('h3', {});
+            sec1Head.appendChild(h('span', {}, 'Parameter prefixes'));
+            sec1Head.appendChild(h('span', { className: 'label' }, '3 kinds'));
+            sec1.appendChild(sec1Head);
+            sec1.appendChild(h('div', { className: 'lead' },
+                'Every Argos bind variable starts with one of three prefixes. The prefix tells you ' +
+                "where the parameter lives in the report's structure."));
+            var grid = h('div', { className: 'argos-prefix-grid' });
+
+            //  :main_*
+            var c1 = h('div', { className: 'argos-card' });
+            c1.appendChild(h('div', { className: 'argos-card-prefix' }, ':main_*'));
+            c1.appendChild(h('div', { className: 'argos-card-title' }, 'Main / top-level DataBlock'));
+            c1.appendChild(h('div', { className: 'argos-card-body' },
+                "Parameters defined on the report's primary (top) DataBlock. " +
+                "These are the most common — visible to the user as filter widgets at the top of the report."));
+            c1.appendChild(h('div', { className: 'argos-card-example' }, ':main_EB_week_of'));
+            grid.appendChild(c1);
+
+            //  :lcl_*
+            var c2 = h('div', { className: 'argos-card lcl' });
+            c2.appendChild(h('div', { className: 'argos-card-prefix' }, ':lcl_*'));
+            c2.appendChild(h('div', { className: 'argos-card-title' }, 'Local / banded sub-DataBlock'));
+            c2.appendChild(h('div', { className: 'argos-card-body' },
+                "Parameters scoped to a child / banded DataBlock — subreports that repeat per row " +
+                "of the main result. Lets the child SQL filter by values from the current main-row context."));
+            c2.appendChild(h('div', { className: 'argos-card-example' }, ':lcl_StudentID'));
+            grid.appendChild(c2);
+
+            //  :dbn_*
+            var c3 = h('div', { className: 'argos-card dbn' });
+            c3.appendChild(h('div', { className: 'argos-card-prefix' }, ':dbn_*'));
+            c3.appendChild(h('div', { className: 'argos-card-title' }, 'DataBlock-name (cross-block)'));
+            c3.appendChild(h('div', { className: 'argos-card-body' },
+                "Refers to a parameter on a NAMED DataBlock other than the current one. " +
+                "Less common, used when a report has multiple DataBlocks that need to share filter values."));
+            c3.appendChild(h('div', { className: 'argos-card-example' }, ':dbn_payroll_year'));
+            grid.appendChild(c3);
+
+            sec1.appendChild(grid);
+            container.appendChild(sec1);
+
+            //  ============== Section 2: Property accessors ==============
+            var sec2 = h('div', { className: 'argos-section' });
+            var sec2Head = h('h3', {});
+            sec2Head.appendChild(h('span', {}, 'Property accessors'));
+            sec2Head.appendChild(h('span', { className: 'label' }, '.suffix'));
+            sec2.appendChild(sec2Head);
+            sec2.appendChild(h('div', { className: 'lead' }, [
+                "For multi-value parameters (drop-downs, multi-checkboxes), Argos exposes ",
+                "properties via a ", h('code', {}, '.Suffix'), " notation. The plain ",
+                h('code', {}, ':main_MC_ecls'), " gives you the comma-separated selection list; " +
+                "the suffix lets you pull a specific facet."
+            ]));
+            var tbl2 = h('table', { className: 'argos-ref-table' });
+            var thead2 = h('thead', {});
+            var trh2 = h('tr', {});
+            trh2.appendChild(h('th', {}, 'Suffix'));
+            trh2.appendChild(h('th', {}, 'Returns'));
+            trh2.appendChild(h('th', {}, 'Typical use'));
+            thead2.appendChild(trh2);
+            tbl2.appendChild(thead2);
+            var tbody2 = h('tbody', {});
+            [
+                ['.Code',        'Selected code value(s)',
+                                 'The most common suffix — filter SQL by a code (eclass, term, etc.)'],
+                ['.Value',       'Actual value of the parameter',
+                                 'Sometimes equivalent to .Code; varies by widget type'],
+                ['.Description', 'Human-readable description',
+                                 'Display in report headers or row group labels'],
+                ['.Caption',     'UI label / widget caption',
+                                 'Echo back the prompt text into the report output'],
+                ['.Count',       'Number of items selected',
+                                 'For multi-checkboxes: branch logic based on selection count']
+            ].forEach(function(row) {
+                var tr = h('tr', {});
+                tr.appendChild(h('td', { className: 'mono' }, row[0]));
+                tr.appendChild(h('td', {}, row[1]));
+                tr.appendChild(h('td', {}, row[2]));
+                tbody2.appendChild(tr);
+            });
+            tbl2.appendChild(tbody2);
+            sec2.appendChild(tbl2);
+            container.appendChild(sec2);
+
+            //  ============== Section 3: Widget naming convention ==============
+            var sec3 = h('div', { className: 'argos-section' });
+            var sec3Head = h('h3', {});
+            sec3Head.appendChild(h('span', {}, 'Widget naming convention'));
+            sec3Head.appendChild(h('span', { className: 'label' }, ':main_<TYPE>_<purpose>'));
+            sec3.appendChild(sec3Head);
+            sec3.appendChild(h('div', { className: 'lead' },
+                "A widely-followed convention is to encode the widget type as a 2-letter token " +
+                "right after the prefix. It's not enforced by Argos itself but lets you read someone " +
+                "else's report and know what UI control the parameter binds to."));
+            var tbl3 = h('table', { className: 'argos-ref-table' });
+            var thead3 = h('thead', {});
+            var trh3 = h('tr', {});
+            trh3.appendChild(h('th', {}, 'Token'));
+            trh3.appendChild(h('th', {}, 'Widget'));
+            trh3.appendChild(h('th', {}, 'Example'));
+            thead3.appendChild(trh3);
+            tbl3.appendChild(thead3);
+            var tbody3 = h('tbody', {});
+            [
+                ['EB', 'Edit Box — free text or number',                   ':main_EB_min_salary'],
+                ['CB', 'Check Box — boolean (1 / 0)',                       ':main_CB_allecls'],
+                ['DD', 'Drop Down — single selection from a list',          ':main_DD_term_code'],
+                ['MC', 'Multi-Checkbox — comma-separated selections',       ':main_MC_ecls'],
+                ['DA', 'Date — single date',                                 ':main_DA_as_of'],
+                ['DR', 'Date Range — start + end',                           ':main_DR_pay_period'],
+                ['RB', 'Radio Button group',                                 ':main_RB_status']
+            ].forEach(function(row) {
+                var tr = h('tr', {});
+                tr.appendChild(h('td', { className: 'mono' }, row[0]));
+                tr.appendChild(h('td', {}, row[1]));
+                tr.appendChild(h('td', { className: 'mono' }, row[2]));
+                tbody3.appendChild(tr);
+            });
+            tbl3.appendChild(tbody3);
+            sec3.appendChild(tbl3);
+            container.appendChild(sec3);
+
+            //  Footer pointer to the Explainer
+            container.appendChild(h('p', { style: 'color: var(--text-muted); font-size: 13px; margin-top: 8px;' },
+                ['Want to validate an Argos query end-to-end? ',
+                 h('a', { href: '#/sql', style: 'color: var(--gold);' }, 'Open the SQL Explainer →')]));
+
+            return container;
         }
 
         function renderSqlExplainer() {
