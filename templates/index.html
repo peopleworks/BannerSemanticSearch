@@ -1246,6 +1246,116 @@
         .argos-pattern-actions {
             display: flex; gap: 6px; margin-top: 2px;
         }
+
+        /* ======  AI Settings (BYOK)  ====== */
+        .settings-container { max-width: 760px; }
+        .settings-disclaimer {
+            background: linear-gradient(135deg, rgba(217,119,6,0.08) 0%, rgba(220,38,38,0.05) 100%);
+            border: 1px solid rgba(217,119,6,0.35);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 22px;
+            display: flex; gap: 14px; align-items: flex-start;
+        }
+        .settings-disclaimer-icon { font-size: 22px; flex-shrink: 0; line-height: 1.2; }
+        .settings-disclaimer-body { flex: 1; }
+        .settings-disclaimer-body strong { color: #b45309; }
+        html.dark .settings-disclaimer-body strong { color: #fbbf24; }
+        .settings-disclaimer-body p { margin: 0 0 6px; line-height: 1.55; font-size: 13px; color: var(--text); }
+        .settings-disclaimer-body p:last-child { margin: 0; }
+
+        .settings-section {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px 18px; margin-bottom: 14px;
+            box-shadow: var(--shadow);
+        }
+        .settings-row { margin-bottom: 14px; }
+        .settings-row:last-child { margin-bottom: 0; }
+        .settings-label {
+            display: block; font-weight: 700; font-size: 13px;
+            color: var(--text); margin-bottom: 4px;
+        }
+        .settings-help {
+            font-size: 12px; color: var(--text-muted);
+            margin-top: 4px; line-height: 1.5;
+        }
+        .settings-help code {
+            background: var(--hover); color: var(--navy-light);
+            padding: 1px 6px; border-radius: 3px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 11px;
+        }
+        html.dark .settings-help code { background: rgba(147,197,253,0.10); color: #93c5fd; }
+
+        .settings-input, .settings-select {
+            width: 100%; padding: 8px 12px;
+            background: var(--bg); color: var(--text);
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: inherit; font-size: 13px;
+            box-sizing: border-box;
+        }
+        .settings-input:focus, .settings-select:focus {
+            outline: none; border-color: var(--gold);
+        }
+        .settings-input.mono { font-family: 'Consolas', 'Courier New', monospace; }
+
+        /* Toggle switch */
+        .settings-toggle-row {
+            display: flex; align-items: center; gap: 14px;
+            padding: 4px 0;
+        }
+        .settings-toggle {
+            position: relative;
+            width: 48px; height: 26px;
+            background: var(--border); border-radius: 13px;
+            cursor: pointer; transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .settings-toggle::after {
+            content: ''; position: absolute;
+            top: 3px; left: 3px;
+            width: 20px; height: 20px;
+            background: white; border-radius: 50%;
+            transition: left 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .settings-toggle.on { background: #10b981; }
+        .settings-toggle.on::after { left: 25px; }
+        .settings-toggle-text { font-weight: 700; font-size: 14px; }
+        .settings-toggle-state { color: var(--text-muted); font-size: 12px; margin-left: 6px; font-weight: 500; }
+
+        .settings-actions {
+            display: flex; gap: 10px; margin-top: 8px;
+            padding-top: 14px; border-top: 1px solid var(--border);
+        }
+        .settings-btn {
+            padding: 8px 16px; border-radius: 6px;
+            font-weight: 600; font-size: 13px; cursor: pointer;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--text); font-family: inherit;
+        }
+        .settings-btn.primary {
+            background: var(--gold); color: var(--navy-dark); border-color: var(--gold);
+        }
+        .settings-btn.primary:hover { background: var(--gold-light); }
+        .settings-btn:hover { background: var(--hover); }
+        .settings-status {
+            margin-left: auto; align-self: center;
+            font-size: 12px; color: var(--text-muted);
+        }
+        .settings-status.ok { color: #10b981; }
+        .settings-status.err { color: #ef4444; }
+
+        .settings-cost-pill {
+            display: inline-block; padding: 1px 8px;
+            background: rgba(16,185,129,0.12); color: #047857;
+            border-radius: 10px; font-size: 11px; font-weight: 700;
+            margin-left: 6px; vertical-align: middle;
+        }
+        html.dark .settings-cost-pill { background: rgba(110,231,183,0.15); color: #6ee7b7; }
+
+        .settings-collapsible { display: none; }
+        .settings-collapsible.open { display: block; }
+
         .scorecard-instr {
             background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
             padding: 12px 16px; margin-bottom: 14px;
@@ -4993,6 +5103,8 @@
                 state.view = 'builder';
             } else if (parts[0] === 'argos') {
                 state.view = 'argos';
+            } else if (parts[0] === 'settings') {
+                state.view = 'settings';
             } else if (parts[0] === 'search' && parts[1]) {
                 var newQuery = decodeURIComponent(parts[1]);
                 var queryChanged = newQuery !== state.query;
@@ -5025,6 +5137,7 @@
                 case 'scorecard': content = renderScorecard(); break;
                 case 'builder': content = renderBuilder(); break;
                 case 'argos': content = renderArgosPage(); break;
+                case 'settings': content = renderSettingsPage(); break;
                 default: content = renderDashboard();
             }
             if (content) app.appendChild(content);
@@ -6260,6 +6373,326 @@
             }
         }
 
+        //  ===================== AI SETTINGS (BYOK — Bring Your Own Key) =====================
+        //  AI is OPT-IN. The toggle defaults to OFF; the validator and every other
+        //  feature on this site work without any AI configured. When the user enables
+        //  AI, they provide their own API key (Anthropic / OpenAI) or local Ollama
+        //  endpoint. The key lives only in localStorage — never tracked, never sent
+        //  anywhere except the chosen provider.
+
+        var AI_SETTINGS_KEY = 'ai_settings_v1';
+        var AI_DEFAULTS = {
+            enabled: false,
+            provider: 'anthropic',
+            providers: {
+                anthropic: { apiKey: '', model: 'claude-haiku-4-5-20251001' },
+                openai:    { apiKey: '', model: 'gpt-4o-mini' },
+                ollama:    { baseUrl: 'http://localhost:11434', model: 'llama3.1' }
+            },
+            redaction: 'standard',
+            stream: true,
+            stats: { lastTest: null, lastTestStatus: null, callsToday: 0, lastCallDate: null }
+        };
+
+        //  Provider catalog — drives the dropdowns + cost hints. Centralized so
+        //  adding a new model is one entry.
+        var AI_CATALOG = {
+            anthropic: {
+                label: 'Anthropic (Claude)',
+                docsUrl: 'https://console.anthropic.com/settings/keys',
+                keyHint: 'sk-ant-…',
+                models: [
+                    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 — fast, cheap', costPerExplain: '~$0.0005' },
+                    { id: 'claude-sonnet-4-6',         label: 'Claude Sonnet 4.6 — balanced',    costPerExplain: '~$0.003'  },
+                    { id: 'claude-opus-4-7',           label: 'Claude Opus 4.7 — deep reasoning', costPerExplain: '~$0.015'  }
+                ]
+            },
+            openai: {
+                label: 'OpenAI (GPT)',
+                docsUrl: 'https://platform.openai.com/api-keys',
+                keyHint: 'sk-proj-…',
+                models: [
+                    { id: 'gpt-4o-mini', label: 'GPT-4o-mini — fast, cheap',    costPerExplain: '~$0.0003' },
+                    { id: 'gpt-4o',      label: 'GPT-4o — balanced',            costPerExplain: '~$0.005'  }
+                ]
+            },
+            ollama: {
+                label: 'Ollama (local — no key)',
+                docsUrl: 'https://ollama.com/download',
+                keyHint: '(no key needed — runs locally)',
+                models: [
+                    { id: 'llama3.1',          label: 'Llama 3.1 8B', costPerExplain: 'free (local CPU/GPU)' },
+                    { id: 'llama3.1:70b',      label: 'Llama 3.1 70B', costPerExplain: 'free (needs ≥48GB)'   },
+                    { id: 'qwen2.5-coder:7b',  label: 'Qwen2.5-Coder 7B — SQL-tuned', costPerExplain: 'free' },
+                    { id: 'phi3.5',            label: 'Phi 3.5 mini — tiny', costPerExplain: 'free'         }
+                ]
+            }
+        };
+
+        function loadAiSettings() {
+            try {
+                var raw = localStorage.getItem(AI_SETTINGS_KEY);
+                if (!raw) return JSON.parse(JSON.stringify(AI_DEFAULTS));
+                var parsed = JSON.parse(raw);
+                //  Shallow-merge so newly added fields pick up defaults
+                var defaults = JSON.parse(JSON.stringify(AI_DEFAULTS));
+                Object.keys(parsed).forEach(function(k) { defaults[k] = parsed[k]; });
+                return defaults;
+            } catch (_) {
+                return JSON.parse(JSON.stringify(AI_DEFAULTS));
+            }
+        }
+        function saveAiSettings(s) {
+            try { localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(s)); } catch (_) {}
+        }
+        function getAiEnabled() {
+            return loadAiSettings().enabled === true;
+        }
+        function getAiProviderConfig() {
+            var s = loadAiSettings();
+            return {
+                provider: s.provider,
+                cfg: s.providers[s.provider] || {},
+                catalog: AI_CATALOG[s.provider] || null,
+                redaction: s.redaction,
+                stream: s.stream
+            };
+        }
+
+        function renderSettingsPage() {
+            var container = h('div', { className: 'settings-container' });
+
+            //  Top bar with Home + shortcuts hint
+            var topBar = h('div', { style: 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;' });
+            var homeBtn = h('button', {
+                style: 'background: var(--navy); color: var(--gold); border: none; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600;'
+            }, 'Home');
+            homeBtn.onclick = function() { navigate(''); };
+            topBar.appendChild(homeBtn);
+            topBar.appendChild(h('span', { style: 'color: var(--text-muted); font-size: 12px;' },
+                'Shortcuts: ` = SQL Explainer | ~ = Reports | / = search | ? = help | Esc = back to home'));
+            container.appendChild(topBar);
+
+            //  Title
+            container.appendChild(h('h2', { style: 'margin-bottom: 4px;' }, '✨ AI Assistance — Settings'));
+            container.appendChild(h('p', { style: 'color: var(--text-muted); margin-bottom: 16px; font-size: 14px;' },
+                "Bring Your Own Key (BYOK). Optional AI features that augment the deterministic validator — never replace it. " +
+                "Everything on this site works without AI configured; this page only turns AI features ON."));
+
+            //  Disclaimer (always visible)
+            var disc = h('div', { className: 'settings-disclaimer' });
+            disc.appendChild(h('div', { className: 'settings-disclaimer-icon' }, '⚠️'));
+            var discBody = h('div', { className: 'settings-disclaimer-body' });
+            discBody.appendChild(h('p', {}, [
+                h('strong', {}, 'Privacy notice:'), ' enabling AI features sends your SQL to the provider you choose ',
+                '(Anthropic, OpenAI, or your local Ollama). Banner SQL often contains identifiers — review what you paste.'
+            ]));
+            discBody.appendChild(h('p', {}, [
+                h('strong', {}, 'Your API key:'), ' stored only in your browser’s localStorage. Never tracked, never logged, ',
+                'never sent anywhere except directly to the provider you selected. The repo and this site are 100% static — there is no backend.'
+            ]));
+            discBody.appendChild(h('p', {}, [
+                h('strong', {}, 'Redaction:'), ' before each request, client-side patterns mask obvious PII (SSN, email, long IDs) in string literals. ',
+                'Set the level below — “Strict” also truncates string literals over 50 chars.'
+            ]));
+            disc.appendChild(discBody);
+            container.appendChild(disc);
+
+            //  Load current settings
+            var s = loadAiSettings();
+
+            //  ============== Master toggle ==============
+            var togSec = h('div', { className: 'settings-section' });
+            var togRow = h('div', { className: 'settings-toggle-row' });
+            var tog = h('div', { className: 'settings-toggle' + (s.enabled ? ' on' : '') });
+            togRow.appendChild(tog);
+            var togText = h('div', {});
+            togText.appendChild(h('div', { className: 'settings-toggle-text' }, [
+                'Enable AI assistance',
+                h('span', { className: 'settings-toggle-state', id: 'aiToggleState' }, s.enabled ? '(ON)' : '(OFF)')
+            ]));
+            togText.appendChild(h('div', { className: 'settings-help' },
+                s.enabled
+                    ? 'AI buttons (Explain, Suggest fix, Translate) appear inside the SQL Explainer.'
+                    : 'No AI features will appear in the UI until you enable them here.'));
+            togRow.appendChild(togText);
+            togSec.appendChild(togRow);
+            container.appendChild(togSec);
+
+            //  ============== Configuration (collapsible) ==============
+            var cfgSec = h('div', { className: 'settings-section settings-collapsible' + (s.enabled ? ' open' : ''), id: 'aiCfgPanel' });
+
+            //  Provider
+            var provRow = h('div', { className: 'settings-row' });
+            provRow.appendChild(h('label', { className: 'settings-label' }, 'Provider'));
+            var provSel = h('select', { className: 'settings-select', id: 'aiProvider' });
+            Object.keys(AI_CATALOG).forEach(function(p) {
+                var opt = h('option', { value: p }, AI_CATALOG[p].label);
+                if (p === s.provider) opt.selected = true;
+                provSel.appendChild(opt);
+            });
+            provRow.appendChild(provSel);
+            cfgSec.appendChild(provRow);
+
+            //  API key / Base URL (per-provider)
+            var keyRow = h('div', { className: 'settings-row', id: 'aiKeyRow' });
+            var keyLabel = h('label', { className: 'settings-label', id: 'aiKeyLabel' },
+                s.provider === 'ollama' ? 'Ollama base URL' : 'API key');
+            keyRow.appendChild(keyLabel);
+            var keyVal = s.provider === 'ollama' ? (s.providers.ollama.baseUrl || 'http://localhost:11434') : (s.providers[s.provider].apiKey || '');
+            var keyInput = h('input', {
+                type: s.provider === 'ollama' ? 'text' : 'password',
+                className: 'settings-input mono',
+                id: 'aiApiKey',
+                placeholder: AI_CATALOG[s.provider].keyHint,
+                autocomplete: 'off',
+                spellcheck: 'false',
+                value: keyVal
+            });
+            keyRow.appendChild(keyInput);
+            var keyHelp = h('div', { className: 'settings-help', id: 'aiKeyHelp' });
+            keyHelp.appendChild(h('span', {}, 'Stored only in localStorage. '));
+            var keyLink = h('a', { href: AI_CATALOG[s.provider].docsUrl, target: '_blank', rel: 'noopener', style: 'color: var(--gold);' }, 'Get a key →');
+            keyHelp.appendChild(keyLink);
+            keyRow.appendChild(keyHelp);
+            cfgSec.appendChild(keyRow);
+
+            //  Model
+            var modelRow = h('div', { className: 'settings-row' });
+            var modelLabelEl = h('label', { className: 'settings-label' }, 'Model');
+            modelRow.appendChild(modelLabelEl);
+            var modelSel = h('select', { className: 'settings-select', id: 'aiModel' });
+            function _rebuildModelOptions(provider, currentModel) {
+                modelSel.innerHTML = '';
+                AI_CATALOG[provider].models.forEach(function(m) {
+                    var opt = h('option', { value: m.id }, m.label + ' · ' + m.costPerExplain + '/Explain');
+                    if (m.id === currentModel) opt.selected = true;
+                    modelSel.appendChild(opt);
+                });
+            }
+            _rebuildModelOptions(s.provider, s.providers[s.provider].model);
+            modelRow.appendChild(modelSel);
+            modelRow.appendChild(h('div', { className: 'settings-help' },
+                'Cost shown is an estimate for one "Explain in depth" call (~500-800 tokens).'));
+            cfgSec.appendChild(modelRow);
+
+            //  Redaction
+            var redRow = h('div', { className: 'settings-row' });
+            redRow.appendChild(h('label', { className: 'settings-label' }, 'Redaction level'));
+            var redSel = h('select', { className: 'settings-select', id: 'aiRedaction' });
+            [
+                ['off',      'Off — SQL sent verbatim'],
+                ['standard', 'Standard — masks SSN, email, long IDs in string literals'],
+                ['strict',   'Strict — Standard + truncates string literals > 50 chars']
+            ].forEach(function(row) {
+                var opt = h('option', { value: row[0] }, row[1]);
+                if (row[0] === s.redaction) opt.selected = true;
+                redSel.appendChild(opt);
+            });
+            redRow.appendChild(redSel);
+            redRow.appendChild(h('div', { className: 'settings-help' },
+                'Redaction runs client-side before each request. Recommended: Standard.'));
+            cfgSec.appendChild(redRow);
+
+            //  Stream
+            var streamRow = h('div', { className: 'settings-row' });
+            var streamLabel = h('label', { style: 'display: flex; align-items: center; gap: 10px; cursor: pointer;' });
+            var streamCb = h('input', { type: 'checkbox', id: 'aiStream' });
+            if (s.stream) streamCb.checked = true;
+            streamLabel.appendChild(streamCb);
+            streamLabel.appendChild(h('span', { className: 'settings-label', style: 'margin: 0;' }, 'Stream responses'));
+            streamRow.appendChild(streamLabel);
+            streamRow.appendChild(h('div', { className: 'settings-help' },
+                'Show the AI response as it generates (feels faster). Recommended ON.'));
+            cfgSec.appendChild(streamRow);
+
+            //  Actions
+            var actions = h('div', { className: 'settings-actions' });
+            var testBtn = h('button', { className: 'settings-btn', id: 'aiTestBtn' }, 'Test connection');
+            var saveBtn = h('button', { className: 'settings-btn primary', id: 'aiSaveBtn' }, 'Save settings');
+            actions.appendChild(testBtn);
+            actions.appendChild(saveBtn);
+            var status = h('div', { className: 'settings-status', id: 'aiStatus' },
+                s.stats.lastTest ? ('Last test: ' + (s.stats.lastTestStatus || 'unknown')) : 'Never tested.');
+            actions.appendChild(status);
+            cfgSec.appendChild(actions);
+
+            container.appendChild(cfgSec);
+
+            //  ============== Stats box ==============
+            var statsSec = h('div', { className: 'settings-section', style: 'font-size: 12px; color: var(--text-muted);' });
+            var today = new Date().toISOString().slice(0, 10);
+            var callsToday = (s.stats.lastCallDate === today) ? s.stats.callsToday : 0;
+            statsSec.appendChild(h('div', {}, [
+                h('strong', { style: 'color: var(--text);' }, 'Today: '),
+                String(callsToday) + ' AI call(s)',
+                h('span', { className: 'settings-cost-pill' }, '~$' + (callsToday * 0.0005).toFixed(4)),
+                ' · settings stored in your browser only · ',
+                h('a', {
+                    href: '#', style: 'color: var(--gold);', onclick: function(ev) {
+                        ev.preventDefault();
+                        if (confirm('Reset all AI settings to defaults? This will clear your API key from localStorage.')) {
+                            localStorage.removeItem(AI_SETTINGS_KEY);
+                            navigate('settings');   // re-render
+                        }
+                    }
+                }, 'Reset')
+            ]));
+            container.appendChild(statsSec);
+
+            //  ============== Wire up interactions ==============
+            tog.addEventListener('click', function() {
+                var cur = loadAiSettings();
+                cur.enabled = !cur.enabled;
+                saveAiSettings(cur);
+                tog.classList.toggle('on');
+                document.getElementById('aiToggleState').textContent = cur.enabled ? '(ON)' : '(OFF)';
+                document.getElementById('aiCfgPanel').classList.toggle('open', cur.enabled);
+            });
+
+            provSel.addEventListener('change', function() {
+                var newProv = provSel.value;
+                var cur = loadAiSettings();
+                cur.provider = newProv;
+                saveAiSettings(cur);
+                //  Refresh dependent inputs
+                var catalog = AI_CATALOG[newProv];
+                document.getElementById('aiKeyLabel').textContent = newProv === 'ollama' ? 'Ollama base URL' : 'API key';
+                keyInput.type = newProv === 'ollama' ? 'text' : 'password';
+                keyInput.placeholder = catalog.keyHint;
+                keyInput.value = newProv === 'ollama' ? (cur.providers.ollama.baseUrl || 'http://localhost:11434') : (cur.providers[newProv].apiKey || '');
+                keyLink.href = catalog.docsUrl;
+                _rebuildModelOptions(newProv, cur.providers[newProv].model);
+            });
+
+            saveBtn.addEventListener('click', function() {
+                var cur = loadAiSettings();
+                cur.provider = provSel.value;
+                if (cur.provider === 'ollama') {
+                    cur.providers.ollama.baseUrl = keyInput.value.trim() || 'http://localhost:11434';
+                } else {
+                    cur.providers[cur.provider].apiKey = keyInput.value.trim();
+                }
+                cur.providers[cur.provider].model = modelSel.value;
+                cur.redaction = redSel.value;
+                cur.stream = streamCb.checked;
+                saveAiSettings(cur);
+                saveBtn.textContent = '✓ Saved';
+                setTimeout(function() { saveBtn.textContent = 'Save settings'; }, 1400);
+            });
+
+            testBtn.addEventListener('click', function() {
+                //  In commit A, "Test connection" is just a stub. Commit B will
+                //  wire it to a real ping. We surface a hint so the user knows
+                //  the button exists but doesn't promise functionality yet.
+                var st = document.getElementById('aiStatus');
+                st.className = 'settings-status';
+                st.textContent = 'Connection testing will be wired in the next release. Settings saved.';
+            });
+
+            return container;
+        }
+
         //  ===================== ARGOS PARAMETER CHEATSHEET =====================
         //  Reference page for SQL devs writing Argos reports against Banner.
         //  Covers parameter prefix conventions (:main_*, :lcl_*, :dbn_*), property
@@ -6884,6 +7317,7 @@
                 { kw: ['sql','explainer','explain','validate'],            title: 'Open SQL Explainer',      sub: 'Validate & explain SQL',           route: 'sql' },
                 { kw: ['reports','report','audit','access review'],        title: 'Open Reports',            sub: REPORTS.length + ' templated reports', route: 'reports' },
                 { kw: ['argos','parameters','cheatsheet','main','lcl','dbn','bind'], title: 'Open Argos cheatsheet', sub: ':main_*, :lcl_*, :dbn_* + 7 SQL patterns', route: 'argos' },
+                { kw: ['settings','ai','byok','api key','anthropic','openai','ollama','claude','gpt'], title: 'Open AI settings', sub: 'BYOK — enable optional AI features', route: 'settings' },
                 { kw: ['home','dashboard','back','main'],                  title: 'Go Home',                 sub: 'Dashboard view',                   route: '' },
                 { kw: ['help','examples','shortcut'],                      title: 'Open Help panel',         sub: 'Search examples & shortcuts',      route: null, action: function() { closePalette(); toggleHelpPanel(); } },
             ];
