@@ -1819,6 +1819,19 @@
             </div>
 
             <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#128203;</span> Argos / Oracle Reference</div>
+                <a class="help-query" data-q="__argos__"><code>Argos parameter cheatsheet</code><span class="help-hint">:main_* / :lcl_* / :dbn_* conventions + accessors</span></a>
+                <a class="help-query" data-q="__argos__"><code>Argos SQL patterns</code><span class="help-hint">7 copy-ready snippets: CONNECT BY split, LISTAGG OVERFLOW, multi-checkbox IN, &quot;show all&quot; toggle, week-of-date, optional date, Y/N flag</span></a>
+                <div class="help-tip" style="margin: 0 -8px;">
+                    <strong style="color: #0e7490;">&#128270; SQL Server &rarr; Oracle:</strong> paste any SQL Server query into the SQL Explainer &mdash;
+                    the validator detects <code>TOP</code>, <code>[brackets]</code>, <code>ISNULL</code>, <code>LEN</code>, <code>GETDATE</code>,
+                    <code>CHARINDEX</code>, <code>IIF</code>, <code>STRING_AGG</code>, <code>DATEDIFF/DATEADD</code>, <code>CONVERT</code>,
+                    <code>WITH (NOLOCK)</code>, <code>+</code> concat, <code>@variables</code>, <code>CROSS/OUTER APPLY</code>, <code>SELECT INTO #temp</code>
+                    and surfaces each one with its Oracle equivalent + a Copy-fix snippet.
+                </div>
+            </div>
+
+            <div class="help-category">
                 <div class="help-cat-title"><span class="help-cat-icon">&#9000;</span> Keyboard Shortcuts</div>
                 <div class="help-tip" style="margin: 0 -8px;">
                     <code>Ctrl+Shift+F</code> &mdash; Command palette (search everything)<br>
@@ -6857,6 +6870,7 @@
                 results.push({ group: 'Start here', type: 'a', title: 'Security Posture Scorecard', sub: '8 traffic-light gauges — paste SR014 row to populate', hint: '!', action: function() { navigate('scorecard'); } });
                 results.push({ group: 'Start here', type: 'a', title: 'Ready-to-run Reports', sub: REPORTS.length + ' security & access reports', hint: '~', action: function() { navigate('reports'); } });
                 results.push({ group: 'Start here', type: 'a', title: 'SQL Explainer', sub: 'Paste any Banner SQL to validate', hint: '`', action: function() { navigate('sql'); } });
+                results.push({ group: 'Start here', type: 'a', title: 'Argos Parameter Cheatsheet', sub: ':main_* / :lcl_* / :dbn_* conventions + 7 copy-ready patterns', hint: '', action: function() { navigate('argos'); } });
                 results.push({ group: 'Start here', type: 'q', title: 'Try: "Banner Student security classes"', sub: 'Ask Banner — auto-generates SQL', hint: '', action: function() { document.getElementById('searchInput').value = 'Banner Student security classes'; navigate('search/' + encodeURIComponent('Banner Student security classes')); } });
                 //  Top 3 reports
                 REPORTS.slice(0, 3).forEach(function(r) {
@@ -6869,6 +6883,7 @@
             var actions = [
                 { kw: ['sql','explainer','explain','validate'],            title: 'Open SQL Explainer',      sub: 'Validate & explain SQL',           route: 'sql' },
                 { kw: ['reports','report','audit','access review'],        title: 'Open Reports',            sub: REPORTS.length + ' templated reports', route: 'reports' },
+                { kw: ['argos','parameters','cheatsheet','main','lcl','dbn','bind'], title: 'Open Argos cheatsheet', sub: ':main_*, :lcl_*, :dbn_* + 7 SQL patterns', route: 'argos' },
                 { kw: ['home','dashboard','back','main'],                  title: 'Go Home',                 sub: 'Dashboard view',                   route: '' },
                 { kw: ['help','examples','shortcut'],                      title: 'Open Help panel',         sub: 'Search examples & shortcuts',      route: null, action: function() { closePalette(); toggleHelpPanel(); } },
             ];
@@ -7105,6 +7120,7 @@
                 //  Sentinel values route to specific views instead of search
                 if (q === '__scorecard__') { navigate('scorecard'); }
                 else if (q === '__builder__') { navigate('builder'); }
+                else if (q === '__argos__') { navigate('argos'); }
                 else if (/^__report:([A-Z0-9]+)__$/.test(q)) {
                     navigate('report/' + q.replace(/^__report:([A-Z0-9]+)__$/, '$1'));
                 }

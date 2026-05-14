@@ -165,6 +165,17 @@ def shot_sql_explainer(page):
     return 'sql-explainer.png'
 
 
+def shot_argos(page):
+    """Argos parameter cheatsheet page — the 3-card prefix grid, accessor +
+    widget reference tables, and the copy-ready SQL pattern library."""
+    page.goto(URL + '#/argos', wait_until='domcontentloaded')
+    page.wait_for_selector('.argos-intro', timeout=8000)
+    #  Scroll into view so the intro + first cards dominate the frame
+    page.evaluate("var s=document.querySelector('.argos-intro'); if(s) s.scrollIntoView({block:'start'});")
+    time.sleep(0.4)
+    return 'argos-cheatsheet.png'
+
+
 def shot_sql_dialect(page):
     """SQL Explainer translating SQL Server idioms to Oracle equivalents.
     Showcases the 'dialect hints' category — a teal section between warnings
@@ -222,6 +233,7 @@ SHOTS = {
     'module-grid': (shot_module_grid,     {'width': 1600, 'height': 1100}),
     'sql-explain': (shot_sql_explainer,   {'width': 1600, 'height': 1000}),
     'sql-dialect': (shot_sql_dialect,     {'width': 1600, 'height': 1100}),
+    'argos':       (shot_argos,           {'width': 1600, 'height': 1200}),
     'search':      (shot_search_synonyms, {'width': 1600, 'height': 1000}),
     'reports':     (shot_reports_index,   {'width': 1600, 'height': 1100}),
 }
