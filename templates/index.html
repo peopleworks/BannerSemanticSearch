@@ -517,6 +517,54 @@
         .sql-fix-btn:hover { background: var(--gold-light); }
         .sql-fix-btn.copied { background: #10b981; color: white; }
 
+        /* AI "Explain in depth" button — purple/violet to distinguish from gold Copy-fix */
+        .ai-explain-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            color: white;
+            border: none; padding: 3px 10px; border-radius: 12px;
+            font-size: 11px; font-weight: 700; cursor: pointer;
+            font-family: inherit; line-height: 1.5;
+            transition: opacity 0.1s;
+        }
+        .ai-explain-btn:hover { opacity: 0.92; }
+        .ai-explain-btn:disabled { opacity: 0.55; cursor: wait; }
+
+        /* Streamed AI response panel */
+        .ai-response {
+            margin: 6px 0 14px;
+            padding: 12px 14px;
+            background: linear-gradient(135deg, rgba(124,58,237,0.07) 0%, rgba(6,182,212,0.04) 100%);
+            border: 1px solid rgba(124,58,237,0.30);
+            border-radius: 8px;
+            font-size: 13px; line-height: 1.6;
+            color: var(--text);
+        }
+        .ai-response.error {
+            background: rgba(239,68,68,0.06);
+            border-color: rgba(239,68,68,0.30);
+        }
+        .ai-response-header {
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 10px; margin-bottom: 8px;
+            font-size: 11px; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700;
+        }
+        .ai-response-model { color: #6d28d9; }
+        html.dark .ai-response-model { color: #c4b5fd; }
+        .ai-response-close {
+            background: transparent; border: none; cursor: pointer;
+            color: var(--text-muted); font-size: 16px; line-height: 1;
+            padding: 0 4px;
+        }
+        .ai-response-close:hover { color: #ef4444; }
+        .ai-response-body { white-space: pre-wrap; }
+        .ai-response-cursor::after {
+            content: '▮'; color: #7c3aed;
+            animation: aiBlink 1s steps(1) infinite;
+            margin-left: 2px;
+        }
+        @keyframes aiBlink { 50% { opacity: 0.25; } }
+
         /* Editor-pulse animation when "jump to" fires */
         @keyframes editorPulse {
             0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
@@ -6062,7 +6110,7 @@
             return { errors: errors, warnings: warnings, passes: passes, dialectHints: dialectHints };
         }
 
-        function buildValidationSection(validation) {
+        function buildValidationSection(validation, sql, parsed) {
             var sec = h('div', { className: 'sql-val-section' });
             var header = h('div', { className: 'sql-val-header' });
             header.appendChild(h('div', { className: 'sql-val-title' }, 'SQL Validation'));
@@ -6075,8 +6123,119 @@
             header.appendChild(badges);
             sec.appendChild(header);
 
-            //  Helper: attaches click-to-jump + Apply Fix button to any
-            //  validation item that has a .target or .fixSnippet field.
+            //  AI explain — builds the prompt, fires aiCall with streaming,
+            //  renders the response inline below the validation item.
+            //  Reusable for any entry (error/warning/dialect/pass) when AI enabled.
+            function _aiExplainFinding(entry, btn) {
+                var msgEl = btn.closest('.sql-val-msg');
+                if (!msgEl) return;
+                var itemEl = msgEl.parentElement;
+
+                btn.disabled = true;
+                var origLabel = btn.textContent;
+                btn.textContent = '⏳ Thinking…';
+
+                //  Remove any prior response panel for this item before starting a new one
+                var existing = itemEl.nextElementSibling;
+                if (existing && existing.classList && existing.classList.contains('ai-response')) existing.remove();
+
+                var s = loadAiSettings();
+                var panel = h('div', { className: 'ai-response' });
+                var header = h('div', { className: 'ai-response-header' });
+                header.appendChild(h('span', { className: 'ai-response-model' },
+                    '✨ ' + (AI_CATALOG[s.provider] ? AI_CATALOG[s.provider].label.split(' ')[0] : s.provider) +
+                    ' · ' + s.providers[s.provider].model));
+                var closeBtn = h('button', { className: 'ai-response-close', title: 'Hide response' }, '×');
+                closeBtn.onclick = function() { panel.remove(); };
+                header.appendChild(closeBtn);
+                panel.appendChild(header);
+                var body = h('div', { className: 'ai-response-body ai-response-cursor' }, '');
+                panel.appendChild(body);
+                itemEl.parentNode.insertBefore(panel, itemEl.nextSibling);
+
+                //  Build a small SQL window around the target token (or first 600 chars)
+                var snippet = '';
+                if (entry.target && sql) {
+                    var idx = sql.toUpperCase().indexOf(entry.target.toUpperCase());
+                    if (idx >= 0) {
+                        var start = Math.max(0, sql.lastIndexOf('\n', Math.max(0, idx - 80)));
+                        var end   = sql.indexOf('\n', idx + entry.target.length + 120);
+                        if (start < 0) start = 0;
+                        if (end < 0)   end = sql.length;
+                        snippet = sql.slice(start, end).trim();
+                    }
+                }
+                if (!snippet) snippet = (sql || '').slice(0, 600);
+                var redacted = redactSql(snippet, s.redaction);
+
+                //  Pull schema descriptions for tables involved (truncated for context size)
+                var tableLines = [];
+                if (parsed && parsed.tables) {
+                    var seen = {};
+                    parsed.tables.slice(0, 6).forEach(function(t) {
+                        if (seen[t]) return;
+                        seen[t] = true;
+                        var info = SCHEMA.tables[t];
+                        if (info) {
+                            tableLines.push('- ' + t + ': ' + (info.d || '').slice(0, 120));
+                        }
+                    });
+                }
+
+                var userParts = [
+                    'Validator finding:',
+                    entry.msg,
+                    '',
+                    'Tool suggested:',
+                    entry.suggestion || '(no suggestion attached)'
+                ];
+                if (entry.fixSnippet) {
+                    userParts.push('');
+                    userParts.push('Tool fix snippet:');
+                    userParts.push(entry.fixSnippet);
+                }
+                userParts.push('');
+                userParts.push('SQL context (redacted):');
+                userParts.push(redacted);
+                if (tableLines.length) {
+                    userParts.push('');
+                    userParts.push('Tables in this query:');
+                    userParts.push(tableLines.join('\n'));
+                }
+                userParts.push('');
+                userParts.push('Explain in plain English (2–3 short paragraphs, no markdown headers):');
+                userParts.push('1. What would happen at runtime if I ignored this');
+                userParts.push('2. Banner-specific context that matters here');
+                userParts.push('3. The simplest practical fix');
+
+                var systemPrompt =
+                    "You are an expert in Ellucian Banner running on Oracle 19c. " +
+                    "Help the user understand a SQL validation finding from a static-analysis tool. " +
+                    "Be concise (2-3 short paragraphs max), plain English, no markdown headers or lists. " +
+                    "Focus on practical runtime impact and Banner conventions.";
+
+                aiCall({
+                    system: systemPrompt,
+                    messages: [{ role: 'user', content: userParts.join('\n') }],
+                    onChunk: function(delta) { body.textContent += delta; },
+                    onDone: function() {
+                        body.classList.remove('ai-response-cursor');
+                        btn.disabled = false;
+                        btn.textContent = origLabel;
+                    },
+                    onError: function(err) {
+                        panel.classList.add('error');
+                        body.classList.remove('ai-response-cursor');
+                        body.textContent = (body.textContent ? body.textContent + '\n\n' : '') +
+                            '⚠ ' + (err.message || String(err));
+                        btn.disabled = false;
+                        btn.textContent = origLabel;
+                    }
+                });
+            }
+
+            //  Helper: attaches click-to-jump + Apply Fix button + AI Explain button
+            //  to any validation item with a .target or .fixSnippet field.
             function _attachInteractivity(item, entry) {
                 if (entry.target) {
                     item.classList.add('clickable');
@@ -6086,38 +6245,57 @@
                         highlightInEditor(entry.target);
                     });
                 }
-                if (entry.fixSnippet) {
+                //  Build the actions row if either Copy-fix or AI Explain applies.
+                //  When AI is enabled we surface "\u2728 Explain in depth" for every
+                //  validation entry (errors, warnings, dialect hints) \u2014 the LLM
+                //  can usually add useful Banner-specific context even when the
+                //  rule has no mechanical fix.
+                var aiEnabled = getAiEnabled();
+                if (entry.fixSnippet || aiEnabled) {
                     var actions = h('div', { className: 'sql-val-actions' });
-                    var btn = h('button', { className: 'sql-fix-btn', title: 'Copy this fix snippet to your clipboard' }, '\uD83D\uDCCB Copy fix');
-                    btn.onclick = function(ev) {
-                        ev.stopPropagation();
-                        var text = entry.fixSnippet;
-                        var done = function() {
-                            btn.classList.add('copied');
-                            btn.textContent = '\u2713 Copied';
-                            setTimeout(function() {
-                                btn.classList.remove('copied');
-                                btn.textContent = '\uD83D\uDCCB Copy fix';
-                            }, 1400);
-                        };
-                        if (navigator.clipboard && navigator.clipboard.writeText) {
-                            navigator.clipboard.writeText(text).then(done, function() {
-                                //  Fallback for older browsers / file:// permissions
+
+                    if (entry.fixSnippet) {
+                        var btn = h('button', { className: 'sql-fix-btn', title: 'Copy this fix snippet to your clipboard' }, '\uD83D\uDCCB Copy fix');
+                        btn.onclick = function(ev) {
+                            ev.stopPropagation();
+                            var text = entry.fixSnippet;
+                            var done = function() {
+                                btn.classList.add('copied');
+                                btn.textContent = '\u2713 Copied';
+                                setTimeout(function() {
+                                    btn.classList.remove('copied');
+                                    btn.textContent = '\uD83D\uDCCB Copy fix';
+                                }, 1400);
+                            };
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(text).then(done, function() {
+                                    //  Fallback for older browsers / file:// permissions
+                                    var ta = document.createElement('textarea');
+                                    ta.value = text; document.body.appendChild(ta);
+                                    ta.select();
+                                    try { document.execCommand('copy'); done(); } catch (_) {}
+                                    document.body.removeChild(ta);
+                                });
+                            } else {
                                 var ta = document.createElement('textarea');
                                 ta.value = text; document.body.appendChild(ta);
                                 ta.select();
                                 try { document.execCommand('copy'); done(); } catch (_) {}
                                 document.body.removeChild(ta);
-                            });
-                        } else {
-                            var ta = document.createElement('textarea');
-                            ta.value = text; document.body.appendChild(ta);
-                            ta.select();
-                            try { document.execCommand('copy'); done(); } catch (_) {}
-                            document.body.removeChild(ta);
-                        }
-                    };
-                    actions.appendChild(btn);
+                            }
+                        };
+                        actions.appendChild(btn);
+                    }
+
+                    if (aiEnabled) {
+                        var aiBtn = h('button', { className: 'ai-explain-btn', title: 'Send this finding to the configured AI provider for a deeper explanation' }, '\u2728 Explain in depth');
+                        aiBtn.onclick = function(ev) {
+                            ev.stopPropagation();
+                            _aiExplainFinding(entry, aiBtn);
+                        };
+                        actions.appendChild(aiBtn);
+                    }
+
                     item.lastChild.appendChild(actions);    //  attach inside the msg div
                 }
             }
@@ -6516,18 +6694,27 @@
 
             var cfg = s.providers[s.provider];
             var stream = !!s.stream;
+            var system = options.system || null;
             try {
-                if (s.provider === 'anthropic')      await _callAnthropic(cfg, options.messages, stream, options.onChunk, options.onDone, options.signal);
-                else if (s.provider === 'openai')    await _callOpenAI   (cfg, options.messages, stream, options.onChunk, options.onDone, options.signal);
-                else if (s.provider === 'ollama')    await _callOllama   (cfg, options.messages, stream, options.onChunk, options.onDone, options.signal);
+                if (s.provider === 'anthropic')      await _callAnthropic(cfg, options.messages, system, stream, options.onChunk, options.onDone, options.signal);
+                else if (s.provider === 'openai')    await _callOpenAI   (cfg, options.messages, system, stream, options.onChunk, options.onDone, options.signal);
+                else if (s.provider === 'ollama')    await _callOllama   (cfg, options.messages, system, stream, options.onChunk, options.onDone, options.signal);
                 else throw new Error('Unknown provider: ' + s.provider);
             } catch (err) {
                 options.onError && options.onError(err);
             }
         }
 
-        async function _callAnthropic(cfg, messages, stream, onChunk, onDone, signal) {
+        async function _callAnthropic(cfg, messages, system, stream, onChunk, onDone, signal) {
             if (!cfg.apiKey) throw new Error('No Anthropic API key — set one in Settings.');
+            var body = {
+                model: cfg.model,
+                max_tokens: 1024,
+                stream: stream,
+                messages: messages
+            };
+            //  Anthropic uses a top-level `system` field (not a message role)
+            if (system) body.system = system;
             var resp = await fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
                 headers: {
@@ -6538,12 +6725,7 @@
                     //  refuses to honor CORS preflights from a non-proxied origin.
                     'anthropic-dangerous-direct-browser-access': 'true'
                 },
-                body: JSON.stringify({
-                    model: cfg.model,
-                    max_tokens: 1024,
-                    stream: stream,
-                    messages: messages
-                }),
+                body: JSON.stringify(body),
                 signal: signal
             });
             if (!resp.ok) {
@@ -6583,8 +6765,10 @@
             if (onDone) onDone(full);
         }
 
-        async function _callOpenAI(cfg, messages, stream, onChunk, onDone, signal) {
+        async function _callOpenAI(cfg, messages, system, stream, onChunk, onDone, signal) {
             if (!cfg.apiKey) throw new Error('No OpenAI API key — set one in Settings.');
+            //  OpenAI / chat completions takes system as a regular message role.
+            var msgs = system ? [{ role: 'system', content: system }].concat(messages) : messages;
             var resp = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -6593,7 +6777,7 @@
                 },
                 body: JSON.stringify({
                     model: cfg.model,
-                    messages: messages,
+                    messages: msgs,
                     stream: stream,
                     max_tokens: 1024
                 }),
@@ -6637,14 +6821,16 @@
             if (onDone) onDone(full);
         }
 
-        async function _callOllama(cfg, messages, stream, onChunk, onDone, signal) {
+        async function _callOllama(cfg, messages, system, stream, onChunk, onDone, signal) {
             var baseUrl = (cfg.baseUrl || 'http://localhost:11434').replace(/\/+$/, '');
+            //  Ollama follows OpenAI-style — system goes in the message list.
+            var msgs = system ? [{ role: 'system', content: system }].concat(messages) : messages;
             var resp = await fetch(baseUrl + '/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     model: cfg.model,
-                    messages: messages,
+                    messages: msgs,
                     stream: stream
                 }),
                 signal: signal
@@ -7381,7 +7567,7 @@
 
             // === VALIDATION ===
             var validation = validateSql(parsed, sql);
-            frag.appendChild(buildValidationSection(validation));
+            frag.appendChild(buildValidationSection(validation, sql, parsed));
 
             // === TABLES ===
             if (parsed.tables.length) {
