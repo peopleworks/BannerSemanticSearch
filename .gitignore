@@ -33,6 +33,8 @@ templates/*.bak_*
 
 # Ad-hoc screenshots saved at repo root — real screenshots live in docs/img/
 /20*-*.png
+/20*-*.jpg
+/20*-*.jpeg
 
 # Internal launch / publication materials — drafts, strategy, copy for LinkedIn /
 # HN / Reddit / X. Stays local; not part of the public repo.
