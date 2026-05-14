@@ -1482,6 +1482,96 @@
             .cloud-diff-table td.oracle, .cloud-diff-table td.pg { max-width: none; white-space: normal; }
         }
 
+        /* ======  Community Resources Hub (#/resources)  ====== */
+        .resources-container { max-width: 1100px; }
+        .resources-intro {
+            background: linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(6,182,212,0.04) 100%);
+            border: 1px solid rgba(16,185,129,0.25);
+            border-left: 4px solid #10b981;
+            border-radius: 10px;
+            padding: 14px 18px; margin-bottom: 22px;
+        }
+        .resources-intro p { margin: 0 0 6px; line-height: 1.55; font-size: 14px; }
+        .resources-intro p:last-child { margin-bottom: 0; }
+        .resources-section { margin-bottom: 28px; }
+        .resources-section h3 {
+            margin: 0 0 6px; font-size: 16px; color: var(--navy-light);
+            display: flex; align-items: baseline; gap: 10px;
+        }
+        .resources-section h3 .count {
+            background: var(--hover); color: var(--text-muted);
+            font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600;
+        }
+        .resources-section .lead {
+            color: var(--text-muted); font-size: 13px;
+            margin: 0 0 14px; line-height: 1.55;
+        }
+        .resource-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        @media (max-width: 900px) {
+            .resource-grid { grid-template-columns: 1fr; }
+        }
+        .resource-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 12px 14px;
+            text-decoration: none; color: inherit;
+            box-shadow: var(--shadow);
+            display: flex; flex-direction: column; gap: 6px;
+            transition: transform 0.08s ease, border-color 0.12s ease;
+            border-left-width: 3px;
+        }
+        .resource-card:hover {
+            transform: translateY(-2px); border-color: var(--gold);
+        }
+        .resource-card.argos    { border-left-color: #06b6d4; }
+        .resource-card.banner   { border-left-color: #7c3aed; }
+        .resource-card.community{ border-left-color: #10b981; }
+        .resource-card-head {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            gap: 8px;
+        }
+        .resource-card-title {
+            font-weight: 700; font-size: 14px; color: var(--text);
+            line-height: 1.35;
+        }
+        .resource-card-type {
+            flex-shrink: 0; background: var(--hover);
+            font-size: 10px; padding: 2px 8px; border-radius: 10px;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+            color: var(--text-muted);
+        }
+        .resource-card-type.webinar     { background: rgba(124,58,237,0.14); color: #6d28d9; }
+        .resource-card-type.recording   { background: rgba(217,119,6,0.14);  color: #b45309; }
+        .resource-card-type.conference  { background: rgba(220,38,38,0.10);  color: #dc2626; }
+        .resource-card-type.hub         { background: rgba(6,182,212,0.14);  color: #0e7490; }
+        .resource-card-type.doc         { background: rgba(16,185,129,0.12); color: #047857; }
+        .resource-card-type.product     { background: rgba(255,184,28,0.18); color: #92400e; }
+        .resource-card-type.community   { background: rgba(16,185,129,0.12); color: #047857; }
+        html.dark .resource-card-type.webinar     { background: rgba(196,181,253,0.12); color: #c4b5fd; }
+        html.dark .resource-card-type.recording   { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+        html.dark .resource-card-type.conference  { background: rgba(252,165,165,0.12); color: #fca5a5; }
+        html.dark .resource-card-type.hub         { background: rgba(103,232,249,0.12); color: #67e8f9; }
+        html.dark .resource-card-type.doc         { background: rgba(110,231,183,0.12); color: #6ee7b7; }
+        html.dark .resource-card-type.product     { background: rgba(253,224,71,0.15);  color: #fde047; }
+        html.dark .resource-card-type.community   { background: rgba(110,231,183,0.12); color: #6ee7b7; }
+        .resource-card-host {
+            font-size: 11px; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;
+        }
+        .resource-card-desc {
+            font-size: 12.5px; color: var(--text); line-height: 1.55;
+        }
+        .resource-card-tags {
+            display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;
+        }
+        .resource-tag {
+            background: var(--hover); color: var(--text-muted);
+            font-size: 10px; padding: 1px 7px; border-radius: 8px;
+            font-family: 'Consolas', 'Courier New', monospace;
+        }
+
         /* ======  AI Settings (BYOK)  ====== */
         .settings-container { max-width: 760px; }
         .settings-disclaimer {
@@ -5344,6 +5434,8 @@
                 state.view = 'argos';
             } else if (parts[0] === 'settings') {
                 state.view = 'settings';
+            } else if (parts[0] === 'resources') {
+                state.view = 'resources';
             } else if (parts[0] === 'search' && parts[1]) {
                 var newQuery = decodeURIComponent(parts[1]);
                 var queryChanged = newQuery !== state.query;
@@ -5377,6 +5469,7 @@
                 case 'builder': content = renderBuilder(); break;
                 case 'argos': content = renderArgosPage(); break;
                 case 'settings': content = renderSettingsPage(); break;
+                case 'resources': content = renderResourcesPage(); break;
                 default: content = renderDashboard();
             }
             if (content) app.appendChild(content);
@@ -7634,6 +7727,186 @@
                 document.querySelector('.settings-toggle').classList.toggle('on', !!s.enabled);
                 document.getElementById('aiToggleState').textContent = s.enabled ? '(ON)' : '(OFF)';
             });
+
+            return container;
+        }
+
+        //  ===================== COMMUNITY RESOURCES HUB (#/resources) =====================
+        //  Hand-curated index of free Argos / Ellucian Banner training, webinars,
+        //  conferences, and user-group resources. Each entry links to an
+        //  official vendor or community page — we don't scrape, we point.
+        //
+        //  Philosophy: "Ser útiles, no importantes" — be useful, not important.
+        //  This hub exists to help the Banner community find the public
+        //  resources that already exist but are scattered across vendor sites,
+        //  regional user groups, and conference pages.
+        //
+        //  Content model: each resource is { title, host, type, url, desc, tags }
+        //  where `type` drives the colored badge (Webinar / Recording / Hub /
+        //  Conference / Doc / Product / Community).
+
+        var RESOURCES_ARGOS = [
+            {
+                title: 'Argos On-Demand Webinar Library',
+                host: 'Evisions',
+                type: 'hub',
+                url: 'https://www.evisions.com/on-demand-webinars/',
+                desc: 'Free, no-signup library of recorded Argos webinars covering reporting, security, data analysis, and product updates. Start here if you\'re new to Argos.',
+                tags: ['hub', 'free', 'starter']
+            },
+            {
+                title: 'Argos for Applying, Monitoring and Troubleshooting User Security',
+                host: 'Evisions Webinar',
+                type: 'webinar',
+                url: 'https://www.evisions.com/webinar/argos-for-applying-monitoring-and-troubleshooting-user-security/',
+                desc: 'Practical walkthrough of how Argos role-based security works in production: applying rules, monitoring usage, and diagnosing access issues.',
+                tags: ['security', 'admin', 'BANSECR-adjacent']
+            },
+            {
+                title: 'Unleashing the Power of Argos — Practical Solutions for Higher Ed Data',
+                host: 'Evisions Webinar',
+                type: 'webinar',
+                url: 'https://www.evisions.com/webinar/unleashing-the-power-of-argos-practical-solutions-for-higher-ed-data/',
+                desc: 'Real-world Argos use cases from higher-ed customers: enrollment dashboards, retention analytics, financial-aid trends, ad-hoc data requests.',
+                tags: ['reporting', 'use-cases']
+            },
+            {
+                title: 'Argos X: The Next Step in the Evolution',
+                host: 'Evisions Webinar',
+                type: 'webinar',
+                url: 'https://www.evisions.com/webinar/argos-x-the-next-step-in-the-evolution-of-evisions-argos/',
+                desc: 'Introduction to Argos X — the modernized Web Viewer. What changes for existing Argos deployments and what stays compatible.',
+                tags: ['argos-x', 'product', 'roadmap']
+            },
+            {
+                title: 'Joining PostgreSQL and Oracle Data in Your Argos Dashboard',
+                host: 'Evisions Webinar',
+                type: 'webinar',
+                url: 'https://www.evisions.com/webinar/joining-postgresql-and-oracle-data-in-your-argos-dashboard/',
+                desc: 'Cross-database joins in Argos — combining on-prem Oracle Banner with PostgreSQL (Banner SaaS or third-party). Directly relevant to the cloud-migration era.',
+                tags: ['postgresql', 'multi-source', 'cloud']
+            },
+            {
+                title: 'Harness Campus Data with Evisions + Invoke Learning',
+                host: 'Evisions Webinar',
+                type: 'webinar',
+                url: 'https://www.evisions.com/webinar/harness-the-full-power-of-your-campus-data-with-evisions-invoke-learning/',
+                desc: 'Pairing Argos with predictive-analytics tooling (Invoke Learning). Useful pattern even if you don\'t use Invoke — the data-pipeline approach generalizes.',
+                tags: ['analytics', 'partner']
+            },
+            {
+                title: 'Evisions All Webinars (current + upcoming)',
+                host: 'Evisions',
+                type: 'hub',
+                url: 'https://www.evisions.com/resources/webinars/',
+                desc: 'Full webinar calendar — covers Argos, FormFusion, and IntelleCheck. Filter by topic. Check here for upcoming live sessions.',
+                tags: ['hub', 'upcoming']
+            },
+            {
+                title: 'Evisions Annual Conference',
+                host: 'Evisions',
+                type: 'conference',
+                url: 'https://conference.evisions.com/',
+                desc: 'The flagship Evisions user conference. Argos workshops, "Argos on the Road" pre-conference sessions, customer success stories.',
+                tags: ['conference', 'annual', 'in-person']
+            },
+            {
+                title: 'Argos Product Overview',
+                host: 'Evisions',
+                type: 'product',
+                url: 'https://www.evisions.com/argos/',
+                desc: 'Official product page — feature overview, capability matrix, customer logos. Useful when justifying Argos in procurement / steering conversations.',
+                tags: ['overview', 'sales-collateral']
+            },
+            {
+                title: 'Argos X Product Page',
+                host: 'Evisions',
+                type: 'product',
+                url: 'https://www.evisions.com/argosx/',
+                desc: 'The next-generation Argos modernized Web Viewer — feature comparison, migration path, supported deployments.',
+                tags: ['argos-x', 'next-gen']
+            }
+        ];
+
+        function _resourceCard(r, theme) {
+            var card = h('a', {
+                className: 'resource-card ' + (theme || ''),
+                href: r.url, target: '_blank', rel: 'noopener noreferrer'
+            });
+            var head = h('div', { className: 'resource-card-head' });
+            head.appendChild(h('div', { className: 'resource-card-title' }, r.title));
+            head.appendChild(h('span', { className: 'resource-card-type ' + r.type }, r.type));
+            card.appendChild(head);
+            card.appendChild(h('div', { className: 'resource-card-host' }, r.host));
+            card.appendChild(h('div', { className: 'resource-card-desc' }, r.desc));
+            if (r.tags && r.tags.length) {
+                var tagWrap = h('div', { className: 'resource-card-tags' });
+                r.tags.forEach(function(t) {
+                    tagWrap.appendChild(h('span', { className: 'resource-tag' }, '#' + t));
+                });
+                card.appendChild(tagWrap);
+            }
+            return card;
+        }
+
+        function renderResourcesPage() {
+            var container = h('div', { className: 'resources-container' });
+
+            //  Top bar with Home + shortcuts
+            var topBar = h('div', { style: 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;' });
+            var homeBtn = h('button', {
+                style: 'background: var(--navy); color: var(--gold); border: none; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600;'
+            }, 'Home');
+            homeBtn.onclick = function() { navigate(''); };
+            topBar.appendChild(homeBtn);
+            topBar.appendChild(h('span', { style: 'color: var(--text-muted); font-size: 12px;' },
+                'Shortcuts: ` = SQL Explainer | ~ = Reports | / = search | ? = help | Esc = back to home'));
+            container.appendChild(topBar);
+
+            //  Title
+            container.appendChild(h('h2', { style: 'margin-bottom: 4px;' }, '🌐 Community Resources'));
+            container.appendChild(h('p', { style: 'color: var(--text-muted); margin-bottom: 16px; font-size: 14px;' },
+                "Hand-curated index of free training, webinars, conferences, and user-group resources " +
+                "for the Argos and Ellucian Banner communities. Every link points to an official vendor or community page."));
+
+            //  Intro / philosophy callout
+            var intro = h('div', { className: 'resources-intro' });
+            intro.appendChild(h('p', {}, [
+                h('strong', {}, 'Why this hub exists: '),
+                'great Banner content is scattered across Evisions, Ellucian, regional Banner User Groups, ',
+                'and YouTube channels. Newcomers waste hours finding it. We collect it here so the community ',
+                'has one place to start.'
+            ]));
+            intro.appendChild(h('p', {}, [
+                h('strong', {}, 'Found something missing? '),
+                'Open an issue or PR at ',
+                h('a', { href: 'https://github.com/peopleworks/BannerSemanticSearch', target: '_blank', rel: 'noopener', style: 'color: var(--gold);' },
+                  'github.com/peopleworks/BannerSemanticSearch'),
+                '. Hand-curated means we welcome additions from the community.'
+            ]));
+            container.appendChild(intro);
+
+            //  Argos section
+            var argosSec = h('div', { className: 'resources-section' });
+            var argosHead = h('h3', {});
+            argosHead.appendChild(h('span', {}, '📊 Argos (Evisions)'));
+            argosHead.appendChild(h('span', { className: 'count' }, RESOURCES_ARGOS.length + ' resources'));
+            argosSec.appendChild(argosHead);
+            argosSec.appendChild(h('div', { className: 'lead' },
+                'Evisions Argos is the dominant ad-hoc reporting tool in the Banner ecosystem. ' +
+                'These are public Evisions webinars, product pages, and the annual conference — all free to access.'));
+            var argosGrid = h('div', { className: 'resource-grid' });
+            RESOURCES_ARGOS.forEach(function(r) {
+                argosGrid.appendChild(_resourceCard(r, 'argos'));
+            });
+            argosSec.appendChild(argosGrid);
+            container.appendChild(argosSec);
+
+            //  Footer
+            container.appendChild(h('p', { style: 'color: var(--text-muted); font-size: 13px; margin-top: 8px;' }, [
+                'Need the parameter conventions instead? See the ',
+                h('a', { href: '#/argos', style: 'color: var(--gold);' }, 'Argos cheatsheet →')
+            ]));
 
             return container;
         }
