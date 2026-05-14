@@ -675,6 +675,33 @@
         .ai-translate-btn:hover { opacity: 0.92; }
         .ai-translate-btn:disabled { opacity: 0.55; cursor: wait; }
 
+        /* Target dialect dropdown in the SQL Explainer button row */
+        .target-dialect {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 10px; border-radius: var(--radius);
+            background: var(--hover); color: var(--text);
+            font-size: 12px; font-weight: 600;
+            border: 1px solid var(--border);
+            margin-left: auto;   /* push to the right edge of the button row */
+        }
+        .target-dialect-label {
+            color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.4px; font-size: 11px;
+        }
+        .target-dialect select {
+            background: transparent; border: none;
+            font-family: inherit; font-size: 12px; font-weight: 700;
+            color: var(--text); cursor: pointer;
+            padding: 2px 4px;
+        }
+        .target-dialect select:focus { outline: none; }
+        .target-dialect.pg {
+            border-color: #06b6d4;
+            background: linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(124,58,237,0.04) 100%);
+        }
+        .target-dialect.pg .target-dialect-label { color: #0891b2; }
+        html.dark .target-dialect.pg .target-dialect-label { color: #67e8f9; }
+
         /* Editor-pulse animation when "jump to" fires */
         @keyframes editorPulse {
             0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
@@ -5928,6 +5955,21 @@
         }
         window.detectOracleToPostgresDialect = detectOracleToPostgresDialect;   // expose for smoke tests
 
+        //  ============== Target dialect preference (Oracle | PostgreSQL) ==============
+        //  Users running Banner SaaS (US) target PostgreSQL; on-prem and non-US
+        //  customers target Oracle. The validator honors this choice when picking
+        //  which dialect detectors to fire. Persists in localStorage so users
+        //  don't have to re-pick on every visit.
+        var TARGET_DIALECT_KEY = 'sql_target_dialect_v1';
+        function getTargetDialect() {
+            try { return localStorage.getItem(TARGET_DIALECT_KEY) || 'oracle'; }
+            catch (_) { return 'oracle'; }
+        }
+        function setTargetDialect(v) {
+            try { localStorage.setItem(TARGET_DIALECT_KEY, v); } catch (_) {}
+        }
+        window.getTargetDialect = getTargetDialect;
+
         function extractColumnRefs(sql, aliases) {
             var refs = [], seen = {};
             var clean = sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -6378,8 +6420,17 @@
             // 3d. SQL Server → Oracle dialect hints. These help users coming
             //     from a SQL Server background (Banner DBAs frequently arrive
             //     via that path) recognize idioms that won't run on Oracle and
-            //     get the canonical Oracle translation.
+            //     get the canonical Oracle translation. ALWAYS RUN — SQL Server
+            //     idioms break on both Oracle AND PostgreSQL targets.
             dialectHints = detectSqlServerDialect(sql);
+
+            // 3e. Oracle → PostgreSQL dialect hints — only when the user's target
+            //     dialect is PostgreSQL (Banner SaaS / US customers). Detects
+            //     Oracle-only constructs (NVL, DECODE, LISTAGG, CONNECT BY, …)
+            //     that won't survive the cloud migration.
+            if (getTargetDialect() === 'postgresql') {
+                detectOracleToPostgresDialect(sql).forEach(function(h) { dialectHints.push(h); });
+            }
 
             // 4. Structural checks
             if (upper.indexOf('SELECT') < 0) {
@@ -7892,6 +7943,34 @@
                 };
                 btnRow.appendChild(translateBtn);
             }
+
+            //  Target dialect dropdown (Oracle | PostgreSQL). Right-aligned in
+            //  the button row via margin-left:auto. Switching to PostgreSQL turns
+            //  on the Oracle→PG detector — useful for users planning or already
+            //  running Banner SaaS / Banner Cloud.
+            var currentTarget = getTargetDialect();
+            var targetWrap = h('div', { className: 'target-dialect' + (currentTarget === 'postgresql' ? ' pg' : ''), id: 'targetDialectWrap' });
+            targetWrap.appendChild(h('span', { className: 'target-dialect-label' }, 'TARGET'));
+            var targetSel = h('select', { id: 'targetDialectSel', title: 'Set the target SQL dialect — PostgreSQL turns on Oracle → PG hints' });
+            [
+                ['oracle',     'Oracle 19c  (on-prem / non-US SaaS)'],
+                ['postgresql', 'PostgreSQL  (Banner SaaS / US)']
+            ].forEach(function(row) {
+                var opt = h('option', { value: row[0] }, row[1]);
+                if (row[0] === currentTarget) opt.selected = true;
+                targetSel.appendChild(opt);
+            });
+            targetSel.addEventListener('change', function() {
+                setTargetDialect(targetSel.value);
+                targetWrap.classList.toggle('pg', targetSel.value === 'postgresql');
+                //  If validation results are already on screen, auto re-run so
+                //  the user sees the dialect change immediately.
+                if (document.getElementById('sqlResults') && document.getElementById('sqlResults').children.length) {
+                    document.getElementById('sqlExplainBtn').click();
+                }
+            });
+            targetWrap.appendChild(targetSel);
+            btnRow.appendChild(targetWrap);
             container.appendChild(btnRow);
 
             //  Slot for the Suggest-fix panel (sits above history + results)
