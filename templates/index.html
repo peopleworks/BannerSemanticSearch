@@ -478,19 +478,23 @@
         .sql-val-badge.errors { background: #fef2f2; color: #dc2626; }
         .sql-val-badge.warnings { background: #fffbeb; color: #d97706; }
         .sql-val-badge.passes { background: #f0fdf4; color: #059669; }
+        .sql-val-badge.dialect { background: #ecfeff; color: #0891b2; }
         .sql-val-item { margin: 6px 0; padding: 8px 12px; border-radius: 6px; font-size: 13px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
         .sql-val-item.error { background: #fef2f2; border-left: 3px solid #ef4444; }
         .sql-val-item.warning { background: #fffbeb; border-left: 3px solid #f59e0b; }
         .sql-val-item.pass { background: #f0fdf4; border-left: 3px solid #10b981; }
+        .sql-val-item.dialect { background: #ecfeff; border-left: 3px solid #06b6d4; }
         .sql-val-icon { flex-shrink: 0; }
         .sql-val-msg { flex: 1; }
         .sql-val-suggestion { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; font-style: italic; }
         html.dark .sql-val-badge.errors { background: #7f1d1d44; }
         html.dark .sql-val-badge.warnings { background: #78350f44; }
         html.dark .sql-val-badge.passes { background: #14532d44; }
+        html.dark .sql-val-badge.dialect { background: #164e6344; color: #67e8f9; }
         html.dark .sql-val-item.error { background: #7f1d1d22; }
         html.dark .sql-val-item.warning { background: #78350f22; }
         html.dark .sql-val-item.pass { background: #14532d22; }
+        html.dark .sql-val-item.dialect { background: #164e6322; }
 
         /* Clickable validation items (jump-to-editor + apply-fix UX) */
         .sql-val-item.clickable { cursor: pointer; transition: transform 0.08s ease, box-shadow 0.08s ease; }
@@ -5137,6 +5141,201 @@
             return results.slice(0, 3);
         }
 
+        //  =========== SQL SERVER → ORACLE DIALECT HINTS ===========
+        //  Detects SQL Server idioms in pasted SQL and surfaces them as
+        //  "dialect" hints with the Oracle equivalent + a Copy-fix snippet
+        //  where the translation is mechanical. Helps DBAs coming from
+        //  SQL Server adapt to Banner's Oracle backend.
+        //
+        //  Strategy: strip comments + string literals first so '+' inside
+        //  a string doesn't trigger the concat hint, and '[brackets]' inside
+        //  a literal don't fire either. Then run a series of pattern checks.
+        function detectSqlServerDialect(sql) {
+            var hints = [];
+            var clean = sql
+                .replace(/--.*$/gm, '')
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/'[^']*'/g, "'_'");
+
+            function _emit(msg, suggestion, target, fixSnippet) {
+                var entry = { msg: msg, suggestion: suggestion, target: target };
+                if (fixSnippet) entry.fixSnippet = fixSnippet;
+                hints.push(entry);
+            }
+
+            //  1. SELECT TOP N
+            var topMatch = clean.match(/\bSELECT\s+(?:DISTINCT\s+)?TOP\s+(\d+)\b/i);
+            if (topMatch) {
+                _emit(
+                    "`TOP " + topMatch[1] + "` row-limit syntax is not supported in Oracle.",
+                    "Use `FETCH FIRST " + topMatch[1] + " ROWS ONLY` at the end of the query (Oracle 12c+) or `WHERE ROWNUM <= " + topMatch[1] + "` in older versions. FETCH FIRST has correct semantics with ORDER BY; ROWNUM does NOT (it's applied before sort).",
+                    "TOP " + topMatch[1],
+                    "-- Remove TOP from SELECT, append at end of query:\nFETCH FIRST " + topMatch[1] + " ROWS ONLY"
+                );
+            }
+
+            //  2. [bracketed] identifiers
+            var brackMatch = clean.match(/\[\w+\]/);
+            if (brackMatch) {
+                _emit(
+                    "`[bracketed]` identifier delimiters are SQL Server syntax.",
+                    "Oracle uses `\"double quotes\"` for quoted identifiers (or no delimiters). Quoted identifiers in Oracle are CASE-SENSITIVE — \"Name\" and \"name\" are different columns. Usually you can just drop the brackets if there are no spaces or reserved keywords in the name.",
+                    brackMatch[0]
+                );
+            }
+
+            //  3. ISNULL(x, y) — two-arg form is SQL Server
+            if (/\bISNULL\s*\(\s*[^,)]+,/i.test(clean)) {
+                _emit(
+                    "`ISNULL(x, y)` (two-argument form) is SQL Server.",
+                    "Oracle's `NVL(x, y)` returns y when x is null — same semantics. Heads up: Oracle DOES have an `ISNULL` predicate but it's single-argument and returns true/false, so SQL Server's two-arg form errors out as ORA-00909.",
+                    "ISNULL",
+                    "NVL(x, y)"
+                );
+            }
+
+            //  4. LEN(x) → LENGTH(x)
+            if (/\bLEN\s*\(/i.test(clean)) {
+                _emit(
+                    "`LEN(x)` is SQL Server — Oracle uses `LENGTH(x)`.",
+                    "Subtle difference: SQL Server's LEN trims trailing spaces; Oracle's LENGTH does NOT. If you need the trimmed length, wrap with `LENGTH(RTRIM(x))`. Other variants: `LENGTHB` (bytes), `LENGTHC` (composite Unicode chars).",
+                    "LEN",
+                    "LENGTH(x)"
+                );
+            }
+
+            //  5. GETDATE() → SYSDATE
+            if (/\bGETDATE\s*\(\s*\)/i.test(clean)) {
+                _emit(
+                    "`GETDATE()` is SQL Server — Oracle uses `SYSDATE` (no parentheses).",
+                    "Other Oracle time functions: `SYSTIMESTAMP` for sub-second precision, `CURRENT_DATE` for session-timezone-aware, `CURRENT_TIMESTAMP` for session TZ with sub-second.",
+                    "GETDATE()",
+                    "SYSDATE"
+                );
+            }
+
+            //  6. CHARINDEX(needle, haystack)
+            if (/\bCHARINDEX\s*\(/i.test(clean)) {
+                _emit(
+                    "`CHARINDEX(needle, haystack)` is SQL Server — Oracle uses `INSTR(haystack, needle)`.",
+                    "⚠ ARGUMENT ORDER IS REVERSED. Oracle takes the source string FIRST, then the substring to find. Oracle's INSTR also supports two extra optional args: `INSTR(haystack, needle, start_position, occurrence)`.",
+                    "CHARINDEX",
+                    "INSTR(haystack, needle)   -- ⚠ arguments REVERSED from CHARINDEX"
+                );
+            }
+
+            //  7. IIF(c, a, b)
+            if (/\bIIF\s*\(/i.test(clean)) {
+                _emit(
+                    "`IIF(condition, a, b)` is SQL Server 2012+ — Oracle has no IIF.",
+                    "Use standard `CASE WHEN condition THEN a ELSE b END` (portable to any DB). For equality comparisons specifically, Oracle's `DECODE(col, match, a, b)` is shorter but Oracle-only.",
+                    "IIF",
+                    "CASE WHEN condition THEN a ELSE b END"
+                );
+            }
+
+            //  8. STRING_AGG
+            if (/\bSTRING_AGG\s*\(/i.test(clean)) {
+                _emit(
+                    "`STRING_AGG(...)` is SQL Server 2017+ — Oracle uses `LISTAGG(...)`.",
+                    "Add `ON OVERFLOW TRUNCATE '...' WITH COUNT` (Oracle 12.2+) to handle results > 4000 bytes — without it, long aggregations raise ORA-01489.",
+                    "STRING_AGG",
+                    "LISTAGG(col, ', ' ON OVERFLOW TRUNCATE '...' WITH COUNT) WITHIN GROUP (ORDER BY col)"
+                );
+            }
+
+            //  9. DATEDIFF
+            if (/\bDATEDIFF\s*\(/i.test(clean)) {
+                _emit(
+                    "`DATEDIFF(unit, a, b)` is SQL Server — Oracle uses arithmetic.",
+                    "Pick the right tool per unit: days → `b - a` (returns NUMBER), months → `MONTHS_BETWEEN(b, a)` (returns fractional months!), seconds → `(b - a) * 86400`, hours → `(b - a) * 24`. There's no single DATEDIFF — match the unit explicitly.",
+                    "DATEDIFF"
+                );
+            }
+
+            //  10. DATEADD
+            if (/\bDATEADD\s*\(/i.test(clean)) {
+                _emit(
+                    "`DATEADD(unit, n, date)` is SQL Server — Oracle uses arithmetic or `ADD_MONTHS`.",
+                    "Days: `date + n`. Months: `ADD_MONTHS(date, n)`. Years: `ADD_MONTHS(date, n * 12)`. Hours: `date + n/24`. Minutes: `date + n/1440`. Or use INTERVAL: `date + INTERVAL 'n' DAY/MONTH/YEAR`.",
+                    "DATEADD"
+                );
+            }
+
+            //  11. CONVERT(type, expr [, style])
+            if (/\bCONVERT\s*\(\s*\w+\s*,/i.test(clean)) {
+                _emit(
+                    "`CONVERT(type, expr, style)` is SQL Server — Oracle uses `CAST` or typed `TO_*` functions.",
+                    "Strict cast: `CAST(expr AS type)`. String → date: `TO_DATE(s, 'YYYY-MM-DD')`. String → number: `TO_NUMBER(s)`. Value → formatted string: `TO_CHAR(v, 'format')`. Oracle has no `style` numeric argument — supply an explicit format mask string instead.",
+                    "CONVERT"
+                );
+            }
+
+            //  12. WITH (NOLOCK)
+            if (/\bWITH\s*\(\s*NOLOCK\s*\)/i.test(clean)) {
+                _emit(
+                    "`WITH (NOLOCK)` is a SQL Server lock hint — Oracle doesn't support or need it.",
+                    "Oracle uses MVCC (multi-version concurrency control): readers never block writers, writers never block readers. Just delete the hint — it's a syntax error in Oracle. For a point-in-time snapshot, look up flashback queries (`SELECT ... AS OF TIMESTAMP ...`).",
+                    "WITH (NOLOCK)"
+                );
+            }
+
+            //  13. String concatenation with +
+            if (/'[^']*'\s*\+|\+\s*'[^']*'/.test(sql)) {
+                _emit(
+                    "`+` for string concatenation is SQL Server — Oracle uses `||`.",
+                    "Replace `'a' + 'b'` with `'a' || 'b'`. Oracle's `+` is strictly arithmetic — concatenating with `+` either errors as ORA-01722 (invalid number) or silently produces wrong results if both sides are numeric strings.",
+                    "+",
+                    "||"
+                );
+            }
+
+            //  14. @variable
+            var atVarMatch = clean.match(/@[A-Za-z_]\w*/);
+            if (atVarMatch) {
+                _emit(
+                    "`" + atVarMatch[0] + "` looks like a SQL Server local variable.",
+                    "Oracle has no `@variable` outside SQL*Plus substitution. For bind variables (parameters from Argos / host apps / JDBC), use `:name`. For PL/SQL locals, declare inside a `DECLARE ... BEGIN ... END;` block. SQL*Plus also accepts `&name` for substitution, but that's a textual replace, not a true variable.",
+                    atVarMatch[0]
+                );
+            }
+
+            //  15. CROSS APPLY / OUTER APPLY
+            var applyMatch = clean.match(/\b((?:CROSS|OUTER)\s+APPLY)\b/i);
+            if (applyMatch) {
+                var aType = /CROSS/i.test(applyMatch[1]) ? 'CROSS' : 'OUTER';
+                _emit(
+                    "`" + applyMatch[1].toUpperCase() + "` is SQL Server — Oracle 12c+ has lateral joins.",
+                    aType === 'CROSS'
+                        ? "Replace with `CROSS JOIN LATERAL (subquery)`. LATERAL lets the right side reference columns from the left side, just like APPLY."
+                        : "Replace with `LEFT JOIN LATERAL (subquery) ON 1=1`. LEFT JOIN preserves left rows when the subquery returns nothing — same semantics as OUTER APPLY.",
+                    applyMatch[1].toUpperCase(),
+                    aType === 'CROSS' ? "CROSS JOIN LATERAL (subquery)" : "LEFT JOIN LATERAL (subquery) ON 1=1"
+                );
+            }
+
+            //  16. SELECT ... INTO #temp
+            var intoTempMatch = clean.match(/\bINTO\s+(#\w+)/i);
+            if (intoTempMatch) {
+                _emit(
+                    "`SELECT ... INTO " + intoTempMatch[1] + "` is SQL Server temp-table syntax.",
+                    "Oracle temp tables are SESSION-scoped and PRE-DEFINED (`CREATE GLOBAL TEMPORARY TABLE ... ON COMMIT PRESERVE/DELETE ROWS`). For one-off intermediate results, use a `WITH` clause (CTE) or inline subquery — far more idiomatic in Oracle than throwaway temp tables.",
+                    intoTempMatch[1]
+                );
+            }
+
+            //  17. STUFF (string manipulation, FOR XML PATH trick)
+            if (/\bSTUFF\s*\(/i.test(clean)) {
+                _emit(
+                    "`STUFF(string, start, length, replace)` is SQL Server.",
+                    "Most common use is `STUFF((... FOR XML PATH('')), 1, 1, '')` for string aggregation — in Oracle just use `LISTAGG` directly. For literal insert/replace, combine `SUBSTR(s, 1, start-1) || replace || SUBSTR(s, start+length)`.",
+                    "STUFF"
+                );
+            }
+
+            return hints;
+        }
+
         function extractColumnRefs(sql, aliases) {
             var refs = [], seen = {};
             var clean = sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -5245,7 +5444,7 @@
         }
 
         function validateSql(parsed, sql) {
-            var errors = [], warnings = [], passes = [];
+            var errors = [], warnings = [], passes = [], dialectHints = [];
             var upper = sql.toUpperCase();
 
             // 1. Table validation. Three buckets:
@@ -5584,6 +5783,12 @@
                 passes.push({ msg: bindCount + " bind variable(s) detected: " + bhead + btail + "." });
             }
 
+            // 3d. SQL Server → Oracle dialect hints. These help users coming
+            //     from a SQL Server background (Banner DBAs frequently arrive
+            //     via that path) recognize idioms that won't run on Oracle and
+            //     get the canonical Oracle translation.
+            dialectHints = detectSqlServerDialect(sql);
+
             // 4. Structural checks
             if (upper.indexOf('SELECT') < 0) {
                 errors.push({ msg: "No SELECT clause found." });
@@ -5606,11 +5811,11 @@
             }
 
             // Always surface at least one message so the user knows the check ran.
-            if (!errors.length && !warnings.length && !passes.length) {
+            if (!errors.length && !warnings.length && !passes.length && !dialectHints.length) {
                 passes.push({ msg: "Query parsed — no issues detected." });
             }
 
-            return { errors: errors, warnings: warnings, passes: passes };
+            return { errors: errors, warnings: warnings, passes: passes, dialectHints: dialectHints };
         }
 
         function buildValidationSection(validation) {
@@ -5620,6 +5825,8 @@
             var badges = h('div', { className: 'sql-val-badges' });
             if (validation.errors.length) badges.appendChild(h('span', { className: 'sql-val-badge errors' }, validation.errors.length + ' error' + (validation.errors.length !== 1 ? 's' : '')));
             if (validation.warnings.length) badges.appendChild(h('span', { className: 'sql-val-badge warnings' }, validation.warnings.length + ' warning' + (validation.warnings.length !== 1 ? 's' : '')));
+            var dialectCount = (validation.dialectHints || []).length;
+            if (dialectCount) badges.appendChild(h('span', { className: 'sql-val-badge dialect', title: 'SQL Server → Oracle translation hints' }, '🔄 ' + dialectCount + ' dialect ' + (dialectCount !== 1 ? 'hints' : 'hint')));
             if (validation.passes.length) badges.appendChild(h('span', { className: 'sql-val-badge passes' }, validation.passes.length + ' passed'));
             header.appendChild(badges);
             sec.appendChild(header);
@@ -5689,6 +5896,16 @@
                 if (w.suggestion) msg.appendChild(h('span', { className: 'sql-val-suggestion' }, w.suggestion));
                 item.appendChild(msg);
                 _attachInteractivity(item, w);
+                sec.appendChild(item);
+            });
+            (validation.dialectHints || []).forEach(function(d) {
+                var item = h('div', { className: 'sql-val-item dialect' });
+                item.appendChild(h('span', { className: 'sql-val-icon', title: 'SQL Server \u2192 Oracle translation hint' }, '\uD83D\uDD04'));
+                var msg = h('div', { className: 'sql-val-msg' });
+                msg.appendChild(h('span', {}, d.msg));
+                if (d.suggestion) msg.appendChild(h('span', { className: 'sql-val-suggestion' }, d.suggestion));
+                item.appendChild(msg);
+                _attachInteractivity(item, d);
                 sec.appendChild(item);
             });
             validation.passes.forEach(function(p) {

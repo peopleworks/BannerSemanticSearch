@@ -165,6 +165,35 @@ def shot_sql_explainer(page):
     return 'sql-explainer.png'
 
 
+def shot_sql_dialect(page):
+    """SQL Explainer translating SQL Server idioms to Oracle equivalents.
+    Showcases the 'dialect hints' category — a teal section between warnings
+    and passes, with Copy-fix buttons for each mechanical translation."""
+    page.goto(URL + '#/sql', wait_until='domcontentloaded')
+    page.wait_for_selector('#sqlInput', timeout=5000)
+    #  Clear any prior history so the shot focuses on the dialect section
+    page.evaluate("try { localStorage.removeItem('sql_explainer_history'); } catch(e){}")
+    sql_server_sql = (
+        "-- Paste your SQL Server query — the Explainer translates each idiom to Oracle\n"
+        "SELECT TOP 10\n"
+        "       [EmployeeID],\n"
+        "       LEN([Name]) AS name_len,\n"
+        "       ISNULL(Phone, 'N/A') AS phone,\n"
+        "       GETDATE() AS today,\n"
+        "       IIF(Salary > 50000, 'Senior', 'Junior') AS grade,\n"
+        "       Name + ' - ' + Department AS label\n"
+        "FROM   [Employees] WITH (NOLOCK)\n"
+        "WHERE  @dept = 'IT'"
+    )
+    page.locator('#sqlInput').fill(sql_server_sql)
+    page.locator('#sqlExplainBtn').click()
+    page.wait_for_selector('.sql-val-item.dialect', timeout=6000)
+    #  Scroll the validation section into view so the dialect items dominate the frame
+    page.evaluate("var s=document.querySelector('.sql-val-section'); if(s) s.scrollIntoView({block:'start'});")
+    time.sleep(0.4)
+    return 'sql-dialect.png'
+
+
 def shot_search_synonyms(page):
     """Search results for 'employee hire date' showing synonym-expansion chips."""
     page.goto(URL + '#/search/employee%20hire%20date', wait_until='domcontentloaded')
@@ -192,6 +221,7 @@ SHOTS = {
     'ask-banner':  (shot_ask_banner,      {'width': 1600, 'height': 1000}),
     'module-grid': (shot_module_grid,     {'width': 1600, 'height': 1100}),
     'sql-explain': (shot_sql_explainer,   {'width': 1600, 'height': 1000}),
+    'sql-dialect': (shot_sql_dialect,     {'width': 1600, 'height': 1100}),
     'search':      (shot_search_synonyms, {'width': 1600, 'height': 1000}),
     'reports':     (shot_reports_index,   {'width': 1600, 'height': 1100}),
 }
