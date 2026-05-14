@@ -430,11 +430,13 @@
         .sql-editor-hl .str { color: #047857; }
         .sql-editor-hl .num { color: #be185d; }
         .sql-editor-hl .cmt { color: #6b7280; font-style: italic; }
+        .sql-editor-hl .bind { color: #7c3aed; font-weight: 600; }
         html.dark .sql-editor-hl .kw { color: #93c5fd; }
         html.dark .sql-editor-hl .fn { color: #fbbf24; }
         html.dark .sql-editor-hl .str { color: #86efac; }
         html.dark .sql-editor-hl .num { color: #f9a8d4; }
         html.dark .sql-editor-hl .cmt { color: #64748b; }
+        html.dark .sql-editor-hl .bind { color: #c4b5fd; }
         .sql-explain-btn {
             background: var(--gold); color: var(--navy-dark); border: none; padding: 10px 24px;
             border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer;
@@ -612,6 +614,7 @@
         .intent-sql .str   { color: #86efac; }
         .intent-sql .num   { color: #f9a8d4; }
         .intent-sql .cmt   { color: #64748b; font-style: italic; }
+        .intent-sql .bind  { color: #c4b5fd; font-weight: 600; }
         .intent-copy-btn {
             position: absolute; top: 10px; right: 10px;
             background: var(--gold); color: var(--navy-dark); border: none;
@@ -721,6 +724,7 @@
         .report-sql-block .str   { color: #86efac; }
         .report-sql-block .num   { color: #f9a8d4; }
         .report-sql-block .cmt   { color: #64748b; font-style: italic; }
+        .report-sql-block .bind  { color: #c4b5fd; font-weight: 600; }
 
         /* ===================== COMMAND PALETTE (Ctrl+Shift+F) ===================== */
         .palette-backdrop {
@@ -2462,6 +2466,9 @@
             escaped = escaped.replace(/(--[^\n]*)/g, '<span class="cmt">$1</span>');
             //  String literals
             escaped = escaped.replace(/('[^']*')/g, '<span class="str">$1</span>');
+            //  Bind variables / Argos parameters (:name and :name.suffix accessor).
+            //  Done AFTER strings so a ':' inside a literal doesn't get colored.
+            escaped = escaped.replace(/(:[A-Za-z_]\w*(?:\.\w+)?)/g, '<span class="bind">$1</span>');
             //  Keywords (whole-word, case-insensitive)
             kws.sort(function(a,b) { return b.length - a.length; });
             kws.forEach(function(kw) {
@@ -5035,6 +5042,9 @@
                 BANINST1:1, SATURN:1, PAYROLL:1, GENERAL:1, POSNCTL:1, FIMSMGR:1, TAISMGR:1, FAISMGR:1 };
             var skipCol = { NEXTVAL:1, CURRVAL:1 };
             while ((m = re.exec(clean)) !== null) {
+                //  Skip Argos / bind parameter property access (e.g. :main_MC_ecls.Code)
+                //  — the ':' lives just before our match, but \b lets the regex still fire.
+                if (m.index > 0 && clean.charAt(m.index - 1) === ':') continue;
                 var prefix = m[1].toUpperCase();
                 var col = m[2].toUpperCase();
                 if (skipPre[prefix] || skipCol[col]) continue;
@@ -5054,13 +5064,15 @@
             if (!validTables.length) return [];
 
             // Strip comments, string literals, and bind variables so we don't
-            // match 'SE9000' or :payno as if they were columns.
+            // match 'SE9000' or :payno as if they were columns. The optional
+            // ".suffix" after a bind is the Argos parameter-accessor notation
+            // (e.g. :main_MC_ecls.Code) and must be stripped along with the bind.
             var clean = sql
                 .replace(/--.*$/gm, '')
                 .replace(/\/\*[\s\S]*?\*\//g, '')
                 .replace(/'[^']*'/g, "''")
                 .replace(/"[^"]*"/g, '""')
-                .replace(/:[A-Za-z_]\w*/g, '');
+                .replace(/:[A-Za-z_]\w*(?:\.\w+)?/g, '');
 
             // Banner columns always contain at least one underscore and are
             // uppercase. This skips bare SQL keywords (NULL, BETWEEN, etc.).
@@ -5340,6 +5352,48 @@
                     suggestion: "Multi-Entity Processing (MEP) is NOT enabled at WCC — both tables are empty (0 rows). If your query depends on setmepcontext or VPD_INSTITUTION, it won't filter anything." });
             }
 
+            // 3c. Argos / bind parameter recognition.
+            //   :main_*  — top-level Argos report parameter (DataBlock)
+            //   :lcl_*   — Argos "local" / banded sub-parameter
+            //   :dbn_*   — Argos DataBlock-name parameter
+            //   anything else with a leading ':' = generic Oracle bind variable
+            //   Optional ".suffix" after the name is the Argos accessor (.Code,
+            //   .Value, .Description, .Caption, etc.) — NOT a schema.column ref.
+            var paramScan = sql
+                .replace(/--.*$/gm, '')
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/'[^']*'/g, "''");
+            var paramRe = /:([A-Za-z_]\w*)(?:\.(\w+))?/g;
+            var argosNames = {}, bindNames = {};
+            var argosCount = 0, bindCount = 0;
+            var pm;
+            while ((pm = paramRe.exec(paramScan)) !== null) {
+                var pname = pm[1];
+                var prop  = pm[2] ? '.' + pm[2] : '';
+                var key   = ':' + pname + prop;
+                var lo    = pname.toLowerCase();
+                if (lo.indexOf('main_') === 0 || lo.indexOf('lcl_') === 0 || lo.indexOf('dbn_') === 0) {
+                    if (!argosNames[key]) { argosNames[key] = true; argosCount++; }
+                } else {
+                    if (!bindNames[key]) { bindNames[key] = true; bindCount++; }
+                }
+            }
+            if (argosCount > 0) {
+                var argosKeys = Object.keys(argosNames);
+                var head = argosKeys.slice(0, 4).join(', ');
+                var tail = argosKeys.length > 4 ? ', … (+' + (argosKeys.length - 4) + ' more)' : '';
+                passes.push({
+                    msg: argosCount + " Argos parameter(s) detected: " + head + tail + ".",
+                    suggestion: "Recognized prefixes: :main_* (top-level), :lcl_* (banded), :dbn_* (DataBlock). Suffixes like .Code / .Value / .Description are Argos accessor properties, not schema columns."
+                });
+            }
+            if (bindCount > 0) {
+                var bindKeys = Object.keys(bindNames);
+                var bhead = bindKeys.slice(0, 4).join(', ');
+                var btail = bindKeys.length > 4 ? ', … (+' + (bindKeys.length - 4) + ' more)' : '';
+                passes.push({ msg: bindCount + " bind variable(s) detected: " + bhead + btail + "." });
+            }
+
             // 4. Structural checks
             if (upper.indexOf('SELECT') < 0) {
                 errors.push({ msg: "No SELECT clause found." });
@@ -5401,7 +5455,10 @@
             validation.passes.forEach(function(p) {
                 var item = h('div', { className: 'sql-val-item pass' });
                 item.appendChild(h('span', { className: 'sql-val-icon' }, '\u2714'));
-                item.appendChild(h('div', { className: 'sql-val-msg' }, p.msg));
+                var msg = h('div', { className: 'sql-val-msg' });
+                msg.appendChild(h('span', {}, p.msg));
+                if (p.suggestion) msg.appendChild(h('span', { className: 'sql-val-suggestion' }, p.suggestion));
+                item.appendChild(msg);
                 sec.appendChild(item);
             });
 
