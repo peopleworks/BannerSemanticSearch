@@ -38,12 +38,18 @@ def run():
         ref_rows = page.locator('.argos-ref-table tbody tr').count()
         prefixes = [t.strip() for t in page.locator('.argos-card-prefix').all_inner_texts()]
         sections = page.locator('.argos-section h3').all_inner_texts()
+        pattern_cards = page.locator('.argos-pattern').count()
+        pattern_copy_btns = page.locator('.argos-pattern .sql-fix-btn').count()
+        pattern_titles = page.locator('.argos-pattern-title').all_inner_texts()
 
         print(f"Prefix cards:        {cards}")
         print(f"Prefixes:            {prefixes}")
         print(f"Reference tables:    {ref_tables}")
         print(f"Total ref rows:      {ref_rows}")
         print(f"Sections:            {sections}")
+        print(f"Pattern cards:       {pattern_cards}")
+        print(f"Pattern titles:      {pattern_titles}")
+        print(f"Copy buttons:        {pattern_copy_btns}")
 
         assert cards == 3, f"Expected 3 prefix cards, got {cards}"
         assert ':main_*' in prefixes, "Expected :main_* card"
@@ -51,6 +57,17 @@ def run():
         assert ':dbn_*'  in prefixes, "Expected :dbn_* card"
         assert ref_tables == 2, f"Expected 2 reference tables (accessors + widgets), got {ref_tables}"
         assert ref_rows >= 12, f"Expected ≥12 ref rows across both tables, got {ref_rows}"
+        assert pattern_cards >= 7, f"Expected ≥7 pattern cards, got {pattern_cards}"
+        assert pattern_copy_btns == pattern_cards, \
+            f"Expected one Copy button per pattern card ({pattern_cards}), got {pattern_copy_btns}"
+
+        #  Click one Copy button and assert the label flips to '✓ Copied'
+        first_copy = page.locator('.argos-pattern .sql-fix-btn').first
+        first_copy.click()
+        page.wait_for_timeout(200)
+        copy_label = first_copy.text_content() or ''
+        assert 'Copied' in copy_label, f"Expected Copy button to flip to Copied, got {copy_label!r}"
+        print(f"Copy button click confirms label flip: {copy_label!r}")
 
         #  Click the "Open the SQL Explainer →" link, confirm we navigate there
         page.locator('a[href="#/sql"]').first.click()

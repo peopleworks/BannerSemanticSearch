@@ -1216,6 +1216,36 @@
             white-space: nowrap;
         }
         html.dark .argos-ref-table td.mono { color: #67e8f9; }
+
+        /* Argos SQL pattern library (copy-ready snippets) */
+        .argos-patterns-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+        @media (max-width: 1100px) {
+            .argos-patterns-grid { grid-template-columns: 1fr; }
+        }
+        .argos-pattern {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 14px 16px;
+            box-shadow: var(--shadow);
+            display: flex; flex-direction: column; gap: 8px;
+            border-top: 3px solid #06b6d4;
+        }
+        .argos-pattern-title {
+            font-size: 14px; font-weight: 700; color: var(--navy-light);
+        }
+        .argos-pattern-purpose {
+            font-size: 12.5px; color: var(--text-muted); line-height: 1.55;
+        }
+        .argos-pattern-sql {
+            margin: 4px 0 0; padding: 10px 12px;
+            font-size: 12px; line-height: 1.5;
+            overflow-x: auto;
+        }
+        .argos-pattern-actions {
+            display: flex; gap: 6px; margin-top: 2px;
+        }
         .scorecard-instr {
             background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
             padding: 12px 16px; margin-bottom: 14px;
@@ -6387,6 +6417,117 @@
             tbl3.appendChild(tbody3);
             sec3.appendChild(tbl3);
             container.appendChild(sec3);
+
+            //  ============== Section 4: Common Argos SQL patterns ==============
+            var sec4 = h('div', { className: 'argos-section' });
+            var sec4Head = h('h3', {});
+            sec4Head.appendChild(h('span', {}, 'Common SQL patterns'));
+            sec4Head.appendChild(h('span', { className: 'label' }, '📋 copy-ready'));
+            sec4.appendChild(sec4Head);
+            sec4.appendChild(h('div', { className: 'lead' },
+                "Battle-tested snippets for situations that come up over and over in Argos report SQL. " +
+                "Click Copy on any card to drop the pattern on your clipboard, then paste into your DataBlock " +
+                "and adjust column/table names."));
+
+            var patterns = [
+                {
+                    title: "Comma-string → rows",
+                    purpose: "Split a comma-separated multi-checkbox selection into a virtual table of rows. " +
+                             "The CONNECT BY LEVEL trick walks each chunk one row at a time using REGEXP_SUBSTR.",
+                    sql: "SELECT REGEXP_SUBSTR(:main_MC_codes, '[^,]+', 1, LEVEL) AS code\n" +
+                         "FROM   dual\n" +
+                         "CONNECT BY LEVEL <= REGEXP_COUNT(:main_MC_codes, ',') + 1"
+                },
+                {
+                    title: "Multi-checkbox → WHERE IN",
+                    purpose: "Filter a query by a multi-checkbox selection. Inlines the comma-to-rows trick so " +
+                             "you can use a clean IN against the user's selection.",
+                    sql: "WHERE col IN (\n" +
+                         "    SELECT REGEXP_SUBSTR(:main_MC_codes, '[^,]+', 1, LEVEL)\n" +
+                         "    FROM   dual\n" +
+                         "    CONNECT BY LEVEL <= REGEXP_COUNT(:main_MC_codes, ',') + 1\n" +
+                         ")"
+                },
+                {
+                    title: "LISTAGG with overflow safety",
+                    purpose: "Join multiple rows back into a comma-separated string. ALWAYS include " +
+                             "ON OVERFLOW TRUNCATE (Oracle 12.2+) — without it, output > 4000 bytes " +
+                             "raises ORA-01489 at runtime, often only on the largest customers.",
+                    sql: "LISTAGG(col, ', ' ON OVERFLOW TRUNCATE '... [truncated]' WITH COUNT)\n" +
+                         "    WITHIN GROUP (ORDER BY col)"
+                },
+                {
+                    title: "\"Show all\" toggle pattern",
+                    purpose: "Lets the user EITHER pick specific codes OR choose 'all'. " +
+                             ":main_CB_allcodes is a 0/1 check box that bypasses the filter entirely.",
+                    sql: "WHERE (\n" +
+                         "      :main_CB_allcodes = 1\n" +
+                         "   OR col_code = :main_MC_codes.Code\n" +
+                         ")"
+                },
+                {
+                    title: "Week-of-date range",
+                    purpose: "Expand a single date Edit Box into a Sunday-through-Saturday week. " +
+                             "TRUNC(date, 'DAY') rounds DOWN to the most recent Sunday under " +
+                             "NLS_TERRITORY = 'AMERICA' (the Banner default).",
+                    sql: "WHERE date_col BETWEEN TRUNC(:main_EB_week_of, 'DAY')\n" +
+                         "                   AND TRUNC(:main_EB_week_of, 'DAY') + 6"
+                },
+                {
+                    title: "Optional date filter (NULL-aware)",
+                    purpose: "Date parameter is optional — blank leaves it unfiltered, otherwise filter " +
+                             "from that date forward. Guards against the 'WHERE date >= :p' anti-pattern " +
+                             "that returns zero rows when :p is null.",
+                    sql: "WHERE (:main_DA_from IS NULL OR date_col >= :main_DA_from)"
+                },
+                {
+                    title: "Y/N flag, NULL-safe",
+                    purpose: "Banner Y/N flags are notoriously inconsistent — some columns leave NULL " +
+                             "meaning 'not set' (which usually equals 'N'). NVL collapses that ambiguity.",
+                    sql: "WHERE NVL(active_flag, 'N') = 'Y'"
+                }
+            ];
+
+            var patternsGrid = h('div', { className: 'argos-patterns-grid' });
+            patterns.forEach(function(p) {
+                var card = h('div', { className: 'argos-pattern' });
+                card.appendChild(h('div', { className: 'argos-pattern-title' }, p.title));
+                card.appendChild(h('div', { className: 'argos-pattern-purpose' }, p.purpose));
+                var preBlock = document.createElement('pre');
+                preBlock.className = 'argos-pattern-sql intent-sql';   // reuse intent-sql token colors
+                preBlock.innerHTML = highlightSql(p.sql);
+                card.appendChild(preBlock);
+                var actions = h('div', { className: 'argos-pattern-actions' });
+                var copyBtn = h('button', { className: 'sql-fix-btn' }, '📋 Copy');
+                copyBtn.onclick = function() {
+                    var done = function() {
+                        copyBtn.classList.add('copied');
+                        copyBtn.textContent = '✓ Copied';
+                        setTimeout(function() {
+                            copyBtn.classList.remove('copied');
+                            copyBtn.textContent = '📋 Copy';
+                        }, 1400);
+                    };
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(p.sql).then(done, function() {
+                            var ta = document.createElement('textarea');
+                            ta.value = p.sql; document.body.appendChild(ta); ta.select();
+                            try { document.execCommand('copy'); done(); } catch (_) {}
+                            document.body.removeChild(ta);
+                        });
+                    } else {
+                        var ta = document.createElement('textarea');
+                        ta.value = p.sql; document.body.appendChild(ta); ta.select();
+                        try { document.execCommand('copy'); done(); } catch (_) {}
+                        document.body.removeChild(ta);
+                    }
+                };
+                actions.appendChild(copyBtn);
+                card.appendChild(actions);
+                patternsGrid.appendChild(card);
+            });
+            sec4.appendChild(patternsGrid);
+            container.appendChild(sec4);
 
             //  Footer pointer to the Explainer
             container.appendChild(h('p', { style: 'color: var(--text-muted); font-size: 13px; margin-top: 8px;' },
