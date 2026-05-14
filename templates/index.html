@@ -6459,6 +6459,266 @@
             };
         }
 
+        //  ============== Redaction — client-side PII masking ==============
+        //  Applied to the SQL BEFORE any AI request. Patterns target string
+        //  literals only (anything in single quotes), which is where Banner
+        //  typically holds the sensitive values — outside literals it's just
+        //  schema names / SQL keywords, which we want the model to see.
+        //
+        //  Levels:
+        //    off       — no redaction
+        //    standard  — masks SSN, email, long numeric IDs in literals
+        //    strict    — Standard + truncates string literals > 50 chars
+        function redactSql(sql, level) {
+            if (!level || level === 'off') return sql;
+            var out = sql;
+
+            //  SSN-like inside a literal: '123-45-6789'
+            out = out.replace(/'(\d{3})-(\d{2})-(\d{4})'/g, "'<REDACTED:SSN>'");
+            //  Email inside a literal
+            out = out.replace(/'([\w.+-]+)@([\w.-]+\.[A-Za-z]{2,})'/g, "'<REDACTED:EMAIL>'");
+            //  Long numeric IDs in a literal (>=6 digits — PIDM, employee IDs)
+            out = out.replace(/'(\d{6,})'/g, "'<REDACTED:ID>'");
+            //  Phone-like patterns ('(312) 555-1234', '+1-312-555-1234')
+            out = out.replace(/'(\+?1?\s*[\(\-]?\s*\d{3}\s*[\)\-]?\s*\d{3}\s*[\-]?\s*\d{4})'/g, "'<REDACTED:PHONE>'");
+
+            if (level === 'strict') {
+                out = out.replace(/'([^']{51,})'/g, function(m, content) {
+                    return "'" + content.slice(0, 47).replace(/'/g, "''") + "<...truncated>'";
+                });
+            }
+            return out;
+        }
+
+        //  ============== Provider abstraction — aiCall() ==============
+        //  Single entry point for AI requests. Routes to Anthropic / OpenAI /
+        //  Ollama based on current settings, handles streaming vs non-streaming,
+        //  surfaces errors as plain-text messages.
+        //
+        //  options:
+        //    { messages, onChunk(delta), onDone(fullText), onError(err), signal }
+
+        async function aiCall(options) {
+            var s = loadAiSettings();
+            if (!s.enabled) {
+                options.onError && options.onError(new Error('AI is not enabled in Settings.'));
+                return;
+            }
+
+            //  Stats — increment day-counter
+            var today = new Date().toISOString().slice(0, 10);
+            if (s.stats.lastCallDate !== today) {
+                s.stats.callsToday = 0;
+                s.stats.lastCallDate = today;
+            }
+            s.stats.callsToday = (s.stats.callsToday || 0) + 1;
+            saveAiSettings(s);
+
+            var cfg = s.providers[s.provider];
+            var stream = !!s.stream;
+            try {
+                if (s.provider === 'anthropic')      await _callAnthropic(cfg, options.messages, stream, options.onChunk, options.onDone, options.signal);
+                else if (s.provider === 'openai')    await _callOpenAI   (cfg, options.messages, stream, options.onChunk, options.onDone, options.signal);
+                else if (s.provider === 'ollama')    await _callOllama   (cfg, options.messages, stream, options.onChunk, options.onDone, options.signal);
+                else throw new Error('Unknown provider: ' + s.provider);
+            } catch (err) {
+                options.onError && options.onError(err);
+            }
+        }
+
+        async function _callAnthropic(cfg, messages, stream, onChunk, onDone, signal) {
+            if (!cfg.apiKey) throw new Error('No Anthropic API key — set one in Settings.');
+            var resp = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': cfg.apiKey,
+                    'anthropic-version': '2023-06-01',
+                    //  Required for direct-browser calls. Without this Anthropic
+                    //  refuses to honor CORS preflights from a non-proxied origin.
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify({
+                    model: cfg.model,
+                    max_tokens: 1024,
+                    stream: stream,
+                    messages: messages
+                }),
+                signal: signal
+            });
+            if (!resp.ok) {
+                var et = await resp.text();
+                throw new Error('Anthropic ' + resp.status + ': ' + et.slice(0, 240));
+            }
+            if (!stream) {
+                var data = await resp.json();
+                var text = (data.content && data.content[0] && data.content[0].text) || '';
+                if (onChunk) onChunk(text);
+                if (onDone) onDone(text);
+                return;
+            }
+            //  Parse SSE — Anthropic emits content_block_delta events with .delta.text
+            var reader = resp.body.getReader();
+            var dec = new TextDecoder();
+            var buf = '', full = '';
+            while (true) {
+                var chunk = await reader.read();
+                if (chunk.done) break;
+                buf += dec.decode(chunk.value, { stream: true });
+                var lines = buf.split('\n');
+                buf = lines.pop();
+                lines.forEach(function(line) {
+                    if (!line.startsWith('data:')) return;
+                    var payload = line.slice(5).trim();
+                    if (!payload || payload === '[DONE]') return;
+                    try {
+                        var ev = JSON.parse(payload);
+                        if (ev.type === 'content_block_delta' && ev.delta && ev.delta.text) {
+                            full += ev.delta.text;
+                            if (onChunk) onChunk(ev.delta.text);
+                        }
+                    } catch (_) {}
+                });
+            }
+            if (onDone) onDone(full);
+        }
+
+        async function _callOpenAI(cfg, messages, stream, onChunk, onDone, signal) {
+            if (!cfg.apiKey) throw new Error('No OpenAI API key — set one in Settings.');
+            var resp = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + cfg.apiKey
+                },
+                body: JSON.stringify({
+                    model: cfg.model,
+                    messages: messages,
+                    stream: stream,
+                    max_tokens: 1024
+                }),
+                signal: signal
+            });
+            if (!resp.ok) {
+                var et = await resp.text();
+                throw new Error('OpenAI ' + resp.status + ': ' + et.slice(0, 240));
+            }
+            if (!stream) {
+                var data = await resp.json();
+                var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+                if (onChunk) onChunk(text);
+                if (onDone) onDone(text);
+                return;
+            }
+            //  Parse SSE — OpenAI emits choices[0].delta.content
+            var reader = resp.body.getReader();
+            var dec = new TextDecoder();
+            var buf = '', full = '';
+            while (true) {
+                var chunk = await reader.read();
+                if (chunk.done) break;
+                buf += dec.decode(chunk.value, { stream: true });
+                var lines = buf.split('\n');
+                buf = lines.pop();
+                lines.forEach(function(line) {
+                    if (!line.startsWith('data:')) return;
+                    var payload = line.slice(5).trim();
+                    if (!payload || payload === '[DONE]') return;
+                    try {
+                        var ev = JSON.parse(payload);
+                        var delta = ev.choices && ev.choices[0] && ev.choices[0].delta && ev.choices[0].delta.content;
+                        if (delta) {
+                            full += delta;
+                            if (onChunk) onChunk(delta);
+                        }
+                    } catch (_) {}
+                });
+            }
+            if (onDone) onDone(full);
+        }
+
+        async function _callOllama(cfg, messages, stream, onChunk, onDone, signal) {
+            var baseUrl = (cfg.baseUrl || 'http://localhost:11434').replace(/\/+$/, '');
+            var resp = await fetch(baseUrl + '/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: cfg.model,
+                    messages: messages,
+                    stream: stream
+                }),
+                signal: signal
+            });
+            if (!resp.ok) {
+                var et = await resp.text();
+                throw new Error('Ollama ' + resp.status + ': ' + et.slice(0, 240));
+            }
+            if (!stream) {
+                var data = await resp.json();
+                var text = (data.message && data.message.content) || '';
+                if (onChunk) onChunk(text);
+                if (onDone) onDone(text);
+                return;
+            }
+            //  Ollama emits JSON-lines (one JSON object per line, no SSE prefix)
+            var reader = resp.body.getReader();
+            var dec = new TextDecoder();
+            var buf = '', full = '';
+            while (true) {
+                var chunk = await reader.read();
+                if (chunk.done) break;
+                buf += dec.decode(chunk.value, { stream: true });
+                var lines = buf.split('\n');
+                buf = lines.pop();
+                lines.forEach(function(line) {
+                    if (!line.trim()) return;
+                    try {
+                        var ev = JSON.parse(line);
+                        if (ev.message && ev.message.content) {
+                            full += ev.message.content;
+                            if (onChunk) onChunk(ev.message.content);
+                        }
+                    } catch (_) {}
+                });
+            }
+            if (onDone) onDone(full);
+        }
+
+        //  Test connection — sends a minimal request to confirm the credentials,
+        //  network, and CORS all work. Ollama uses /api/tags (no inference, just
+        //  lists installed models); cloud providers send a 1-2 token completion.
+        async function aiTestConnection() {
+            var s = loadAiSettings();
+            try {
+                if (s.provider === 'ollama') {
+                    var baseUrl = (s.providers.ollama.baseUrl || 'http://localhost:11434').replace(/\/+$/, '');
+                    var resp = await fetch(baseUrl + '/api/tags');
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' from Ollama. Is it running?');
+                    var data = await resp.json();
+                    var count = (data.models || []).length;
+                    return { ok: true, msg: '✓ Connected · ' + count + ' model' + (count !== 1 ? 's' : '') + ' installed' };
+                }
+                //  Cloud providers: try a 1-token reply via aiCall
+                var got = '';
+                await new Promise(function(resolve, reject) {
+                    aiCall({
+                        messages: [{ role: 'user', content: 'Reply with the single word "ok".' }],
+                        onChunk: function(d) { got += d; },
+                        onDone:  function(t) { got = t || got; resolve(); },
+                        onError: function(e) { reject(e); }
+                    });
+                });
+                return { ok: true, msg: '✓ Connected · response: "' + got.trim().slice(0, 40) + '"' };
+            } catch (err) {
+                return { ok: false, msg: '✗ ' + (err.message || String(err)) };
+            }
+        }
+
+        //  Expose for smoke tests + future internal calls. The IIFE keeps these
+        //  out of accidental global scope otherwise.
+        window.redactSql = redactSql;
+        window.aiTestConnection = aiTestConnection;
+
         function renderSettingsPage() {
             var container = h('div', { className: 'settings-container' });
 
@@ -6681,13 +6941,41 @@
                 setTimeout(function() { saveBtn.textContent = 'Save settings'; }, 1400);
             });
 
-            testBtn.addEventListener('click', function() {
-                //  In commit A, "Test connection" is just a stub. Commit B will
-                //  wire it to a real ping. We surface a hint so the user knows
-                //  the button exists but doesn't promise functionality yet.
+            testBtn.addEventListener('click', async function() {
+                //  Save current form state first so the test uses the same values
+                //  the user is looking at (otherwise they have to Save → Test → see).
+                var cur = loadAiSettings();
+                cur.provider = provSel.value;
+                if (cur.provider === 'ollama') {
+                    cur.providers.ollama.baseUrl = keyInput.value.trim() || 'http://localhost:11434';
+                } else {
+                    cur.providers[cur.provider].apiKey = keyInput.value.trim();
+                }
+                cur.providers[cur.provider].model = modelSel.value;
+                cur.redaction = redSel.value;
+                cur.stream = streamCb.checked;
+                //  Force enabled=true for the test path even if the master toggle is OFF
+                //  — otherwise aiCall throws "AI is not enabled".
+                cur.enabled = true;
+                saveAiSettings(cur);
+
                 var st = document.getElementById('aiStatus');
                 st.className = 'settings-status';
-                st.textContent = 'Connection testing will be wired in the next release. Settings saved.';
+                st.textContent = '⏳ Testing…';
+                testBtn.disabled = true;
+                var result = await aiTestConnection();
+                testBtn.disabled = false;
+                st.className = 'settings-status ' + (result.ok ? 'ok' : 'err');
+                st.textContent = result.msg;
+                //  Save lastTest result + restore the user's actual toggle preference
+                var post = loadAiSettings();
+                post.stats.lastTest = Date.now();
+                post.stats.lastTestStatus = result.ok ? 'ok' : 'failed';
+                post.enabled = !!s.enabled;   // back to whatever the user had at page load
+                saveAiSettings(post);
+                //  Sync the toggle visual in case we forced enabled briefly
+                document.querySelector('.settings-toggle').classList.toggle('on', !!s.enabled);
+                document.getElementById('aiToggleState').textContent = s.enabled ? '(ON)' : '(OFF)';
             });
 
             return container;
