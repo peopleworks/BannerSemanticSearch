@@ -5742,6 +5742,192 @@
             return hints;
         }
 
+        //  ==================== ORACLE → POSTGRESQL DIALECT HINTS ====================
+        //  Mirror of detectSqlServerDialect, but for the cloud-migration direction.
+        //
+        //  Why this matters for Banner: Ellucian's Banner SaaS migrates US-based
+        //  customers from Oracle 19c on-prem to a PostgreSQL backend (per Strata
+        //  Information Group). The TABLES stay the same (SPRIDEN, PHRHIST, GURACLS,
+        //  etc.) — but every Oracle-specific construct (NVL, DECODE, LISTAGG,
+        //  CONNECT BY, SYSDATE, ROWNUM, (+) outer join, MONTHS_BETWEEN, ADD_MONTHS,
+        //  seq.NEXTVAL, MINUS, /*+ hints */, INSTR, DUAL, NVL2) breaks at the
+        //  migration boundary. Argos reports written against on-prem Banner need
+        //  remediation for these before they run on SaaS.
+        //
+        //  This detector lights them up so users can plan ahead.
+        function detectOracleToPostgresDialect(sql) {
+            var hints = [];
+            var clean = sql
+                .replace(/--.*$/gm, '')
+                .replace(/\/\*\+[\s\S]*?\*\//g, '__HINT__')   // mask Oracle hints first so /* … */ doesn't eat them
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/'[^']*'/g, "'_'");
+
+            function _emit(msg, suggestion, target, fixSnippet) {
+                var entry = { msg: msg, suggestion: suggestion, target: target };
+                if (fixSnippet) entry.fixSnippet = fixSnippet;
+                hints.push(entry);
+            }
+
+            //  1. SYSDATE
+            if (/\bSYSDATE\b/i.test(clean)) {
+                _emit(
+                    "`SYSDATE` is Oracle-only — PostgreSQL uses `CURRENT_TIMESTAMP` / `NOW()`.",
+                    "Replace `SYSDATE` with `CURRENT_TIMESTAMP` (timezone-aware) or `LOCALTIMESTAMP` (no TZ). `NOW()` is the most common short form. Note: `SYSDATE` in Oracle returns no fractional seconds; `CURRENT_TIMESTAMP` does — wrap with `date_trunc('second', …)` if you need exact parity.",
+                    "SYSDATE",
+                    "CURRENT_TIMESTAMP"
+                );
+            }
+
+            //  2. NVL(x, y) — Oracle-only function name
+            if (/\bNVL\s*\(/i.test(clean) && !/\bNVL2\s*\(/i.test(clean.replace(/NVL2\s*\(/gi, '__NVL2__'))) {
+                //  Use COALESCE detection cleanly — only fire if NVL appears (NVL2 handled separately)
+                _emit(
+                    "`NVL(x, y)` is Oracle-specific — PostgreSQL uses standard `COALESCE`.",
+                    "Drop-in replacement: `COALESCE(x, y)`. Bonus: COALESCE accepts unlimited arguments and short-circuits on the first non-null. Portable across every major DB.",
+                    "NVL",
+                    "COALESCE(x, y)"
+                );
+            }
+
+            //  3. NVL2(x, y, z)
+            if (/\bNVL2\s*\(/i.test(clean)) {
+                _emit(
+                    "`NVL2(x, y, z)` is Oracle-only.",
+                    "PostgreSQL has no NVL2 — use `CASE WHEN x IS NOT NULL THEN y ELSE z END`. Logic: NVL2 returns y when x is NOT null, else z (opposite of what you might expect from the name).",
+                    "NVL2",
+                    "CASE WHEN x IS NOT NULL THEN y ELSE z END"
+                );
+            }
+
+            //  4. DECODE(col, val1, ret1, val2, ret2, default)
+            if (/\bDECODE\s*\(/i.test(clean)) {
+                _emit(
+                    "`DECODE(col, a, b, …)` is Oracle-only — PostgreSQL uses standard `CASE`.",
+                    "Convert each (value, result) pair: `CASE col WHEN a THEN b WHEN c THEN d ELSE e END`. Portable across every major DB. PostgreSQL also won't compare NULLs equal in DECODE-style — explicit `IS NULL` checks needed.",
+                    "DECODE"
+                );
+            }
+
+            //  5. LISTAGG
+            if (/\bLISTAGG\s*\(/i.test(clean)) {
+                _emit(
+                    "`LISTAGG(...)` is Oracle 11.2+ — PostgreSQL calls this `STRING_AGG`.",
+                    "Replace `LISTAGG(col, ', ') WITHIN GROUP (ORDER BY col)` with `STRING_AGG(col, ', ' ORDER BY col)`. PostgreSQL doesn't use the `WITHIN GROUP` clause for this — the ORDER BY goes inside the function call itself. No overflow ambush either: STRING_AGG returns TEXT (unbounded).",
+                    "LISTAGG",
+                    "STRING_AGG(col, ', ' ORDER BY col)"
+                );
+            }
+
+            //  6. CONNECT BY LEVEL <= N (sequence generation)
+            if (/\bCONNECT\s+BY\s+LEVEL\b/i.test(clean)) {
+                _emit(
+                    "`CONNECT BY LEVEL` is Oracle's sequence-generation trick — PostgreSQL has a native function.",
+                    "Replace `SELECT LEVEL FROM dual CONNECT BY LEVEL <= N` with `SELECT n FROM generate_series(1, N) AS n`. Far cleaner and faster on PG.",
+                    "CONNECT BY LEVEL",
+                    "SELECT n FROM generate_series(1, N) AS n"
+                );
+            }
+            //  7. CONNECT BY PRIOR (general hierarchical queries)
+            else if (/\bCONNECT\s+BY\s+PRIOR\b/i.test(clean) || /\bSTART\s+WITH\b/i.test(clean)) {
+                _emit(
+                    "`CONNECT BY PRIOR` (hierarchical query) is Oracle-only.",
+                    "PostgreSQL uses recursive CTEs: `WITH RECURSIVE t AS (SELECT … WHERE <start condition> UNION ALL SELECT … FROM t JOIN parent ON …) SELECT * FROM t`. Slightly more verbose but more flexible. `LEVEL` becomes a counter you maintain manually in the recursive part.",
+                    "CONNECT BY"
+                );
+            }
+
+            //  8. FROM dual
+            if (/\bFROM\s+dual\b/i.test(clean)) {
+                _emit(
+                    "`FROM dual` is an Oracle quirk — PostgreSQL doesn't need it.",
+                    "PostgreSQL allows `SELECT 1` or `SELECT NOW()` with no FROM clause at all. Just delete `FROM dual` (or the entire FROM clause) — it's a no-op holdover from Oracle's requirement that every SELECT have a FROM.",
+                    "FROM dual"
+                );
+            }
+
+            //  9. ROWNUM
+            if (/\bROWNUM\b/i.test(clean)) {
+                _emit(
+                    "`ROWNUM` is Oracle-only — PostgreSQL has standard `LIMIT` + `ROW_NUMBER()`.",
+                    "For 'top N' use `LIMIT N` (with `ORDER BY` for predictable results). For row numbering within a query use `ROW_NUMBER() OVER (ORDER BY …)`. ROWNUM-based pagination in Oracle has a famous gotcha (ROWNUM is assigned BEFORE ordering) that PG simply doesn't have.",
+                    "ROWNUM",
+                    "LIMIT N"
+                );
+            }
+
+            //  10. Oracle (+) outer join syntax
+            if (/\(\+\)/.test(clean)) {
+                _emit(
+                    "`(+)` outer-join operator is Oracle-only legacy syntax.",
+                    "PostgreSQL only supports ANSI joins. Rewrite as `LEFT/RIGHT JOIN ... ON ...`. Note Oracle's `(+)` can produce semantically different results from ANSI joins in some edge cases with multiple outer joins — review the join order carefully.",
+                    "(+)"
+                );
+            }
+
+            //  11. MONTHS_BETWEEN(a, b)
+            if (/\bMONTHS_BETWEEN\s*\(/i.test(clean)) {
+                _emit(
+                    "`MONTHS_BETWEEN(a, b)` is Oracle-only.",
+                    "PostgreSQL: `EXTRACT(YEAR FROM age(a, b)) * 12 + EXTRACT(MONTH FROM age(a, b))`. Note: Oracle's MONTHS_BETWEEN returns a fractional result (days/31 between whole months); the PG `age()` approach returns whole months. If you need fractional months, compute days then divide.",
+                    "MONTHS_BETWEEN"
+                );
+            }
+
+            //  12. ADD_MONTHS(date, n)
+            if (/\bADD_MONTHS\s*\(/i.test(clean)) {
+                _emit(
+                    "`ADD_MONTHS(date, n)` is Oracle-only.",
+                    "PostgreSQL: `date + INTERVAL 'n months'` (literal) or `date + (n * INTERVAL '1 month')` (variable). Subtle difference: Oracle's ADD_MONTHS adjusts for end-of-month (Jan 31 + 1 month → Feb 28); PostgreSQL's interval math does the same in most cases, but verify against your edge dates.",
+                    "ADD_MONTHS",
+                    "date + INTERVAL 'n months'"
+                );
+            }
+
+            //  13. Sequence access: seq_name.NEXTVAL / seq_name.CURRVAL
+            var seqMatch = clean.match(/\b(\w+)\.(NEXTVAL|CURRVAL)\b/i);
+            if (seqMatch) {
+                _emit(
+                    "`" + seqMatch[1] + "." + seqMatch[2].toUpperCase() + "` is Oracle sequence syntax.",
+                    "PostgreSQL uses function calls: `" + seqMatch[2].toLowerCase() + "('" + seqMatch[1] + "')`. Wrap the sequence name in single quotes. Also: PG sequences are case-sensitive when quoted — verify the name matches your DDL.",
+                    seqMatch[0],
+                    seqMatch[2].toLowerCase() + "('" + seqMatch[1] + "')"
+                );
+            }
+
+            //  14. MINUS set operator
+            if (/\bMINUS\b/i.test(clean)) {
+                _emit(
+                    "`MINUS` is Oracle's name for set difference — PostgreSQL uses `EXCEPT`.",
+                    "Drop-in replacement: change `MINUS` to `EXCEPT`. Same semantics. PostgreSQL also supports `EXCEPT ALL` (preserves duplicates) and `INTERSECT` / `UNION` work identically in both.",
+                    "MINUS",
+                    "EXCEPT"
+                );
+            }
+
+            //  15. INSTR(str, sub)
+            if (/\bINSTR\s*\(/i.test(clean)) {
+                _emit(
+                    "`INSTR(str, sub)` is Oracle/MySQL — PostgreSQL has `POSITION` and `STRPOS`.",
+                    "Two equivalents: `POSITION(sub IN str)` (SQL standard) or `STRPOS(str, sub)` (shorter, PG-specific). Both return 0 when not found, just like INSTR. Oracle's 4-arg variant `INSTR(str, sub, start, occurrence)` has no PG built-in — use `regexp_instr()` if you need start/occurrence.",
+                    "INSTR",
+                    "POSITION(sub IN str)"
+                );
+            }
+
+            //  16. Oracle optimizer hints /*+ … */
+            if (/__HINT__/.test(clean)) {
+                _emit(
+                    "Oracle optimizer hints `/*+ … */` have no effect in PostgreSQL.",
+                    "PostgreSQL's planner has no hint syntax (by design). The pg_hint_plan extension exists but isn't installed in Banner SaaS. Delete the comments — they're silently ignored, but leaving them creates the false impression they're influencing plans.",
+                    "/*+"
+                );
+            }
+
+            return hints;
+        }
+        window.detectOracleToPostgresDialect = detectOracleToPostgresDialect;   // expose for smoke tests
+
         function extractColumnRefs(sql, aliases) {
             var refs = [], seen = {};
             var clean = sql.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
