@@ -1,8 +1,10 @@
 # Banner Schema Search
 
-A smart, self-contained **search · query-builder · audit** tool for Ellucian Banner. Search 6,900+ tables and 133,000+ columns instantly, build Banner SQL by snapping visual blocks together, run 14 ready-made security audits, and validate any SQL against the live schema — **no AI, no server, no internet required**, just open one HTML file in any browser.
+> 🌐 **Live at [bss.peopleworksservices.com](https://bss.peopleworksservices.com)** — free, no signup, no tracking.
 
-> "How does it work so well without AI?" — It uses the same algorithms that powered Google and Elasticsearch for decades. Pure math, zero magic.
+A smart, self-contained **search · query-builder · audit · SQL-dialect translator** tool for Ellucian Banner. Search 6,900+ tables and 133,000+ columns instantly, build Banner SQL by snapping visual blocks together, run 14 ready-made security audits, validate any SQL against the live schema with cross-dialect hints (SQL Server ↔ Oracle ↔ PostgreSQL for Banner SaaS), and optionally hook your own AI key for explanations and rewrites — **the validator works 100% offline; AI is opt-in BYOK**, just open one HTML file in any browser.
+
+> "How does it work so well without AI?" — Because for 95% of the job, AI isn't needed. It uses BM25, trigram fuzzy match, and a curated rules engine — the same algorithms that powered Google and Elasticsearch for decades. Pure math, zero magic. AI is reserved for the 5% where it really helps: open-ended explanations and SQL rewrites.
 
 ![Banner Lego — the visual query builder](docs/img/banner-lego.png)
 
@@ -21,9 +23,12 @@ This is one HTML file with six distinct tools glued together:
 | **🛡️ Security Posture Scorecard** | Paste one-row output of SR014 into a textarea — 8 traffic-light gauges light up: dormant accounts, terminated-with-access, super users, PII breadth, violations, unused classes, etc. Everything client-side, persists in localStorage. | `#/scorecard` · `security posture` |
 | **💡 Ask Banner** | Natural-language → generated SQL. Ask "finance security classes", "access to SHAINST", "users in class SFAREGS", "Student user access inventory" — get Argos-ready SQL with step-by-step explanation. | Just type a question |
 | **☰ Ready-to-run Reports** | 14 vetted SR0XX reports: dormant accounts, terminated-with-access, direct-grant bypass, PII audit, violation dashboard, module overview, per-module user-form inventory, security posture scorecard. | `#/reports` · `~` |
-| **🔧 SQL Explainer** | Paste any Banner SQL. Validates every table/column against the embedded schema, runs 15+ Banner pitfall checks, matches against a curated case library, shows "Did you mean…?" suggestions. Live syntax highlighting. | `#/sql` |
+| **🔧 SQL Explainer** | Paste any Banner SQL. Validates every table/column against the embedded schema, runs 15+ Banner pitfall checks, matches against a curated case library, shows "Did you mean…?" suggestions. Live syntax highlighting + multi-dialect translation hints. | `#/sql` |
+| **📋 Argos Cheatsheet** | Parameter conventions (`:main_*` / `:lcl_*` / `:dbn_*`), property accessors, widget naming, 7 copy-ready SQL patterns, and the "Banner Cloud reality check" (Oracle → PostgreSQL migration table for Banner SaaS). | `#/argos` |
+| **🌐 Community Resources** | Hand-curated index of free Argos webinars (Evisions), Ellucian training (Customer Center, Live conference), and 6 regional Banner User Groups (ALBUG / FLBUG / PABUG / BUGMI / UMBUG). Every link points to an official source. | `#/resources` |
+| **✨ AI Assistance (BYOK — optional)** | Bring your own Anthropic / OpenAI / Ollama key. Three actions: "Explain in depth" per validation finding · "Suggest fix" with side-by-side LCS diff · "Translate from SQL Server" → Oracle. Client-side redaction of SSN/email/long-IDs before each request. OFF by default. | `#/settings` |
 
-Plus: dark/light theme toggle (sun/moon button — cycles Auto → Light → Dark — also `Ctrl+Shift+L`), command palette (`Ctrl+Shift+F`), Help panel with 50+ clickable example queries.
+Plus: dark/light theme toggle (sun/moon button — cycles Auto → Light → Dark — also `Ctrl+Shift+L`), command palette (`Ctrl+Shift+F`), Help panel with 50+ clickable example queries, target-dialect dropdown (Oracle on-prem vs PostgreSQL/SaaS), and a recent-SQL history that survives reloads.
 
 ---
 

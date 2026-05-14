@@ -2258,6 +2258,18 @@
             </div>
 
             <div class="help-category">
+                <div class="help-cat-title"><span class="help-cat-icon">&#127760;</span> Community Resources</div>
+                <a class="help-query" data-q="__resources__"><code>Argos webinars (Evisions)</code><span class="help-hint">10 curated webinars + product pages + the annual Evisions Conference</span></a>
+                <a class="help-query" data-q="__resources__"><code>Ellucian Banner training</code><span class="help-hint">Customer Center, Training Portal, "Get to Know Banner" series, Ellucian Live 2026</span></a>
+                <a class="help-query" data-q="__resources__"><code>Banner User Groups (BUGs)</code><span class="help-hint">Regional groups: ALBUG / FLBUG / PABUG / BUGMI / UMBUG — peer-driven sessions</span></a>
+                <div class="help-tip" style="margin: 0 -8px;">
+                    <strong style="color: #10b981;">&#128221; Found something missing?</strong> Open an issue or PR at the
+                    <a href="https://github.com/peopleworks/BannerSemanticSearch" target="_blank" rel="noopener">repo</a>.
+                    The resources list is hand-curated and welcomes additions from the community.
+                </div>
+            </div>
+
+            <div class="help-category">
                 <div class="help-cat-title"><span class="help-cat-icon">&#128203;</span> Argos / Oracle Reference</div>
                 <a class="help-query" data-q="__argos__"><code>Argos parameter cheatsheet</code><span class="help-hint">:main_* / :lcl_* / :dbn_* conventions + accessors</span></a>
                 <a class="help-query" data-q="__argos__"><code>Argos SQL patterns</code><span class="help-hint">7 copy-ready snippets: CONNECT BY split, LISTAGG OVERFLOW, multi-checkbox IN, &quot;show all&quot; toggle, week-of-date, optional date, Y/N flag</span></a>
@@ -9093,6 +9105,7 @@
                 results.push({ group: 'Start here', type: 'a', title: 'Ready-to-run Reports', sub: REPORTS.length + ' security & access reports', hint: '~', action: function() { navigate('reports'); } });
                 results.push({ group: 'Start here', type: 'a', title: 'SQL Explainer', sub: 'Paste any Banner SQL to validate', hint: '`', action: function() { navigate('sql'); } });
                 results.push({ group: 'Start here', type: 'a', title: 'Argos Parameter Cheatsheet', sub: ':main_* / :lcl_* / :dbn_* conventions + 7 copy-ready patterns', hint: '', action: function() { navigate('argos'); } });
+                results.push({ group: 'Start here', type: 'a', title: 'Community Resources Hub', sub: 'Argos webinars, Ellucian training, regional Banner User Groups', hint: '', action: function() { navigate('resources'); } });
                 results.push({ group: 'Start here', type: 'q', title: 'Try: "Banner Student security classes"', sub: 'Ask Banner — auto-generates SQL', hint: '', action: function() { document.getElementById('searchInput').value = 'Banner Student security classes'; navigate('search/' + encodeURIComponent('Banner Student security classes')); } });
                 //  Top 3 reports
                 REPORTS.slice(0, 3).forEach(function(r) {
@@ -9107,6 +9120,7 @@
                 { kw: ['reports','report','audit','access review'],        title: 'Open Reports',            sub: REPORTS.length + ' templated reports', route: 'reports' },
                 { kw: ['argos','parameters','cheatsheet','main','lcl','dbn','bind'], title: 'Open Argos cheatsheet', sub: ':main_*, :lcl_*, :dbn_* + 7 SQL patterns', route: 'argos' },
                 { kw: ['settings','ai','byok','api key','anthropic','openai','ollama','claude','gpt'], title: 'Open AI settings', sub: 'BYOK — enable optional AI features', route: 'settings' },
+                { kw: ['resources','community','webinars','training','conference','bug','evisions','ellucian live'], title: 'Open Community Resources', sub: 'Curated Argos / Banner / BUG resources', route: 'resources' },
                 { kw: ['home','dashboard','back','main'],                  title: 'Go Home',                 sub: 'Dashboard view',                   route: '' },
                 { kw: ['help','examples','shortcut'],                      title: 'Open Help panel',         sub: 'Search examples & shortcuts',      route: null, action: function() { closePalette(); toggleHelpPanel(); } },
             ];
@@ -9344,6 +9358,7 @@
                 if (q === '__scorecard__') { navigate('scorecard'); }
                 else if (q === '__builder__') { navigate('builder'); }
                 else if (q === '__argos__') { navigate('argos'); }
+                else if (q === '__resources__') { navigate('resources'); }
                 else if (/^__report:([A-Z0-9]+)__$/.test(q)) {
                     navigate('report/' + q.replace(/^__report:([A-Z0-9]+)__$/, '$1'));
                 }

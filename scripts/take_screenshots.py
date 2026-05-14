@@ -165,6 +165,14 @@ def shot_sql_explainer(page):
     return 'sql-explainer.png'
 
 
+def shot_resources(page):
+    """Community Resources hub — Argos webinars + Banner training + regional BUGs."""
+    page.goto(URL + '#/resources', wait_until='domcontentloaded')
+    page.wait_for_selector('.resources-intro', timeout=8000)
+    time.sleep(0.3)
+    return 'resources-hub.png'
+
+
 def shot_ai_settings(page):
     """AI Settings page — BYOK panel with toggle ON, provider dropdown,
     privacy disclaimer, model + cost hint, redaction slider."""
@@ -261,6 +269,7 @@ SHOTS = {
     'sql-dialect': (shot_sql_dialect,     {'width': 1600, 'height': 1100}),
     'argos':       (shot_argos,           {'width': 1600, 'height': 1200}),
     'ai-settings': (shot_ai_settings,     {'width': 1600, 'height': 1200}),
+    'resources':   (shot_resources,       {'width': 1600, 'height': 1400}),
     'search':      (shot_search_synonyms, {'width': 1600, 'height': 1000}),
     'reports':     (shot_reports_index,   {'width': 1600, 'height': 1100}),
 }
