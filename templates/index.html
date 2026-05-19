@@ -418,11 +418,23 @@
         }
         .sql-editor-ta {
             position: relative; z-index: 2; width: 100%;
-            min-height: 240px; max-height: 520px;
+            min-height: 240px; max-height: 85vh;
             background: transparent; outline: none;
             color: transparent; caret-color: var(--text);
             resize: vertical; overflow: auto; display: block;
         }
+        /*  Expand toggle — lets users grow the editor to ~75vh in one click
+            without having to drag the bottom-right corner. State is mirrored
+            on .sql-editor via a .expanded class. */
+        .sql-editor.expanded .sql-editor-ta { height: 75vh !important; }
+        .sql-editor-expand {
+            position: absolute; top: 6px; right: 8px; z-index: 3;
+            background: rgba(255,255,255,0.85); border: 1px solid var(--border);
+            border-radius: 4px; padding: 2px 8px; font-size: 12px; cursor: pointer;
+            color: var(--text-muted); line-height: 1.4;
+        }
+        html.dark .sql-editor-expand { background: rgba(30,30,30,0.85); }
+        .sql-editor-expand:hover { color: var(--text); border-color: var(--gold); }
         .sql-editor-ta::selection { background: rgba(255, 184, 28, 0.35); color: transparent; }
         /* Token colors — light mode: WCC-style navy/gold palette */
         .sql-editor-hl .kw  { color: #1e40af; font-weight: 600; }
@@ -8486,7 +8498,7 @@
                 'checks for common Banner pitfalls (missing filters, wrong data sources), and explains what the query does.'));
 
             //  Live-highlighted SQL editor (overlay <pre> + transparent textarea)
-            var editor = h('div', { className: 'sql-editor' });
+            var editor = h('div', { className: 'sql-editor', id: 'sqlEditor' });
             var highlight = document.createElement('pre');
             highlight.className = 'sql-editor-hl placeholder';
             highlight.id = 'sqlHighlight';
@@ -8495,8 +8507,21 @@
                 className: 'sql-editor-ta', id: 'sqlInput',
                 spellcheck: 'false', autocomplete: 'off'
             });
+            //  Expand/collapse button — one-click toggle to ~75vh height
+            //  (drag-resize from the bottom-right corner still works).
+            var expandBtn = h('button', {
+                className: 'sql-editor-expand', id: 'sqlEditorExpand',
+                type: 'button', title: 'Expand editor (or drag corner to resize)'
+            }, '⛶ Expand');
+            expandBtn.onclick = function() {
+                var isExpanded = editor.classList.toggle('expanded');
+                expandBtn.textContent = isExpanded ? '⛶ Collapse' : '⛶ Expand';
+                //  Keep highlight overlay in sync with the new textarea height
+                setTimeout(function() { textarea.dispatchEvent(new Event('scroll')); }, 0);
+            };
             editor.appendChild(highlight);
             editor.appendChild(textarea);
+            editor.appendChild(expandBtn);
             container.appendChild(editor);
 
             // Button row
