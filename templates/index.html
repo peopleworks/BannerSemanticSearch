@@ -6262,6 +6262,18 @@
                        /^[A-Z]VQ(_|[A-Z0-9])/.test(t) ||   // PVQ_PTRECLS, NVQ_NBBPOSN_GUID
                        /VIEW$/.test(t) || /_VW$/.test(t) || /_VIEW$/.test(t);
             }
+            //  Detects 7-character Banner base tables whose owner schema (e.g.
+            //  TAISMGR Accounts Receivable, FIMSMGR Finance) wasn't visible to
+            //  the BANSECR account that built this bundle. Examples that match:
+            //  TBRACCD, TBBDETC, FGBJVCD, NBBPOSN. The SQL is almost certainly
+            //  valid against the real Banner DB — we just can't validate columns.
+            //
+            //  Banner naming: pos 1 = system (T=AR, S=Student, F=Finance, N=HR…),
+            //  pos 2 = module, pos 3 = TYPE code (B=base/validation, R=repeating,
+            //  V=view, T=temp, W=web-view), pos 4-7 = mnemonic.
+            function _isLikelyBannerBaseTable(t) {
+                return /^[A-Z]{2}[BRVTW][A-Z]{4}$/.test(t);
+            }
             var validTables = [];
             var unknownTablesInFrom = {};
             var seenTables = {};
@@ -6275,6 +6287,13 @@
                     warnings.push({
                         msg: "'" + tbl + "' looks like a Banner view, not a base table — not indexed in this schema.",
                         suggestion: "Column references against " + tbl + " (e.g. " + tbl + "_*) are skipped — the SQL is fine, the validator just can't check them. Banner web views (PWV*) and AppNav views (PVQ_*) are documented in Ellucian's EDM, not in BANINST1 base tables.",
+                        target: tbl
+                    });
+                } else if (_isLikelyBannerBaseTable(tbl)) {
+                    unknownTablesInFrom[tbl] = true;
+                    warnings.push({
+                        msg: "'" + tbl + "' matches Banner's 7-character naming convention but isn't in this schema bundle.",
+                        suggestion: "Likely a base table in a Banner owner schema (TAISMGR Accounts Receivable, FIMSMGR Finance, PAYROLL, etc.) that wasn't visible to the BANSECR account when the bundle was built. Your Banner DB almost certainly has it — Argos / production queries will run fine. Column references against " + tbl + " are skipped here because we don't have its column list.",
                         target: tbl
                     });
                 } else {
