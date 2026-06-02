@@ -5295,7 +5295,7 @@
 
             container.appendChild(h('h2', { style: 'margin-bottom: 6px;' }, 'Ready-to-run Reports'));
             container.appendChild(h('p', { className: 'muted', style: 'margin-bottom: 20px;' },
-                REPORTS.length + ' report(s) available — vetted SQL for access reviews, privilege audits, and security monitoring. Click any report to view the full SQL, caveats, and validation in the SQL Explainer.'));
+                REPORTS.length + ' report(s) available — vetted SQL for access reviews, privilege audits, security monitoring, and data-accuracy audits. Click any report to view the full SQL, caveats, and validation in the SQL Explainer.'));
 
             if (!REPORTS || !REPORTS.length) {
                 container.appendChild(h('p', { className: 'muted' }, 'No reports loaded. Add .sql files to data/reports/ and rebuild.'));
