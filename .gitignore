@@ -42,3 +42,7 @@ LAUNCH_PLAN.md
 launch/
 marketing/
 drafts/
+
+# Internal client requests — contain real Banner IDs, FERPA-sensitive sample
+# data, and institution-specific report SQL. Stays local; never published.
+request/
