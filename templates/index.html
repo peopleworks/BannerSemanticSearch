@@ -6618,6 +6618,39 @@
                 detectOracleToPostgresDialect(sql).forEach(function(h) { dialectHints.push(h); });
             }
 
+            // 3f. Anti-pattern: hardcoded fund-code INCLUDE list (5+ literals).
+            //   Real-world impact at Waubonsee on a FAID1026 audit: a 10-code
+            //   `rprawrd_fund_code IN ('PELL','SEOG',...)` had drifted out of
+            //   sync — 149 newer fund codes (WSSCM, WSS, PATH, DLPLUS, ALT, …)
+            //   representing $1,361,345 in awards never showed on the report
+            //   because nobody had touched the list since 2008. The fix is
+            //   architectural: flip to an EXCLUDE list so anything not already
+            //   in a named column flows into OTHER automatically.
+            //
+            //   Threshold is 5+ literals — below that, the list is likely a
+            //   legitimate small enum (terms, days, status codes).
+            var fundInListRe = /\b(\w*_FUND_CODE)\s+IN\s*\(\s*(?:'[^']*'\s*,\s*){4,}'[^']*'\s*\)/gi;
+            var fundInHits = [];
+            var fundInMatch;
+            while ((fundInMatch = fundInListRe.exec(upper)) !== null) {
+                var litCount = (fundInMatch[0].match(/'[^']*'/g) || []).length;
+                fundInHits.push({ col: fundInMatch[1], count: litCount });
+            }
+            if (fundInHits.length) {
+                fundInHits.sort(function(a, b) { return b.count - a.count; });
+                var biggestIn = fundInHits[0];
+                var extraIn = fundInHits.length > 1
+                    ? ' (' + fundInHits.length + ' such INCLUDE lists in this query; biggest shown)'
+                    : '';
+                var colLower = biggestIn.col.toLowerCase();
+                warnings.push({
+                    msg: "Hardcoded `" + biggestIn.col + " IN (" + biggestIn.count + " fund codes)` — INCLUDE-list anti-pattern" + extraIn + ".",
+                    suggestion: "INCLUDE lists like this drift as Financial Aid creates new fund codes. Real audit at Waubonsee: a 10-code list on FAID1026 missed $1,361,345 across 149 newer fund codes because the list hadn't been updated since 2008. Consider flipping to an EXCLUDE pattern — `" + colLower + " NOT IN (<your named columns>)` is self-maintaining and catches every new code FA adds. See the FA001 report (Financial Aid Audit category) for the audit query that surfaces orphan codes.",
+                    target: biggestIn.col,
+                    fixSnippet: "-- Replace INCLUDE list with EXCLUDE pattern:\n-- AND " + colLower + " NOT IN ('PELL','IIA','MAP','SEOG','FWS','DLSUB','DLUNSB')  -- list the codes with dedicated columns"
+                });
+            }
+
             // 4. Structural checks
             if (upper.indexOf('SELECT') < 0) {
                 errors.push({ msg: "No SELECT clause found." });
